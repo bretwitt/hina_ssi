@@ -1,0 +1,3 @@
+/home/bretwitt/HSGC/hina_ssi/build/CMakeFiles/rebuild_cache.dir
+/home/bretwitt/HSGC/hina_ssi/build/CMakeFiles/edit_cache.dir
+/home/bretwitt/HSGC/hina_ssi/build/CMakeFiles/hina_ssi_plugin.dir
