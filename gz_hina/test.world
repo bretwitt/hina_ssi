@@ -1,7 +1,6 @@
 <?xml version='1.0'?>
-<sdf version='1.7'>
+<sdf version='1.7'>	
   <world name='empty'>
-    <plugin name='hina' filename='libhina_ssi_plugin.so'/>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
     <atmosphere type='adiabatic'/>
@@ -107,6 +106,7 @@
           </surface>
         </collision>
         <visual name='visual'>
+          <plugin name='hina' filename='libhina_ssi_plugin.so'/>
           <geometry>
             <box>
               <size>1 1 1</size>
