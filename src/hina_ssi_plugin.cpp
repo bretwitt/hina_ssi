@@ -13,8 +13,12 @@ namespace gazebo {
         }
 
         void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) {
-            //connectionPtr = event::Events::ConnectBeforeCPhysicsUpdate(boost::bind(&HinaSSIPlugin::OnWorldLoad, this));
+            connectionPtr = event::Events::ConnectPreRender(boost::bind(&HinaSSIPlugin::update, this));
             init_soil();
+        }
+
+        void update() {
+
         }
 
 
@@ -23,6 +27,8 @@ namespace gazebo {
             auto mesh = mesh_gen.generate_mesh();
             auto scenePtr = rendering::get_scene();
             auto visual = std::make_shared<rendering::Visual>("terrain", scenePtr);
+
+            scenePtr->SetWireframe(true);
             visual->InsertMesh(mesh);
             scenePtr->AddVisual(visual);
         }

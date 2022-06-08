@@ -25,31 +25,8 @@
     <model name='ground_plane'>
       <static>1</static>
       <link name='link'>
-        <collision name='collision'>
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>100 100</size>
-            </plane>
-          </geometry>
-          <surface>
-            <friction>
-              <ode>
-                <mu>100</mu>
-                <mu2>50</mu2>
-              </ode>
-              <torsional>
-                <ode/>
-              </torsional>
-            </friction>
-            <contact>
-              <ode/>
-            </contact>
-            <bounce/>
-          </surface>
-          <max_contacts>10</max_contacts>
-        </collision>
         <visual name='visual'>
+          <plugin name='hina' filename='libhina_ssi_plugin.so'/>
           <cast_shadows>0</cast_shadows>
           <geometry>
             <plane>
@@ -70,60 +47,6 @@
       </link>
       <pose>0.252724 -0.228037 0 0 -0 0</pose>
     </model>
-    <model name='unit_box'>
-      <pose>-0.454506 -0.034901 0.5 0 -0 0</pose>
-      <link name='link'>
-        <inertial>
-          <mass>1</mass>
-          <inertia>
-            <ixx>0.166667</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.166667</iyy>
-            <iyz>0</iyz>
-            <izz>0.166667</izz>
-          </inertia>
-          <pose>0 0 0 0 -0 0</pose>
-        </inertial>
-        <collision name='collision'>
-          <geometry>
-            <box>
-              <size>1 1 1</size>
-            </box>
-          </geometry>
-          <max_contacts>10</max_contacts>
-          <surface>
-            <contact>
-              <ode/>
-            </contact>
-            <bounce/>
-            <friction>
-              <torsional>
-                <ode/>
-              </torsional>
-              <ode/>
-            </friction>
-          </surface>
-        </collision>
-        <visual name='visual'>
-          <plugin name='hina' filename='libhina_ssi_plugin.so'/>
-          <geometry>
-            <box>
-              <size>1 1 1</size>
-            </box>
-          </geometry>
-          <material>
-            <script>
-              <name>Gazebo/Grey</name>
-              <uri>file://media/materials/scripts/gazebo.material</uri>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-    </model>
     <state world_name='empty'>
       <sim_time>158 460000000</sim_time>
       <real_time>28 466482100</real_time>
@@ -137,16 +60,6 @@
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-      </model>
-      <model name='unit_box'>
-        <pose>-0.454516 -0.034906 0.499995 -1e-05 -0 -0</pose>
-        <scale>1 1 1</scale>
-        <link name='link'>
-          <pose>-0.454516 -0.034906 0.499995 -1e-05 -0 -0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0.004709 0.011055 -9.78158 -0.022108 0.009414 1e-06</acceleration>
-          <wrench>0.004709 0.011055 -9.78158 0 -0 0</wrench>
         </link>
       </model>
       <light name='sun'>
