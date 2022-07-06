@@ -6,5 +6,5 @@ include_directories(include ${GAZEBO_INCLUDE_DIRS})
 link_directories(${GAZEBO_LIBRARY_DIRS})
 list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
 
-add_library(${PROJECT_NAME} SHARED src/hina_ssi_plugin.cpp src/MeshGenerator.cpp)
+add_library(${PROJECT_NAME} SHARED src/hina_ssi_plugin.cpp src/MeshGenerator.cpp src/Soil.cpp)
 target_link_libraries(${PROJECT_NAME} ${GAZEBO_LIBRARIES})

@@ -1,3 +1,6 @@
+#ifndef HINA_SSI_PLUGIN_CPP
+#define HINA_SSI_PLUGIN_CPP
+
 #include <gazebo/common/common.hh>
 #include <memory>
 #include <gazebo/rendering/rendering.hh>
@@ -8,8 +11,15 @@ namespace gazebo {
 
     private:
         event::ConnectionPtr connectionPtr = nullptr;
+        Soil* soil = nullptr;
+        MeshGenerator* mesh_gen = nullptr;
     public:
         HinaSSIPlugin() : VisualPlugin() {
+        }
+
+        ~HinaSSIPlugin() override {
+            delete soil;
+            delete mesh_gen;
         }
 
         void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) {
@@ -19,10 +29,13 @@ namespace gazebo {
 
 
         void init_soil(const rendering::VisualPtr& _visual) {
-            auto mesh_gen = MeshGenerator();
-            auto mesh = mesh_gen.generate_mesh();
+            this->mesh_gen = new MeshGenerator();
+            this->soil = new Soil();
+
+            auto mesh = mesh_gen->generate_mesh(soil);
             auto scenePtr = _visual->GetScene();
             auto worldViz = scenePtr->WorldVisual();
+
             auto visual = std::make_shared<rendering::Visual>("terrain_visual", worldViz);
             common::MeshManager::Instance()->AddMesh(mesh);
 
@@ -35,3 +48,5 @@ namespace gazebo {
     GZ_REGISTER_VISUAL_PLUGIN(HinaSSIPlugin)
 
 }
+
+#endif
