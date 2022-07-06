@@ -1,3 +1,3 @@
-# Hina Soft-Soil Interaction (HSSI) Project
+# Hina Soft-Soil Interaction (HSSI) Project (Under Construction)
 
-Plugins for Gazebo to simulate soft soil interaction with rigidbodies. WIP
+Plugins for Gazebo 11 to simulate soft soil interaction with rigidbodies. 
