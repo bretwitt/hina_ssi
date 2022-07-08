@@ -42,6 +42,16 @@ namespace gazebo {
             visual->AttachMesh("terrain_mesh");
         }
 
+        void update_soil(Soil* soil) {
+            auto mesh = mesh_gen->generate_mesh(soil);
+            auto _mesh = common::MeshManager::Instance()->GetMesh("terrain_mesh");
+            if(_mesh == nullptr) {
+                return;
+            }
+            // *_mesh = *mesh
+            //*(_mesh->GetSubMesh(0)) = *(mesh->GetSubMesh(0));
+            //*(_mesh->GetSubMesh(0)).
+        }
     };
 
     GZ_REGISTER_VISUAL_PLUGIN(HinaSSIVisualPlugin)

@@ -1,0 +1,5 @@
+package hina_ssi_msgs.msgs;
+
+message Soil
+{
+}
