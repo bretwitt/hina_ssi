@@ -17,30 +17,35 @@ namespace gazebo {
         transport::PublisherPtr soilPub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
 
+        msgs::Vector3d *soil_v = nullptr;
+
     public:
         HinaSSIWorldPlugin() : WorldPlugin() {
         }
 
         ~HinaSSIWorldPlugin() override {
             delete soilPtr;
+            delete soil_v;
         }
 
         void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
             updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
-            init_transport();
             init_soil();
+            init_transport();
+        }
+
+        void init_soil() {
+            soilPtr = new Soil({2,2,0,0,{}});
         }
 
         void init_transport() {
+            auto df = soilPtr->get_data();
+            soil_v = new msgs::Vector3d[df.x_width * df.y_width];
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
         }
 
-        void init_soil() {
-            //struct SoilData s{2,2,0,0};
-            soilPtr = new Soil({2,2,0,0,{}});
-        }
 
         // TODO: Check timestamp for hard rt freq & dT calculation
         void update() {
@@ -59,20 +64,18 @@ namespace gazebo {
             auto y_w = soil->get_data().y_width;
             soilMsg.set_len_col(x_w);
             soilMsg.set_len_row(y_w);
-            auto *vec_v = new msgs::Vector3d[x_w*y_w];
             for(int i = 0; i < x_w; i++) {
                 for(int j = 0; j < y_w; j++) {
                     int idx =  j*x_w + i;
-                    auto vert = soil->get_data().soil_field[i][j];
-
-                    vec_v[idx] = msgs::Vector3d();
-                    vec_v[idx].set_x(vert.X());
-                    vec_v[idx].set_y(vert.Y());
-                    vec_v[idx].set_z(vert.Z());
+                    auto vert = soil->get_data().soil_field[idx];
+                    soil_v[idx] = msgs::Vector3d();
+                    soil_v[idx].set_x(vert.X());
+                    soil_v[idx].set_y(vert.Y());
+                    soil_v[idx].set_z(vert.Z());
                 }
             }
             auto v = soilMsg.add_flattened_field();
-            *v = *vec_v;
+            *v = *soil_v;
             soilPub->Publish(soilMsg);
         }
 

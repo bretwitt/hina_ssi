@@ -11,13 +11,18 @@ namespace gazebo {
         int y_width = 5;
         double x_offset = 0;
         double y_offset = 0;
-        Vector3d ** soil_field{};
+        Vector3d * soil_field{};
 
         void init_field() {
-            soil_field = new Vector3d*[x_width];
-            for(int i = 0; i < x_width; i++) {
-                soil_field[i] = new Vector3d[y_width];
-            }
+            soil_field = new Vector3d[x_width*y_width];
+        }
+
+        Vector3d getFieldAtIndex(int x, int y) {
+            return soil_field[x_width*y + x];
+        }
+
+        void setFieldAtIndex(int x, int y, Vector3d v) {
+            getFieldAtIndex(x,y) = v;
         }
     };
 
@@ -34,10 +39,7 @@ namespace gazebo {
         }
 
         ~Soil() {
-            for(int i = 0; i < this->_data.x_width; i++) {
-                delete this->get_data().soil_field[i];
-            }
-            delete this->get_data().soil_field;
+            delete _data.soil_field;
         }
 
         SoilData get_data() {
@@ -50,7 +52,7 @@ namespace gazebo {
 
             for(int i = 0; i < _data.x_width; i++) {
                 for(int j = 0; j < _data.y_width; j++) {
-                    _data.soil_field[i][j] = Vector3d(i + _data.x_offset,j + _data.y_offset,0.0);
+                    _data.setFieldAtIndex(i,j,Vector3d(i + _data.x_offset,j + _data.y_offset,0.0));
                 }
             }
         }

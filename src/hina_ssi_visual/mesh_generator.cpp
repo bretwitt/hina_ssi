@@ -27,7 +27,7 @@ namespace gazebo {
 
             for(int y = 0; y < y_size; y++) {
                 for (int x = 0; x < x_size; x++) {
-                    terrainSubMesh->AddVertex(soil->get_data().soil_field[x][y]);
+                    terrainSubMesh->AddVertex(soil->get_data().getFieldAtIndex(x,y));
                 }
             }
 
