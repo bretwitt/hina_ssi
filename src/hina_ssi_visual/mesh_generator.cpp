@@ -22,12 +22,12 @@ namespace gazebo {
 
             terrainSubMesh->SetPrimitiveType(common::SubMesh::PrimitiveType::TRIANGLES);
 
-            int x_size = soil->getData().x_width;
-            int y_size = soil->getData().y_width;
+            int x_size = soil->get_data().x_width;
+            int y_size = soil->get_data().y_width;
 
             for(int y = 0; y < y_size; y++) {
                 for (int x = 0; x < x_size; x++) {
-                    terrainSubMesh->AddVertex(soil->soil_field[x][y]);
+                    terrainSubMesh->AddVertex(soil->get_data().soil_field[x][y]);
                 }
             }
 

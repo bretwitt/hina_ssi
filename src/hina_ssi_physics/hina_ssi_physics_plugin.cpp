@@ -10,41 +10,70 @@
 namespace gazebo {
     class HinaSSIWorldPlugin : public WorldPlugin {
 
-    public:
+    private:
+        Soil *soilPtr = nullptr;
+
         transport::NodePtr node = nullptr;
-        transport::SubscriberPtr sub = nullptr;
         transport::PublisherPtr soilPub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
-        Soil* soil_field = nullptr;
 
+    public:
         HinaSSIWorldPlugin() : WorldPlugin() {
         }
 
-        void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
-            std::cout << "Loaded World Plugin" << std::endl;
-            init_node();
+        ~HinaSSIWorldPlugin() override {
+            delete soilPtr;
         }
 
-        void init_node() {
+        void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
+            updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
+            init_transport();
+            init_soil();
+        }
+
+        void init_transport() {
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
-            updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
         }
 
-        void update() {
-            //soil_field = update_soil();
-            //broadcast_soil(soil_field);
+        void init_soil() {
+            //struct SoilData s{2,2,0,0};
+            soilPtr = new Soil({2,2,0,0,{}});
         }
 
-        void update_soil() {
+        // TODO: Check timestamp for hard rt freq & dT calculation
+        void update() {
+            soilPtr = update_soil(soilPtr, 0.0f);
+            broadcast_soil(soilPtr);
+        }
 
+        Soil* update_soil(Soil* s, float dt) {
+            // soil_field = realloc(..);
+            return s;
         }
 
         void broadcast_soil(Soil* soil) {
-            msgs::GzString str;
-            str.set_data("str");
-            soilPub->Publish(str);
+            hina_ssi_msgs::msgs::Soil soilMsg;
+            auto x_w = soil->get_data().x_width;
+            auto y_w = soil->get_data().y_width;
+            soilMsg.set_len_col(x_w);
+            soilMsg.set_len_row(y_w);
+            auto *vec_v = new msgs::Vector3d[x_w*y_w];
+            for(int i = 0; i < x_w; i++) {
+                for(int j = 0; j < y_w; j++) {
+                    int idx =  j*x_w + i;
+                    auto vert = soil->get_data().soil_field[i][j];
+
+                    vec_v[idx] = msgs::Vector3d();
+                    vec_v[idx].set_x(vert.X());
+                    vec_v[idx].set_y(vert.Y());
+                    vec_v[idx].set_z(vert.Z());
+                }
+            }
+            auto v = soilMsg.add_flattened_field();
+            *v = *vec_v;
+            soilPub->Publish(soilMsg);
         }
 
     };

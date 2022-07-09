@@ -1,5 +1,12 @@
+syntax = "proto2";
+
 package hina_ssi_msgs.msgs;
+
+import "vector3d.proto";
 
 message Soil
 {
+  required uint32     len_row = 1;
+  required uint32     len_col = 2;
+  repeated            gazebo.msgs.Vector3d flattened_field = 3;
 }

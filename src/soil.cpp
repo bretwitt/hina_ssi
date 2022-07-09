@@ -7,11 +7,18 @@ using ignition::math::Vector3d;
 namespace gazebo {
 
     struct SoilData {
-        int x_width = 50;
-        int y_width = 50;
+        int x_width = 5;
+        int y_width = 5;
         double x_offset = 0;
         double y_offset = 0;
-        double scale = 1.0;
+        Vector3d ** soil_field{};
+
+        void init_field() {
+            soil_field = new Vector3d*[x_width];
+            for(int i = 0; i < x_width; i++) {
+                soil_field[i] = new Vector3d[y_width];
+            }
+        }
     };
 
     class Soil {
@@ -19,45 +26,38 @@ namespace gazebo {
         SoilData _data;
 
     public:
-        Vector3d ** soil_field{};
 
-        explicit Soil(SoilData _data) : Soil() {
+        Soil(SoilData _data) {
             this->_data = _data;
-        }
-
-        Soil() {
-            this->soil_field = new Vector3d*[this->_data.x_width];
-            for(int i = 0; i < this->_data.x_width; i++) {
-                this->soil_field[i] = new Vector3d[this->_data.y_width];
-            }
-            this->reset_soil();
+            this->_data.init_field();
+            reset_soil();
         }
 
         ~Soil() {
             for(int i = 0; i < this->_data.x_width; i++) {
-                delete this->soil_field[i];
+                delete this->get_data().soil_field[i];
             }
-            delete soil_field;
+            delete this->get_data().soil_field;
         }
 
-        SoilData getData() {
+        SoilData get_data() {
             return _data;
         }
-        
-        void reset_soil() {
-            this->_data.x_offset = -(double)this->_data.x_width / 2;
-            this->_data.y_offset = -(double)this->_data.y_width / 2;
 
-            for(int i = 0; i < this->_data.x_width; i++) {
-                for(int j = 0; j < this->_data.y_width; j++) {
-                    soil_field[i][j] = Vector3d(i*this->_data.scale + this->_data.x_offset,j*this->_data.scale + this->_data.y_offset,0.0);
+        void reset_soil() {
+            _data.x_offset = -(double)_data.x_width / 2;
+            _data.y_offset = -(double)_data.y_width / 2;
+
+            for(int i = 0; i < _data.x_width; i++) {
+                for(int j = 0; j < _data.y_width; j++) {
+                    _data.soil_field[i][j] = Vector3d(i + _data.x_offset,j + _data.y_offset,0.0);
                 }
             }
         }
 
         // bool intersects(ContactMesh* mesh) {}
 
-        bool intersects(Vector3d vertex, Vector3d intersect_plane, Vector3d normal) {
+        bool intersects(Vector3d v1, Vector3d v2, Vector3d v3, Vector3d normal) {
             // AABB
         }
     };
