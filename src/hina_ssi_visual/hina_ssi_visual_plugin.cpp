@@ -6,6 +6,7 @@
 #include <gazebo/rendering/rendering.hh>
 #include "mesh_generator.cpp"
 #include "Soil.pb.h"
+#include "../soil.cpp"
 
 namespace gazebo {
     class HinaSSIVisualPlugin : public VisualPlugin {
@@ -14,10 +15,13 @@ namespace gazebo {
         event::ConnectionPtr connectionPtr = nullptr;
         Soil* soil = nullptr;
         MeshGenerator* mesh_gen = nullptr;
+        rendering::VisualPtr visual = nullptr;
 
         transport::NodePtr node = nullptr;
         transport::SubscriberPtr sub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
+
+        bool mesh_initialized = false;
 
     public:
         HinaSSIVisualPlugin() : VisualPlugin() {
@@ -31,6 +35,7 @@ namespace gazebo {
         void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) override {
             //connectionPtr = event::Events::ConnectPreRender(boost::bind(&HinaSSIVisualPlugin::update, this));
             init_transport();
+            visual = _visual;
         }
 
         void init_transport() {
@@ -40,39 +45,37 @@ namespace gazebo {
         }
 
         void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::Soil> &soil_update) {
+            if(!mesh_initialized) {
+                int x_width = soil_update->len_col();
+                int y_width = soil_update->len_row();
 
-            std::cout << "Frame" << std::endl;
-            std::cout << soil_update->len_col() << std::endl;
-            std::cout << soil_update->len_row() << std::endl;
-            std::cout << soil_update->flattened_field()[0].x() << std::endl;
-            std::cout << soil_update->flattened_field()[0].y() << std::endl;
-            std::cout << soil_update->flattened_field()[0].z() << std::endl;
+                auto* field = new Vector3d[x_width*y_width];
+                auto v = soil_update->flattened_field();
+
+                uint32_t i = 0;
+                for(const gazebo::msgs::Vector3d& v0 : v) {
+                    field[i++] = Vector3d(v0.x(),v0.y(),v0.z());
+                }
+
+                soil = new Soil({x_width,y_width,0,0,field});
+                init_soil(visual,soil);
+
+                mesh_initialized = true;
+            }
         }
 
         void init_soil(const rendering::VisualPtr& _visual, Soil* soil) {
-            this->mesh_gen = new MeshGenerator();
-            this->soil = soil;
+            mesh_gen = new MeshGenerator();
 
             auto mesh = mesh_gen->generate_mesh(soil);
             auto scenePtr = _visual->GetScene();
             auto worldViz = scenePtr->WorldVisual();
+            auto terrainViz = std::make_shared<rendering::Visual>("terrain_visual", worldViz);
 
-            auto visual = std::make_shared<rendering::Visual>("terrain_visual", worldViz);
             common::MeshManager::Instance()->AddMesh(mesh);
+            scenePtr->AddVisual(terrainViz);
+            terrainViz->AttachMesh("terrain_mesh");
 
-            scenePtr->AddVisual(visual);
-            visual->AttachMesh("terrain_mesh");
-        }
-
-        void update_soil(Soil* soil) {
-            auto mesh = mesh_gen->generate_mesh(soil);
-            auto _mesh = common::MeshManager::Instance()->GetMesh("terrain_mesh");
-            if(_mesh == nullptr) {
-                return;
-            }
-            // *_mesh = *mesh
-            //*(_mesh->GetSubMesh(0)) = *(mesh->GetSubMesh(0));
-            //*(_mesh->GetSubMesh(0)).
         }
     };
 

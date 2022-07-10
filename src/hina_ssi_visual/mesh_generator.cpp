@@ -27,7 +27,8 @@ namespace gazebo {
 
             for(int y = 0; y < y_size; y++) {
                 for (int x = 0; x < x_size; x++) {
-                    terrainSubMesh->AddVertex(soil->get_data().getFieldAtIndex(x,y));
+                    auto vert = soil->get_data().getFieldAtIndex(x,y);
+                    terrainSubMesh->AddVertex(vert);
                 }
             }
 
@@ -52,10 +53,10 @@ namespace gazebo {
             mesh->AddSubMesh(terrainSubMesh);
             mesh->SetName("terrain_mesh");
 
-            auto material = new common::Material(ignition::math::Color(0,0,0));
-            material->SetTextureImage("terrain.png");
+            //auto material = new common::Material(ignition::math::Color(0,0,0));
+            //material->SetTextureImage("terrain.png");
 
-            mesh->AddMaterial(material);
+            //mesh->AddMaterial(material);
 
             return mesh;
         }

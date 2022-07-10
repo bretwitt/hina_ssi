@@ -17,12 +17,12 @@ namespace gazebo {
             soil_field = new Vector3d[x_width*y_width];
         }
 
-        Vector3d getFieldAtIndex(int x, int y) {
+        Vector3d getFieldAtIndex(int x, int y) const {
             return soil_field[x_width*y + x];
         }
 
-        void setFieldAtIndex(int x, int y, Vector3d v) {
-            getFieldAtIndex(x,y) = v;
+        void setFieldAtIndex(int x, int y, const Vector3d& v) const {
+            soil_field[x_width*y + x] = v;
         }
     };
 
@@ -32,10 +32,12 @@ namespace gazebo {
 
     public:
 
-        Soil(SoilData _data) {
-            this->_data = _data;
-            this->_data.init_field();
-            reset_soil();
+        explicit Soil(SoilData soil_data) {
+            this->_data = soil_data;
+            if(_data.soil_field == nullptr) {
+                _data.init_field();
+                generate_soil_vertices();
+            }
         }
 
         ~Soil() {
@@ -46,7 +48,7 @@ namespace gazebo {
             return _data;
         }
 
-        void reset_soil() {
+        void generate_soil_vertices() {
             _data.x_offset = -(double)_data.x_width / 2;
             _data.y_offset = -(double)_data.y_width / 2;
 

@@ -35,7 +35,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil({2,2,0,0,{}});
+            soilPtr = new Soil({2,2,0,0});
         }
 
         void init_transport() {
@@ -49,13 +49,8 @@ namespace gazebo {
 
         // TODO: Check timestamp for hard rt freq & dT calculation
         void update() {
-            soilPtr = update_soil(soilPtr, 0.0f);
+            //soilPtr = update_soil(soilPtr, 0.0f);
             broadcast_soil(soilPtr);
-        }
-
-        Soil* update_soil(Soil* s, float dt) {
-            // soil_field = realloc(..);
-            return s;
         }
 
         void broadcast_soil(Soil* soil) {
@@ -67,15 +62,17 @@ namespace gazebo {
             for(int i = 0; i < x_w; i++) {
                 for(int j = 0; j < y_w; j++) {
                     int idx =  j*x_w + i;
-                    auto vert = soil->get_data().soil_field[idx];
+                    auto vert = soil->get_data().getFieldAtIndex(i,j);
                     soil_v[idx] = msgs::Vector3d();
                     soil_v[idx].set_x(vert.X());
                     soil_v[idx].set_y(vert.Y());
                     soil_v[idx].set_z(vert.Z());
                 }
             }
-            auto v = soilMsg.add_flattened_field();
-            *v = *soil_v;
+            for(uint32_t i = 0; i < x_w*y_w; i++) {
+                auto v = soilMsg.add_flattened_field();
+                *v = soil_v[i];
+            }
             soilPub->Publish(soilMsg);
         }
 
