@@ -25,11 +25,9 @@ namespace gazebo {
             int x_size = soil->get_data().x_width;
             int y_size = soil->get_data().y_width;
 
-            for(int y = 0; y < y_size; y++) {
-                for (int x = 0; x < x_size; x++) {
-                    auto vert = soil->get_data().getFieldAtIndex(x,y);
-                    terrainSubMesh->AddVertex(vert);
-                }
+            for(int i = 0; i < x_size*y_size; i++) {
+                Vector3d vert = soil->get_data().soil_field[i];
+                terrainSubMesh->AddVertex(vert);
             }
 
             for(int y = 0; y < y_size - 1; y++) {
@@ -49,7 +47,7 @@ namespace gazebo {
             }
 
             terrainSubMesh->RecalculateNormals();
-
+            
             mesh->AddSubMesh(terrainSubMesh);
             mesh->SetName("terrain_mesh");
 

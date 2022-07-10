@@ -22,6 +22,7 @@ namespace gazebo {
         event::ConnectionPtr updateEventPtr = nullptr;
 
         bool mesh_initialized = false;
+        bool init_viz = false;
 
     public:
         HinaSSIVisualPlugin() : VisualPlugin() {
@@ -33,7 +34,7 @@ namespace gazebo {
         }
 
         void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) override {
-            //connectionPtr = event::Events::ConnectPreRender(boost::bind(&HinaSSIVisualPlugin::update, this));
+            connectionPtr = event::Events::ConnectPreRender(boost::bind(&HinaSSIVisualPlugin::update, this));
             init_transport();
             visual = _visual;
         }
@@ -58,24 +59,35 @@ namespace gazebo {
                 }
 
                 soil = new Soil({x_width,y_width,0,0,field});
-                init_soil(visual,soil);
-
                 mesh_initialized = true;
+                init_viz = true;
             }
         }
 
-        void init_soil(const rendering::VisualPtr& _visual, Soil* soil) {
+        void update() {
+            if(init_viz) {
+                init_soil(soil);
+                init_viz = false;
+            }
+        }
+
+        void init_box() {
+            common::MeshManager::Instance()->CreateBox("terrain_mesh", Vector3d(1,1,1), ignition::math::Vector2d(0,0));
+            visual->AttachMesh("terrain_mesh");
+        }
+
+        void init_soil(Soil* soil) {
             mesh_gen = new MeshGenerator();
 
             auto mesh = mesh_gen->generate_mesh(soil);
-            auto scenePtr = _visual->GetScene();
+            common::MeshManager::Instance()->AddMesh(mesh);
+
+            auto scenePtr = visual->GetScene();
             auto worldViz = scenePtr->WorldVisual();
             auto terrainViz = std::make_shared<rendering::Visual>("terrain_visual", worldViz);
-
-            common::MeshManager::Instance()->AddMesh(mesh);
             scenePtr->AddVisual(terrainViz);
-            terrainViz->AttachMesh("terrain_mesh");
 
+            terrainViz->AttachMesh("terrain_mesh");
         }
     };
 
