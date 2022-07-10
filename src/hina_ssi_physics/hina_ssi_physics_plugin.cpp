@@ -12,12 +12,12 @@ namespace gazebo {
 
     private:
         Soil *soilPtr = nullptr;
+        msgs::Vector3d *soil_v = nullptr;
 
         transport::NodePtr node = nullptr;
         transport::PublisherPtr soilPub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
 
-        msgs::Vector3d *soil_v = nullptr;
 
     public:
         HinaSSIWorldPlugin() : WorldPlugin() {
@@ -59,15 +59,12 @@ namespace gazebo {
             auto y_w = soil->get_data().y_width;
             soilMsg.set_len_col(x_w);
             soilMsg.set_len_row(y_w);
-            for(int i = 0; i < x_w; i++) {
-                for(int j = 0; j < y_w; j++) {
-                    int idx =  j*x_w + i;
-                    auto vert = soil->get_data().getFieldAtIndex(i,j);
-                    soil_v[idx] = msgs::Vector3d();
-                    soil_v[idx].set_x(vert.X());
-                    soil_v[idx].set_y(vert.Y());
-                    soil_v[idx].set_z(vert.Z());
-                }
+            for(int idx = 0; idx < x_w*y_w; idx++) {
+                auto vert = soil->get_data().soil_field[idx];
+                soil_v[idx] = msgs::Vector3d();
+                soil_v[idx].set_x(vert.X());
+                soil_v[idx].set_y(vert.Y());
+                soil_v[idx].set_z(vert.Z());
             }
             for(uint32_t i = 0; i < x_w*y_w; i++) {
                 auto v = soilMsg.add_flattened_field();

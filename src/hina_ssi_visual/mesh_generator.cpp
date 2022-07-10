@@ -17,8 +17,8 @@ namespace gazebo {
         }
 
         common::Mesh* generate_mesh(Soil* soil) {
-            auto mesh = new common::Mesh();
-            auto terrainSubMesh = new common::SubMesh();
+            this->mesh = new common::Mesh();
+            this->terrainSubMesh = new common::SubMesh();
 
             terrainSubMesh->SetPrimitiveType(common::SubMesh::PrimitiveType::TRIANGLES);
 

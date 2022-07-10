@@ -17,10 +17,6 @@ namespace gazebo {
             soil_field = new Vector3d[x_width*y_width];
         }
 
-        Vector3d getFieldAtIndex(int x, int y) const {
-            return soil_field[x_width*y + x];
-        }
-
         void setFieldAtIndex(int x, int y, const Vector3d& v) const {
             soil_field[x_width*y + x] = v;
         }
@@ -41,7 +37,7 @@ namespace gazebo {
         }
 
         ~Soil() {
-            delete _data.soil_field;
+            delete[] _data.soil_field;
         }
 
         SoilData get_data() {

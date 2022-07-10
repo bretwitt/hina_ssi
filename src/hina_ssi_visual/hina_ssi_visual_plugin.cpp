@@ -12,11 +12,12 @@ namespace gazebo {
     class HinaSSIVisualPlugin : public VisualPlugin {
 
     private:
-        event::ConnectionPtr connectionPtr = nullptr;
         Soil* soil = nullptr;
         MeshGenerator* mesh_gen = nullptr;
-        rendering::VisualPtr visual = nullptr;
+        Vector3d* field;
 
+        event::ConnectionPtr connectionPtr = nullptr;
+        rendering::VisualPtr visual = nullptr;
         transport::NodePtr node = nullptr;
         transport::SubscriberPtr sub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
@@ -50,7 +51,7 @@ namespace gazebo {
                 int x_width = soil_update->len_col();
                 int y_width = soil_update->len_row();
 
-                auto* field = new Vector3d[x_width*y_width];
+                field = new Vector3d[x_width*y_width];
                 auto v = soil_update->flattened_field();
 
                 uint32_t i = 0;
