@@ -12,6 +12,7 @@ chmod +x build.sh
 
 Load the test world with plugins AFTER building
 ```
+chmod +x launch.sh
 ./launch.sh
 ```
 
