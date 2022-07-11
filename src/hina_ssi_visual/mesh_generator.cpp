@@ -8,8 +8,9 @@
 namespace gazebo {
     class MeshGenerator {
     private:
-        common::Mesh* mesh = nullptr;
         common::SubMesh* terrainSubMesh = nullptr;
+        common::Mesh* mesh = nullptr;
+
     public:
         ~MeshGenerator() {
             delete mesh;
@@ -17,16 +18,27 @@ namespace gazebo {
         }
 
         common::Mesh* generate_mesh(Soil* soil) {
-            this->mesh = new common::Mesh();
-            this->terrainSubMesh = new common::SubMesh();
+            mesh = new common::Mesh();
 
-            terrainSubMesh->SetPrimitiveType(common::SubMesh::PrimitiveType::TRIANGLES);
+            generate_submesh(soil);
+
+            mesh->AddSubMesh(terrainSubMesh);
+            mesh->SetName("terrain_mesh");
+
+            return mesh;
+        }
+
+        void generate_submesh(Soil* soil) {
+            terrainSubMesh = new common::SubMesh();
+            terrainSubMesh->SetName("terrain_submesh");
 
             int x_size = soil->get_data().x_width;
             int y_size = soil->get_data().y_width;
 
+            terrainSubMesh->SetPrimitiveType(common::SubMesh::PrimitiveType::TRIANGLES);
+
             for(int i = 0; i < x_size*y_size; i++) {
-                Vector3d vert = soil->get_data().soil_field[i];
+                auto vert = soil->get_data().soil_field[i];
                 terrainSubMesh->AddVertex(vert);
             }
 
@@ -47,17 +59,19 @@ namespace gazebo {
             }
 
             terrainSubMesh->RecalculateNormals();
-            
-            mesh->AddSubMesh(terrainSubMesh);
-            mesh->SetName("terrain_mesh");
-
-            //auto material = new common::Material(ignition::math::Color(0,0,0));
-            //material->SetTextureImage("terrain.png");
-
-            //mesh->AddMaterial(material);
-
-            return mesh;
         }
+
+        void update_submesh(Soil* soil) {
+            int x_size = soil->get_data().x_width;
+            int y_size = soil->get_data().y_width;
+
+            for(int i = 0; i < x_size*y_size; i++) {
+                auto vert = soil->get_data().soil_field[i];
+                terrainSubMesh->SetVertex(i,Vector3d(vert.X(),vert.Y(), 0));
+            }
+            terrainSubMesh->RecalculateNormals();
+        }
+
     };
 }
 

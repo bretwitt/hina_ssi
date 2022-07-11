@@ -14,7 +14,8 @@ namespace gazebo {
     private:
         Soil* soil = nullptr;
         MeshGenerator* mesh_gen = nullptr;
-        Vector3d* field;
+        common::Mesh* mesh = nullptr;
+        Vector3d* field{};
 
         event::ConnectionPtr connectionPtr = nullptr;
         rendering::VisualPtr visual = nullptr;
@@ -22,7 +23,7 @@ namespace gazebo {
         transport::SubscriberPtr sub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
 
-        bool mesh_initialized = false;
+        bool soil_initialized = false;
         bool init_viz = false;
 
     public:
@@ -47,21 +48,32 @@ namespace gazebo {
         }
 
         void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::Soil> &soil_update) {
-            if(!mesh_initialized) {
-                int x_width = soil_update->len_col();
-                int y_width = soil_update->len_row();
+            int x_width = soil_update->len_col();
+            int y_width = soil_update->len_row();
 
-                field = new Vector3d[x_width*y_width];
-                auto v = soil_update->flattened_field();
+            delete[] field;
+            field = new Vector3d[x_width*y_width];
 
-                uint32_t i = 0;
-                for(const gazebo::msgs::Vector3d& v0 : v) {
-                    field[i++] = Vector3d(v0.x(),v0.y(),v0.z());
+            auto v = soil_update->flattened_field();
+
+            uint32_t i = 0;
+            for(const gazebo::msgs::Vector3d& v0 : v) {
+                field[i++] = Vector3d(v0.x(),v0.y(),v0.z());
+            }
+            soil = new Soil({x_width,y_width,0,0,field});
+
+            /*if(soil == nullptr) {*/
+//                soil = new Soil({x_width,y_width,0,0,field});
+            /*} else {
+                for(int i = 0; i < x_width*y_width; i++) {
+                    std::cout << field[i] << " " << soil->get_data().soil_field[i] << std::endl;
                 }
+                std::copy_n(field, x_width*y_width, soil->get_data().soil_field);
+            }*/
 
-                soil = new Soil({x_width,y_width,0,0,field});
-                mesh_initialized = true;
+            if(!soil_initialized) {
                 init_viz = true;
+                soil_initialized = true;
             }
         }
 
@@ -69,6 +81,11 @@ namespace gazebo {
             if(init_viz) {
                 init_soil(soil);
                 init_viz = false;
+                return;
+            }
+            if(soil_initialized) {
+                //std::cout << soil->get_data().soil_field[0].Z() << std::endl;
+                update_soil_mesh(soil);
             }
         }
 
@@ -79,16 +96,20 @@ namespace gazebo {
 
         void init_soil(Soil* soil) {
             mesh_gen = new MeshGenerator();
-
-            auto mesh = mesh_gen->generate_mesh(soil);
+            mesh = mesh_gen->generate_mesh(soil);
             common::MeshManager::Instance()->AddMesh(mesh);
 
             auto scenePtr = visual->GetScene();
             auto worldViz = scenePtr->WorldVisual();
             auto terrainViz = std::make_shared<rendering::Visual>("terrain_visual", worldViz);
-            scenePtr->AddVisual(terrainViz);
 
+            scenePtr->AddVisual(terrainViz);
             terrainViz->AttachMesh("terrain_mesh");
+        }
+
+        void update_soil_mesh(Soil* soil) {
+            //mesh = mesh_gen->generate_mesh(soil);
+            mesh_gen->update_submesh(soil);
         }
     };
 

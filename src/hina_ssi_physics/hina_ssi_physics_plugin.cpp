@@ -6,6 +6,7 @@
 #include <gazebo/rendering/rendering.hh>
 #include "../soil.cpp"
 #include "Soil.pb.h"
+#include "../../thirdparty/PerlinNoise.h"
 
 namespace gazebo {
     class HinaSSIWorldPlugin : public WorldPlugin {
@@ -13,6 +14,7 @@ namespace gazebo {
     private:
         Soil *soilPtr = nullptr;
         msgs::Vector3d *soil_v = nullptr;
+        common::Time time;
 
         transport::NodePtr node = nullptr;
         transport::PublisherPtr soilPub = nullptr;
@@ -35,7 +37,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil({50,50,0,0});
+            soilPtr = new Soil({10,10,0,0});
         }
 
         void init_transport() {
@@ -49,18 +51,37 @@ namespace gazebo {
 
         // TODO: Check timestamp for hard rt freq & dT calculation
         void update() {
-            //soilPtr = update_soil(soilPtr, 0.0f);
+            update_soil(soilPtr);
             broadcast_soil(soilPtr);
         }
 
-        void broadcast_soil(Soil* soil) {
+        void update_soil(Soil* soilPtr) {
+            auto d = soilPtr->get_data();
+            auto xlen = d.x_width;
+            auto ylen = d.y_width;
+
+            time = common::Time::GetWallTime();
+            int sec = (int)time.Double() % 100;
+
+            const siv::PerlinNoise::seed_type seed = 123456u;
+            const siv::PerlinNoise perlin{ seed };
+
+            double z = 0;
+            for(int i = 0; i < xlen*ylen; i++) {
+                auto v3 = d.soil_field[i];
+                z = 4*perlin.octave2D_01(((v3.X()+sec) * 0.1), (v3.Y() * 0.1), 4);
+                d.soil_field[i] = Vector3d(v3.X(), v3.Y(), z);
+            }
+        }
+
+        void broadcast_soil(Soil* soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;
-            auto x_w = soil->get_data().x_width;
-            auto y_w = soil->get_data().y_width;
+            auto x_w = soilPtr->get_data().x_width;
+            auto y_w = soilPtr->get_data().y_width;
             soilMsg.set_len_col(x_w);
             soilMsg.set_len_row(y_w);
             for(int idx = 0; idx < x_w*y_w; idx++) {
-                auto vert = soil->get_data().soil_field[idx];
+                auto vert = soilPtr->get_data().soil_field[idx];
                 soil_v[idx] = msgs::Vector3d();
                 soil_v[idx].set_x(vert.X());
                 soil_v[idx].set_y(vert.Y());
