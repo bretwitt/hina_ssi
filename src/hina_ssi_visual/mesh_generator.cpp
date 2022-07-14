@@ -11,52 +11,11 @@
 namespace gazebo {
     class MeshGenerator {
     private:
-        common::SubMesh* terrainSubMesh = nullptr;
-        common::Mesh* mesh = nullptr;
         rendering::ScenePtr scenePtr = nullptr;
 
-    public:
-        ~MeshGenerator() {
-            delete mesh;
-            delete terrainSubMesh;
-        }
-
-        void setScenePtr(rendering::ScenePtr scenePtr) {
-            this->scenePtr = scenePtr;
-        }
-
-        void create_ogre_mesh(Soil* soil) {
-            auto sceneManager = scenePtr->OgreSceneManager();
-            auto* manObj = sceneManager->createManualObject("terrain_mesh");
-
-            uint32_t x_size = soil->get_data().x_width;
-            uint32_t y_size = soil->get_data().y_width;
+        void tri_update(Soil* soil, Ogre::ManualObject* manObj, uint32_t x_size, uint32_t y_size) {
             uint32_t nVerts = x_size*y_size;
 
-            manObj->begin("", Ogre::RenderOperation::OT_TRIANGLE_LIST);
-            tri_update(soil, manObj, nVerts, x_size, y_size);
-            manObj->end();
-
-            sceneManager->getRootSceneNode()->createChildSceneNode()->attachObject(manObj);
-        }
-
-        void update_ogre_mesh(Soil* soil) {
-            auto sceneManager = scenePtr->OgreSceneManager();
-            auto* manObj = sceneManager->getManualObject("terrain_mesh");
-            uint32_t x_size = soil->get_data().x_width;
-            uint32_t y_size = soil->get_data().y_width;
-            uint32_t nVerts = x_size*y_size;
-
-            manObj->beginUpdate(0);
-            tri_update(soil, manObj, nVerts, x_size, y_size);
-            manObj->end();
-        }
-
-        void tri_update(Soil* soil, Ogre::ManualObject* manObj, uint32_t nVerts, uint32_t x_size, uint32_t y_size) {
-            for(uint32_t i = 0; i < nVerts; i++) {
-                auto v3 = soil->get_data().soil_field[i];
-                manObj->position(v3.X(),v3.Y(),v3.Z());
-            }
             for(uint32_t i = 0; i < nVerts; i++) {
                 auto v3 = soil->get_data().soil_field[i];
                 manObj->position(v3.X(),v3.Y(),v3.Z());
@@ -78,6 +37,35 @@ namespace gazebo {
                     manObj->index(a);
                 }
             }
+        }
+    public:
+        void setScenePtr(rendering::ScenePtr scenePtr) {
+            this->scenePtr = scenePtr;
+        }
+
+        void create_ogre_mesh(Soil* soil) {
+            auto sceneManager = scenePtr->OgreSceneManager();
+            auto* manObj = sceneManager->createManualObject("terrain_mesh");
+
+            uint32_t x_size = soil->get_data().x_width;
+            uint32_t y_size = soil->get_data().y_width;
+
+            manObj->begin("", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+            tri_update(soil, manObj, x_size, y_size);
+            manObj->end();
+
+            sceneManager->getRootSceneNode()->createChildSceneNode()->attachObject(manObj);
+        }
+
+        void update_ogre_mesh(Soil* soil) {
+            auto sceneManager = scenePtr->OgreSceneManager();
+            auto* manObj = sceneManager->getManualObject("terrain_mesh");
+            uint32_t x_size = soil->get_data().x_width;
+            uint32_t y_size = soil->get_data().y_width;
+
+            manObj->beginUpdate(0);
+            tri_update(soil, manObj, x_size, y_size);
+            manObj->end();
         }
     };
 }
