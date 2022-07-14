@@ -37,7 +37,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil({10,10,0,0});
+            soilPtr = new Soil({100,100,0,0});
         }
 
         void init_transport() {

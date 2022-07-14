@@ -56,21 +56,13 @@ namespace gazebo {
 
             auto v = soil_update->flattened_field();
 
-            uint32_t i = 0;
-            if(field == nullptr) {
-                field = new Vector3d[x_width*y_width];
-            }
-
-            for(const gazebo::msgs::Vector3d& v0 : v) {
-                field[i++] = Vector3d(v0.x(),v0.y(),v0.z());
-            }
-
             if(soil == nullptr) {
-                soil = new Soil({x_width,y_width,0,0,field});
-            } else {
-                for(size_t i = 0; i < x_width*y_width; i++) {
-                    soil->get_data().soil_field[i] = field[i];
-                }
+                soil = new Soil({x_width,y_width,0,0});
+            }
+
+            uint32_t i = 0;
+            for(const gazebo::msgs::Vector3d& v0 : v) {
+                soil->get_data().soil_field[i++] = Vector3d(v0.x(),v0.y(),v0.z());
             }
 
             if(!soil_initialized) {

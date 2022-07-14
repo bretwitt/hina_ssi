@@ -50,7 +50,9 @@ namespace gazebo {
 
             for(int i = 0; i < _data.x_width; i++) {
                 for(int j = 0; j < _data.y_width; j++) {
-                    _data.setFieldAtIndex(i,j,Vector3d(i + _data.x_offset,j + _data.y_offset,0.0));
+                    auto i_f = (float)i;
+                    auto j_f = (float)j;
+                    _data.setFieldAtIndex(i,j,Vector3d(i_f + _data.x_offset,j_f + _data.y_offset,0.0));
                 }
             }
         }
