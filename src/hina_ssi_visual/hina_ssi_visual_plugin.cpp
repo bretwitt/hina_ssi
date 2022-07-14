@@ -19,9 +19,11 @@ namespace gazebo {
 
         event::ConnectionPtr connectionPtr = nullptr;
         rendering::VisualPtr visual = nullptr;
+        rendering::VisualPtr terrainViz = nullptr;
         transport::NodePtr node = nullptr;
         transport::SubscriberPtr sub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
+
 
         bool soil_initialized = false;
         bool init_viz = false;
@@ -36,7 +38,7 @@ namespace gazebo {
         }
 
         void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) override {
-            connectionPtr = event::Events::ConnectPreRender(boost::bind(&HinaSSIVisualPlugin::update, this));
+            connectionPtr = event::Events::ConnectRender(boost::bind(&HinaSSIVisualPlugin::update, this));
             init_transport();
             visual = _visual;
         }
@@ -61,15 +63,6 @@ namespace gazebo {
                 field[i++] = Vector3d(v0.x(),v0.y(),v0.z());
             }
             soil = new Soil({x_width,y_width,0,0,field});
-
-            /*if(soil == nullptr) {*/
-//                soil = new Soil({x_width,y_width,0,0,field});
-            /*} else {
-                for(int i = 0; i < x_width*y_width; i++) {
-                    std::cout << field[i] << " " << soil->get_data().soil_field[i] << std::endl;
-                }
-                std::copy_n(field, x_width*y_width, soil->get_data().soil_field);
-            }*/
 
             if(!soil_initialized) {
                 init_viz = true;
@@ -96,20 +89,12 @@ namespace gazebo {
 
         void init_soil(Soil* soil) {
             mesh_gen = new MeshGenerator();
-            mesh = mesh_gen->generate_mesh(soil);
-            common::MeshManager::Instance()->AddMesh(mesh);
-
-            auto scenePtr = visual->GetScene();
-            auto worldViz = scenePtr->WorldVisual();
-            auto terrainViz = std::make_shared<rendering::Visual>("terrain_visual", worldViz);
-
-            scenePtr->AddVisual(terrainViz);
-            terrainViz->AttachMesh("terrain_mesh");
+            mesh_gen->setScenePtr(visual->GetScene());
+            mesh_gen->create_ogre_mesh(soil);
         }
 
         void update_soil_mesh(Soil* soil) {
-            //mesh = mesh_gen->generate_mesh(soil);
-            mesh_gen->update_submesh(soil);
+            mesh_gen->update_ogre_mesh(soil);
         }
     };
 
