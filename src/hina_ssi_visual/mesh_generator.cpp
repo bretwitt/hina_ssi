@@ -17,6 +17,7 @@ namespace gazebo {
         rendering::ScenePtr scenePtr = nullptr;
         Vector3d* field = nullptr;
         Ogre::Vector3* vertex_normals;
+        Ogre::ManualObject* manObj;
 
         void tri_update(Soil* soil, Ogre::ManualObject* manObj, uint32_t x_size, uint32_t y_size) {
             uint32_t nVerts = x_size*y_size;
@@ -55,9 +56,7 @@ namespace gazebo {
 
         void calculate_vertex_normals(Vector3d* field, uint32_t x_size, uint32_t y_size, Ogre::Vector3* vertex_normals) {
 
-            for(uint32_t i = 0; i < x_size*y_size; i++) {
-                vertex_normals[i] = Ogre::Vector3(0,0,0);
-            }
+            std::fill_n(vertex_normals, x_size*y_size, Ogre::Vector3(0,0,0));
 
             for(uint32_t y = 0; y < y_size - 1; y++) {
                 for(uint32_t x = 0; x < x_size - 1; x++) {
@@ -96,7 +95,7 @@ namespace gazebo {
 
         void create_ogre_mesh(Soil* soil) {
             auto sceneManager = scenePtr->OgreSceneManager();
-            auto* manObj = sceneManager->createManualObject("terrain_mesh");
+            manObj = sceneManager->createManualObject("terrain_mesh");
 
             uint32_t x_size = soil->get_data().x_width;
             uint32_t y_size = soil->get_data().y_width;
@@ -108,8 +107,6 @@ namespace gazebo {
         }
 
         void update_ogre_mesh(Soil* soil) {
-            auto sceneManager = scenePtr->OgreSceneManager();
-            auto* manObj = sceneManager->getManualObject("terrain_mesh");
             uint32_t x_size = soil->get_data().x_width;
             uint32_t y_size = soil->get_data().y_width;
 
