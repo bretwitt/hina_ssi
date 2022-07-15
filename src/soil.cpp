@@ -9,6 +9,7 @@ namespace gazebo {
     struct SoilData {
         int x_width = 5;
         int y_width = 5;
+        double scale = 1.0;
         double x_offset = 0;
         double y_offset = 0;
         Vector3d * soil_field{};
