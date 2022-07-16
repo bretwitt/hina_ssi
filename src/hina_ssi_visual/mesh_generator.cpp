@@ -27,8 +27,9 @@ namespace gazebo {
 
             calculate_vertex_normals(field, x_size, y_size, vertex_normals);
 
+            auto vertices = soil->get_data().soil_field;
             for(uint32_t i = 0; i < nVerts; i++) {
-                auto v3 = soil->get_data().soil_field[i];
+                auto v3 = vertices[i];
                 manObj->position(v3.X(),v3.Y(),v3.Z());
                 manObj->normal(vertex_normals[i]);
 
@@ -36,21 +37,9 @@ namespace gazebo {
                 if(i == nVerts - 1) manObj->textureCoord(1,1);
             }
 
-            for(uint32_t y = 0; y < y_size - 1; y++) {
-                for(uint32_t x = 0; x < x_size - 1; x++) {
-                    uint32_t a = (x_size * x) + y;
-                    uint32_t b = (x_size * (x + 1)) + y;
-                    uint32_t c = (x_size * (x + 1)) + (y + 1);
-                    uint32_t d = (x_size * x) + (y + 1);
-
-                    manObj->index(a);
-                    manObj->index(d);
-                    manObj->index(c);
-
-                    manObj->index(c);
-                    manObj->index(b);
-                    manObj->index(a);
-                }
+            auto indices = soil->get_data().indices;
+            for(uint32_t i = 0; i < (x_size - 1)*(y_size - 1)*3*2;) {
+                manObj->index(indices[i++]);
             }
         }
 
