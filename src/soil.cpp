@@ -2,7 +2,13 @@
 #define SOIL_CPP
 
 #include <gazebo/common/common.hh>
+#include <CGAL/intersections.h>
+#include <CGAL/Triangle_2.h>
+#include <CGAL/Cartesian.h>
+
 using ignition::math::Vector3d;
+using namespace CGAL;
+typedef CGAL::Cartesian<double> Kernel;
 
 namespace gazebo {
 
@@ -24,10 +30,19 @@ namespace gazebo {
             soil_field[x_width*y + x] = v;
         }
     };
+
     struct Triangle {
         Vector3d v1;
         Vector3d v2;
         Vector3d v3;
+
+        auto as_cgal_p3(Vector3d v) {
+            return Point_3<Kernel>(v1.X(), v1.Y(), v1.Z());
+        }
+
+        auto as_cgal_tri() {
+            return Triangle_3<Kernel>(as_cgal_p3(v1),as_cgal_p3(v2),as_cgal_p3(v3));
+        }
     };
 
     class Soil {
@@ -93,12 +108,13 @@ namespace gazebo {
 
         // bool intersects(ContactMesh* mesh) {}
 
-        bool intersects(Vector3d v1, Vector3d v2, Vector3d v3) {
+        bool intersects(Triangle meshTri) {
             // AABB
         }
 
         bool intersects(Triangle meshTri, Triangle soilTri) {
-
+            auto intersection = CGAL::intersection(meshTri.as_cgal_tri(),soilTri.as_cgal_tri());
+            return !intersection->empty();
         }
     };
 }
