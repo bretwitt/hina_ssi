@@ -62,7 +62,7 @@ namespace gazebo {
 
             uint32_t i = 0;
             for(const gazebo::msgs::Vector3d& v0 : v) {
-                soil->get_data().soil_field[i++] = 0.1f * Vector3d(v0.x(),v0.y(),v0.z());
+                soil->get_data().soil_field[i++] = Vector3d(v0.x(),v0.y(),v0.z());
             }
 
             if(!soil_initialized) {

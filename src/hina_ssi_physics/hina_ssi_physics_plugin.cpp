@@ -14,12 +14,21 @@ namespace gazebo {
     private:
         Soil *soilPtr = nullptr;
         msgs::Vector3d *soil_v = nullptr;
-        common::Time time;
 
         transport::NodePtr node = nullptr;
         transport::PublisherPtr soilPub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
 
+        const siv::PerlinNoise::seed_type seed = 123456u;
+        const siv::PerlinNoise perlin{ seed };
+
+        double z;
+        Vector3d v3;
+
+        common::Time time;
+        double sec;
+        double last_sec;
+        double last_sec_viz;
 
     public:
         HinaSSIWorldPlugin() : WorldPlugin() {
@@ -37,7 +46,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil({1000,1000,1.0});
+            soilPtr = new Soil({100,100,0.01f});
         }
 
         void init_transport() {
@@ -49,10 +58,20 @@ namespace gazebo {
         }
 
 
-        // TODO: Check timestamp for hard rt freq & dT calculation
         void update() {
-            update_soil(soilPtr);
-            broadcast_soil(soilPtr);
+            time = common::Time::GetWallTime();
+            sec = time.Double();
+            double dt = sec - last_sec;
+            double dt_viz = sec - last_sec_viz;
+
+            if(dt > (1./30)) {
+                update_soil(soilPtr);
+                last_sec = sec;
+            }
+            if(dt_viz > (1./5)) {
+                broadcast_soil(soilPtr);
+                last_sec_viz = sec;
+            }
         }
 
         void update_soil(Soil* soilPtr) {
@@ -60,18 +79,14 @@ namespace gazebo {
             auto xlen = _soilData.x_width;
             auto ylen = _soilData.y_width;
 
-            time = common::Time::GetWallTime();
-            int sec = (int)time.Double() % 100;
-
-            const siv::PerlinNoise::seed_type seed = 123456u;
-            const siv::PerlinNoise perlin{ seed };
-
-            double z;
-            Vector3d v3;
             for(uint32_t i = 0; i < xlen*ylen; i++) {
+
                 v3 = _soilData.soil_field[i];
-                z = 4*perlin.octave2D_01(((v3.X()+sec) * 0.1), (v3.Y() * 0.1), 4);
+
+                z = 0; //4*perlin.octave2D_01(((v3.X()+sec) * 0.1), (v3.Y() * 0.1), 4);
+
                 _soilData.soil_field[i] = Vector3d(v3.X(), v3.Y(), z);
+
             }
         }
 

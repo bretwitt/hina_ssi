@@ -53,14 +53,15 @@ namespace gazebo {
                 for(int j = 0; j < _data.y_width; j++) {
                     auto i_f = (float)i;
                     auto j_f = (float)j;
-                    _data.setFieldAtIndex(i,j,Vector3d(i_f + _data.x_offset,j_f + _data.y_offset,0.0));
+                    auto v3 = Vector3d(_data.scale*(i_f + _data.x_offset),_data.scale*(j_f + _data.y_offset),0.0);
+                    _data.setFieldAtIndex(i,j,v3);
                 }
             }
         }
 
         // bool intersects(ContactMesh* mesh) {}
 
-        bool intersects(Vector3d v1, Vector3d v2, Vector3d v3, Vector3d normal) {
+        bool intersects(Vector3d v1, Vector3d v2, Vector3d v3) {
             // AABB
         }
     };
