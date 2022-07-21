@@ -98,30 +98,6 @@ namespace gazebo {
             }
         }
 
-//        void init_model_meshes() {
-//            auto models = world->Models();
-//            for(const auto& model : models) {
-//                for(const auto& link : model->GetLinks()) {
-//                    for(const auto& collider : link->GetCollisions()) {
-//                        auto shape = collider->GetShape();
-//                        if(shape->HasType(shape->MESH_SHAPE)) {
-//                            init_mesh_shape_uri(shape);
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//
-//        void init_mesh_shape_uri(const physics::ShapePtr& shape) {
-//            auto meshPtr = boost::dynamic_pointer_cast<physics::MeshShapePtr>(shape);
-//            if(meshPtr != nullptr && meshPtr->get() != nullptr) {
-//                auto meshURI = meshPtr->get()->GetMeshURI();
-//                auto modelName = shape->GetName();
-//                model_mesh_uri.insert(std::pair<std::string,std::string>(modelName,meshURI));
-//            }
-//        }
-
-
         void update() {
             time = common::Time::GetWallTime();
             sec = time.Double();
@@ -150,9 +126,12 @@ namespace gazebo {
                     auto submesh = mesh->GetSubMesh(i++);
                     uint32_t indices = submesh->GetIndexCount();
                     for(uint32_t idx = 0; idx < indices;) {
-                        auto tri0 = submesh->GetIndex(idx++);
-                        auto tri1 = submesh->GetIndex(idx++);
-                        auto tri2 = submesh->GetIndex(idx++);
+                        auto v0 = submesh->Vertex(submesh->GetIndex(idx++));
+                        auto v1 = submesh->Vertex(submesh->GetIndex(idx++));
+                        auto v2 = submesh->Vertex(submesh->GetIndex(idx++));
+
+                        bool itsx = soilPtr->intersects(Triangle(v0, v1, v2));
+                        std::cout << itsx << std::endl;
                     }
                 }
             }
