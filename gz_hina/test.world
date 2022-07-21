@@ -25,26 +25,26 @@
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
     <model name="wheel">
-     <link name='wheel'>
-          <gravity>1</gravity>
-          <collision name="collision">
-              <geometry>
-                  <mesh><uri>file://box.dae</uri></mesh>
-              </geometry>
-          </collision>
-          <visual name='visual'>
-            <cast_shadows>1</cast_shadows>
-            <geometry>
-                <mesh><uri>file://box.dae</uri></mesh>
-            </geometry>
-            <material>
-              <script>
-                <uri>file://media/materials/scripts/gazebo.material</uri>
-                <name>Gazebo/Grey</name>
-              </script>
-            </material>
-          </visual>
-      </link>
+    <link name='wheel'>
+      <gravity>1</gravity>
+      <collision name="collision">
+          <geometry>
+              <mesh><uri>file://box.dae</uri></mesh>
+          </geometry>
+      </collision>
+      <visual name='visual'>
+        <cast_shadows>1</cast_shadows>
+        <geometry>
+            <mesh><uri>file://box.dae</uri></mesh>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Grey</name>
+          </script>
+        </material>
+      </visual>
+    </link>
     <pose>0 0 20 0 -0 0</pose>
     </model>
     <model name='ground_plane'>

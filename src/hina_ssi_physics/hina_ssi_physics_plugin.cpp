@@ -5,6 +5,7 @@
 #include <memory>
 #include <gazebo/rendering/rendering.hh>
 #include <gazebo/physics/physics.hh>
+#include <utility>
 #include "../soil.cpp"
 #include "Soil.pb.h"
 #include "../../thirdparty/PerlinNoise.h"
@@ -20,13 +21,14 @@ namespace gazebo {
         transport::PublisherPtr soilPub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
         physics::WorldPtr world = nullptr;
+        sdf::ElementPtr sdf = nullptr;
 
         const siv::PerlinNoise::seed_type seed = 123456u;
         const siv::PerlinNoise perlin{ seed };
 
         double z;
         Vector3d v3;
-        std::map<std::string, std::string> model_mesh_uri;
+        std::map<std::string, const common::Mesh*> mesh_lookup;
 
         common::Time time;
         double sec;
@@ -45,9 +47,10 @@ namespace gazebo {
         void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
             updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
             world = _world;
+            sdf = _sdf;
             init_soil();
             init_transport();
-            init_model_meshes();
+            load_meshes();
         }
 
         void init_soil() {
@@ -62,26 +65,61 @@ namespace gazebo {
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
         }
 
-        void init_model_meshes() {
-            auto models = world->Models();
-            for(const auto& model : models) {
-                for(const auto& link : model->GetLinks()) {
-                    for(const auto& collider : link->GetCollisions()) {
-                        auto shape = collider->GetShape();
-                        //init_model_mesh_uri(shape);
+        void load_meshes() {
+            auto modelElemPtr = sdf->GetParent()->GetElement("model");
+            auto link = sdf->GetElement("link");
+            while(modelElemPtr != nullptr) {
+                if(!modelElemPtr->HasElement("link")) break;
+                auto linkElemPtr = modelElemPtr->GetElement("link");
+                while(linkElemPtr != nullptr) {
+                    if(!linkElemPtr->HasElement("collision")) break;
+                    auto collElemPtr = linkElemPtr->GetElement("collision");
+                    if(collElemPtr != nullptr) {
+                        if(!collElemPtr->HasElement("geometry")) break;
+                        auto geomElemPtr = collElemPtr->GetElement("geometry");
+                        if(geomElemPtr != nullptr) {
+                            auto meshElemPtr = geomElemPtr->GetElement("mesh");
+                            if(!geomElemPtr->HasElement("mesh")) break;
+                            if(meshElemPtr != nullptr) {
+                                auto uriElemPtr = meshElemPtr->GetElement("uri");
+                                if(!meshElemPtr->HasElement("uri")) break;
+                                if(uriElemPtr != nullptr) {
+                                    auto model = modelElemPtr->GetAttribute("name")->GetAsString();
+                                    auto uri = uriElemPtr->Get<std::string>();
+                                    auto mesh = common::MeshManager::Instance()->Load(uri);
+                                    mesh_lookup.insert(std::pair<std::string, const common::Mesh*>(model, mesh));
+                                }
+                            }
+                        }
                     }
+                    linkElemPtr = linkElemPtr->GetNextElement();
                 }
+                modelElemPtr = modelElemPtr->GetNextElement();
             }
         }
 
-        void init_model_mesh_uri(const physics::ShapePtr& shape) {
-            if(shape->HasType(shape->MESH_SHAPE)) {
-                boost::shared_ptr<physics::MeshShapePtr> meshPtr = boost::dynamic_pointer_cast<physics::MeshShapePtr>(shape);
-                auto meshURI = meshPtr->get()->GetMeshURI();
-                auto modelName = shape->GetName();
-                model_mesh_uri.insert(std::pair<std::string,std::string>(modelName,meshURI));
-            }
-        }
+//        void init_model_meshes() {
+//            auto models = world->Models();
+//            for(const auto& model : models) {
+//                for(const auto& link : model->GetLinks()) {
+//                    for(const auto& collider : link->GetCollisions()) {
+//                        auto shape = collider->GetShape();
+//                        if(shape->HasType(shape->MESH_SHAPE)) {
+//                            init_mesh_shape_uri(shape);
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        void init_mesh_shape_uri(const physics::ShapePtr& shape) {
+//            auto meshPtr = boost::dynamic_pointer_cast<physics::MeshShapePtr>(shape);
+//            if(meshPtr != nullptr && meshPtr->get() != nullptr) {
+//                auto meshURI = meshPtr->get()->GetMeshURI();
+//                auto modelName = shape->GetName();
+//                model_mesh_uri.insert(std::pair<std::string,std::string>(modelName,meshURI));
+//            }
+//        }
 
 
         void update() {
@@ -105,7 +143,19 @@ namespace gazebo {
         }
 
         void detect_collisions() {
-
+            for(std::pair<std::string, const common::Mesh*> pair : mesh_lookup) {
+                auto modelName = pair.first;
+                auto mesh = pair.second;
+                for(uint32_t i = 0; i < mesh->GetSubMeshCount();) {
+                    auto submesh = mesh->GetSubMesh(i++);
+                    uint32_t indices = submesh->GetIndexCount();
+                    for(uint32_t idx = 0; idx < indices;) {
+                        auto tri0 = submesh->GetIndex(idx++);
+                        auto tri1 = submesh->GetIndex(idx++);
+                        auto tri2 = submesh->GetIndex(idx++);
+                    }
+                }
+            }
         }
 
         void broadcast_soil(Soil* soilPtr) {
