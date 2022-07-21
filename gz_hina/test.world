@@ -2,7 +2,6 @@
 <sdf version='1.7'>	
   <world name='empty'>
     <plugin name='hina_physics' filename='src/hina_ssi_physics/libhina_ssi_plugin_physics.so'>
-        <link name="wheel"/>
     </plugin>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
@@ -25,6 +24,29 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
+    <model name="wheel">
+     <link name='wheel'>
+          <gravity>1</gravity>
+          <collision name="collision">
+              <geometry>
+                  <mesh><uri>file://box.dae</uri></mesh>
+              </geometry>
+          </collision>
+          <visual name='visual'>
+            <cast_shadows>1</cast_shadows>
+            <geometry>
+                <mesh><uri>file://box.dae</uri></mesh>
+            </geometry>
+            <material>
+              <script>
+                <uri>file://media/materials/scripts/gazebo.material</uri>
+                <name>Gazebo/Grey</name>
+              </script>
+            </material>
+          </visual>
+      </link>
+    <pose>0 0 20 0 -0 0</pose>
+    </model>
     <model name='ground_plane'>
       <static>1</static>
       <link name='link'>

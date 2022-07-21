@@ -36,6 +36,12 @@ namespace gazebo {
         Vector3d v2;
         Vector3d v3;
 
+        Triangle(Vector3d v1, Vector3d v2, Vector3d v3) {
+            this->v1 = v1;
+            this->v2 = v2;
+            this->v3 = v3;
+        }
+
         auto as_cgal_p3(Vector3d v) {
             return Point_3<Kernel>(v1.X(), v1.Y(), v1.Z());
         }
@@ -106,10 +112,25 @@ namespace gazebo {
             }
         }
 
-        // bool intersects(ContactMesh* mesh) {}
+        //bool intersects(ContactMesh* mesh) {}
 
         bool intersects(Triangle meshTri) {
-            // AABB
+            uint32_t idx = 0;
+            auto x_size = _data.x_width;
+            auto y_size = _data.y_width;
+            auto indices = _data.indices;
+            auto verts = _data.soil_field;
+
+            for(uint32_t n = 0; n < (x_size - 1)*(y_size - 1)*2; n++) {
+                auto p0 = verts[indices[idx++]];
+                auto p1 = verts[indices[idx++]];
+                auto p2 = verts[indices[idx++]];
+                Triangle soilTri(p0,p1,p2);
+                if(intersects(meshTri,soilTri)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         bool intersects(Triangle meshTri, Triangle soilTri) {

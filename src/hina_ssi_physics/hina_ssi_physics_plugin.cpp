@@ -4,6 +4,7 @@
 #include <gazebo/common/common.hh>
 #include <memory>
 #include <gazebo/rendering/rendering.hh>
+#include <gazebo/physics/physics.hh>
 #include "../soil.cpp"
 #include "Soil.pb.h"
 #include "../../thirdparty/PerlinNoise.h"
@@ -18,12 +19,14 @@ namespace gazebo {
         transport::NodePtr node = nullptr;
         transport::PublisherPtr soilPub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
+        physics::WorldPtr world = nullptr;
 
         const siv::PerlinNoise::seed_type seed = 123456u;
         const siv::PerlinNoise perlin{ seed };
 
         double z;
         Vector3d v3;
+        std::map<std::string, std::string> model_mesh_uri;
 
         common::Time time;
         double sec;
@@ -41,8 +44,10 @@ namespace gazebo {
 
         void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
             updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
+            world = _world;
             init_soil();
             init_transport();
+            init_model_meshes();
         }
 
         void init_soil() {
@@ -55,6 +60,27 @@ namespace gazebo {
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
+        }
+
+        void init_model_meshes() {
+            auto models = world->Models();
+            for(const auto& model : models) {
+                for(const auto& link : model->GetLinks()) {
+                    for(const auto& collider : link->GetCollisions()) {
+                        auto shape = collider->GetShape();
+                        //init_model_mesh_uri(shape);
+                    }
+                }
+            }
+        }
+
+        void init_model_mesh_uri(const physics::ShapePtr& shape) {
+            if(shape->HasType(shape->MESH_SHAPE)) {
+                boost::shared_ptr<physics::MeshShapePtr> meshPtr = boost::dynamic_pointer_cast<physics::MeshShapePtr>(shape);
+                auto meshURI = meshPtr->get()->GetMeshURI();
+                auto modelName = shape->GetName();
+                model_mesh_uri.insert(std::pair<std::string,std::string>(modelName,meshURI));
+            }
         }
 
 
@@ -75,19 +101,11 @@ namespace gazebo {
         }
 
         void update_soil(Soil* soilPtr) {
-            auto _soilData = soilPtr->get_data();
-            auto xlen = _soilData.x_width;
-            auto ylen = _soilData.y_width;
+            detect_collisions();
+        }
 
-            for(uint32_t i = 0; i < xlen*ylen; i++) {
+        void detect_collisions() {
 
-                v3 = _soilData.soil_field[i];
-
-                z = 0; //4*perlin.octave2D_01(((v3.X()+sec) * 0.1), (v3.Y() * 0.1), 4);
-
-                _soilData.soil_field[i] = Vector3d(v3.X(), v3.Y(), z);
-
-            }
         }
 
         void broadcast_soil(Soil* soilPtr) {
