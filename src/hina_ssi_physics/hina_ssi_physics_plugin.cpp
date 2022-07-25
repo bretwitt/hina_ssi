@@ -6,7 +6,7 @@
 #include <gazebo/rendering/rendering.hh>
 #include <gazebo/physics/physics.hh>
 #include <utility>
-#include "../soil.cpp"
+#include "../common/soil.cpp"
 #include "Soil.pb.h"
 #include "../../thirdparty/PerlinNoise.h"
 
@@ -54,7 +54,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil({100,100,0.1f});
+            soilPtr = new Soil({5,5,1.0f});
         }
 
         void init_transport() {
@@ -67,7 +67,6 @@ namespace gazebo {
 
         void load_meshes() {
             auto modelElemPtr = sdf->GetParent()->GetElement("model");
-            auto link = sdf->GetElement("link");
             while(modelElemPtr != nullptr) {
                 if(!modelElemPtr->HasElement("link")) break;
                 auto linkElemPtr = modelElemPtr->GetElement("link");
@@ -129,9 +128,12 @@ namespace gazebo {
                         auto v0 = submesh->Vertex(submesh->GetIndex(idx++));
                         auto v1 = submesh->Vertex(submesh->GetIndex(idx++));
                         auto v2 = submesh->Vertex(submesh->GetIndex(idx++));
+                        auto meshTri = Triangle(v0, v1, v2);
 
-                        bool itsx = soilPtr->intersects(Triangle(v0, v1, v2));
-                        std::cout << itsx << std::endl;
+                        std::vector<std::pair<uint32_t, uint32_t>> candidates;
+                        soilPtr->find_intersection_candidates(meshTri, candidates);
+                        soilPtr->try_deform(meshTri, candidates, 0.1f);
+
                     }
                 }
             }
@@ -144,7 +146,7 @@ namespace gazebo {
 
             Vector3d vert;
             for(int idx = 0; idx < x_w*y_w; idx++) {
-                vert = soilPtr->get_data().soil_field[idx];
+                vert = soilPtr->get_data().vertex_at_flattened_index(idx);
                 soil_v[idx] = msgs::Vector3d();
                 soil_v[idx].set_x(vert.X());
                 soil_v[idx].set_y(vert.Y());

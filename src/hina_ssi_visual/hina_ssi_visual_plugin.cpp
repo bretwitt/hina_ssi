@@ -6,7 +6,7 @@
 #include <gazebo/rendering/rendering.hh>
 #include "mesh_generator.cpp"
 #include "Soil.pb.h"
-#include "../soil.cpp"
+#include "../common/soil.cpp"
 
 namespace gazebo {
     class HinaSSIVisualPlugin : public VisualPlugin {
@@ -62,7 +62,7 @@ namespace gazebo {
 
             uint32_t i = 0;
             for(const gazebo::msgs::Vector3d& v0 : v) {
-                soil->get_data().soil_field[i++] = Vector3d(v0.x(),v0.y(),v0.z());
+                soil->get_data().set_vertex_at_flattened_index(i++, Vector3d(v0.x(), v0.y(), v0.z()));
             }
 
             if(!soil_initialized) {
