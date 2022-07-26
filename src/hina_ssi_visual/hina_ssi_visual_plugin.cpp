@@ -6,7 +6,6 @@
 #include <gazebo/rendering/rendering.hh>
 #include "mesh_generator.cpp"
 #include "Soil.pb.h"
-#include "../common/soil.cpp"
 
 namespace gazebo {
     class HinaSSIVisualPlugin : public VisualPlugin {

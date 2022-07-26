@@ -6,7 +6,7 @@
 #include <CGAL/Triangle_2.h>
 #include <CGAL/Cartesian.h>
 #include <CGAL/Point_2.h>
-
+#include "../../thirdparty/MollerTest.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
@@ -71,6 +71,14 @@ namespace gazebo {
             auto c_rd = Point_2<Kernel>(rd.X(), rd.Y());
             return Iso_rectangle_2<Kernel>(c_lu, c_ru, c_ld, c_rd);
         }
+
+        Vector2d center() {
+            return Vector2d((lu.X() + ru.X()) * 0.5, (lu.Y() + ld.Y()) * 0.5);
+        }
+
+        Vector2d half_size() {
+            return Vector2d(lu.X(), lu.Y());
+        }
     };
 
     class CGALGeometry {
@@ -82,6 +90,21 @@ namespace gazebo {
                 return true;
             }
             return false;
+        }
+    };
+
+    class Geometry {
+    public:
+        static bool intersects_box_tri(Triangle tri, AABB aabb) {
+            float boxCenter[3] = { static_cast<float>(aabb.center().X()), static_cast<float>(aabb.center().Y()), 0.0 };
+            float boxHalfSize[3] = { static_cast<float>(aabb.half_size().X()), static_cast<float>(aabb.half_size().Y()), 0.0 };
+            float triVerts[3][3] =
+                    {
+                        { static_cast<float>(tri.v1.X()), static_cast<float>(tri.v1.Y()), 0 },
+                        { static_cast<float>(tri.v2.X()), static_cast<float>(tri.v2.Y()), 0 },
+                        { static_cast<float>(tri.v3.X()), static_cast<float>(tri.v3.Y()), 0 }
+                    };
+            return triBoxOverlap( boxCenter, boxHalfSize, triVerts);
         }
     };
 }

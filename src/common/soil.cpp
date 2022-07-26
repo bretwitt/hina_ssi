@@ -5,7 +5,6 @@
 #include <utility>
 #include "geometry.cpp"
 
-
 namespace gazebo {
 
     struct SoilData {
@@ -137,11 +136,13 @@ namespace gazebo {
                 return;
             }
 
+            std::cout << meshTri.v1 << " " << meshTri.v2 << " " << meshTri.v3 << std::endl;
+
             std::vector<std::pair<uint32_t, uint32_t>> idx_v;
 
             get_hash_idx_within_tri_rect_bounds(meshTri, idx_v);
 
-            double w = 0.5;
+            double w = 0.2;
 
             for(const auto& point : idx_v) {
                 auto v3 = _data->get_vertex_at_index(point.first, point.second);
@@ -183,7 +184,7 @@ namespace gazebo {
         }
 
         bool intersects_projected(Triangle meshTri, AABB vertexRect) {
-            return CGALGeometry::intersects_projected(std::move(meshTri), std::move(vertexRect));
+            return Geometry::intersects_box_tri(meshTri, vertexRect) ;
         }
 
         void terramx_deform(uint32_t x, uint32_t y, Vector3d v3) {
