@@ -26,7 +26,7 @@
     </spherical_coordinates>
     <model name="wheel">
     <link name='wheel'>
-      <gravity>1</gravity>
+      <gravity>0</gravity>
       <collision name="collision">
           <geometry>
               <mesh><uri>file://box.dae</uri></mesh>
@@ -45,7 +45,7 @@
         </material>
       </visual>
     </link>
-    <pose>0 0 20 0 -0 0</pose>
+    <pose>0 0 2 0 -0 0</pose>
     </model>
     <model name='ground_plane'>
       <static>1</static>

@@ -31,9 +31,6 @@ namespace gazebo {
             indices = new uint32_t[(x_width - 1) * (y_width - 1) * 3 * 2];
         }
 
-        void reset_collisions() {
-
-        }
 
         Vector3d vertex_at_flattened_index(uint32_t idx) const {
             uint32_t x;
@@ -62,16 +59,10 @@ namespace gazebo {
             (*soil_hashmap)[x][y] = vtx;
         }
 
-        void get_nearest_index(Vector3d vtx, uint32_t& x, uint32_t& y) const {
-            auto x_unrounded = (vtx.X() - x_offset) / scale;
-            auto y_unrounded = (vtx.Y() - x_offset) / scale;
-            x = (int)x_unrounded;
-            y = (int)y_unrounded;
-        }
-
         void get_nearest_index(Vector2d vtx, uint32_t& x, uint32_t& y) const {
-            auto x_unrounded = (vtx.X() - x_offset) / scale;
-            auto y_unrounded = (vtx.Y() - x_offset) / scale;
+            auto x_unrounded = (vtx.X() / scale) - x_offset;
+            auto y_unrounded = (vtx.Y() / scale) - y_offset;
+
             x = (int)x_unrounded;
             y = (int)y_unrounded;
         }
@@ -104,14 +95,15 @@ namespace gazebo {
         }
 
         void generate_soil_vertices() {
-            _data->x_offset = -(double) _data->x_width / 2;
-            _data->y_offset = -(double) _data->y_width / 2;
+            _data->x_offset = -(double) (_data->x_width - 1) / 2;
+            _data->y_offset = -(double) (_data->y_width - 1) / 2;
 
             for (int i = 0; i < _data->x_width; i++) {
                 for (int j = 0; j < _data->y_width; j++) {
                     auto i_f = (float) i;
                     auto j_f = (float) j;
                     auto v3 = Vector3d(_data->scale * (i_f + _data->x_offset), _data->scale * (j_f + _data->y_offset), 0.0);
+
                     _data->set_vertex_at_index(i, j, v3);
                 }
             }
@@ -140,9 +132,14 @@ namespace gazebo {
             }
         }
 
-        void try_deform(const Triangle& meshTri) {
+        void try_deform(Triangle& meshTri) {
+            if (meshTri.as_cgal_tri_proj().is_degenerate()) {
+                return;
+            }
+
             std::vector<std::pair<uint32_t, uint32_t>> idx_v;
-            find_intersection_candidates(meshTri, idx_v);
+
+            get_hash_idx_within_tri_rect_bounds(meshTri, idx_v);
 
             double w = 0.5;
 
@@ -154,58 +151,28 @@ namespace gazebo {
             }
         }
 
-        void find_intersection_candidates(const Triangle& meshTri, std::vector<std::pair<uint32_t, uint32_t>>& candidates) {
-            _data->reset_collisions();
+        void get_hash_idx_within_tri_rect_bounds(Triangle meshTri, std::vector<std::pair<uint32_t, uint32_t>>& idx) {
+            auto max_x = max(meshTri.v1.X(), max(meshTri.v2.X(), meshTri.v3.X()));
+            auto max_y = max(meshTri.v1.Y(), max(meshTri.v2.Y(), meshTri.v3.Y()));
+            auto min_x = min(meshTri.v1.X(), min(meshTri.v2.X(), meshTri.v3.X()));
+            auto min_y = min(meshTri.v1.Y(), min(meshTri.v2.Y(), meshTri.v3.Y()));
 
-            std::vector<Vector2d> points;
-            generate_sampling_points(meshTri,points);
+            auto scale = _data->scale;
 
-            for(auto& point : points) {
-                uint32_t x = 0;
-                uint32_t y = 0;
-                _data->get_nearest_index(point, x, y);
-                candidates.emplace_back(x,y);
-            }
-        }
+            auto iter_x = ceil( ((max_x - min_x) / scale) );
+            auto iter_y = ceil( ((max_y - min_y) / scale) );
 
-        void generate_sampling_points(const Triangle& meshTri, std::vector<Vector2d>& points) {
-            std::unordered_map<double, std::unordered_map<double, int>> point_hashmap;
+            uint32_t x_start = 0;
+            uint32_t y_start = 0;
 
-            auto av2 = Vector2d(meshTri.v1.X(), meshTri.v1.Y());
-            auto bv2 = Vector2d(meshTri.v2.X(), meshTri.v2.Y());
-            auto cv2 = Vector2d(meshTri.v3.X(), meshTri.v3.Y());
+            _data->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
-            if(av2 == bv2 || av2 == cv2 || bv2 == cv2) {    // Discard degenerate rectangles
-                return;
-            }
-
-            for(uint32_t i = 0; i < 100; i++) {
-                auto v2 = point_in_triangle( av2, bv2, cv2 );
-
-                uint32_t x;
-                uint32_t y;
-
-                _data->get_nearest_index(v2, x, y);
-
-                if(point_hashmap[x][y] != -1) {
-                    point_hashmap[x][y] = -1;
-                    points.push_back(v2);
+            for(uint32_t y = 0; y < iter_y; y++) {
+                for(uint32_t x = 0; x < iter_x; x++) {
+                    idx.emplace_back(x + x_start,y + y_start);
                 }
             }
         }
-
-        static Vector2d point_in_triangle(Vector2d a, Vector2d b, Vector2d c) {
-            // between [0, 1]
-            auto s = (double)rand() / (double)RAND_MAX;
-            auto t = (double)rand() / (double)RAND_MAX;
-
-            if (s + t <= 1) {
-                return s * (a + c) + t * (b + c);
-            } else {
-                return (1 - s) * (a + c) + (1 - t) * (b + c);
-            }
-        }
-
 
         bool penetrates(Triangle meshTri, const Vector3d& point, double w) {
             if(intersects_projected(std::move(meshTri), AABB(point, w ))) {
