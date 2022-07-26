@@ -56,12 +56,14 @@ namespace gazebo {
         Vector3d ru;
         Vector3d ld;
         Vector3d rd;
+        double dA;
 
         AABB(Vector3d centroid, double dA) {
-            lu = Vector3d(centroid.X() - (dA/2), centroid.Y() + (dA/2), centroid.Z());
-            ru = Vector3d(centroid.X() + (dA/2), centroid.Y() + (dA/2), centroid.Z());
-            ld = Vector3d(centroid.X() - (dA/2), centroid.Y() - (dA/2), centroid.Z());
-            rd = Vector3d(centroid.X() + (dA/2), centroid.Y() - (dA/2), centroid.Z());
+            this->dA = dA;
+            lu = Vector3d(centroid.X() - (dA/2), centroid.Y() + (dA/2), 0);
+            ru = Vector3d(centroid.X() + (dA/2), centroid.Y() + (dA/2), 0);
+            ld = Vector3d(centroid.X() - (dA/2), centroid.Y() - (dA/2), 0);
+            rd = Vector3d(centroid.X() + (dA/2), centroid.Y() - (dA/2), 0);
         }
 
         auto as_cgal_rect() {
@@ -77,7 +79,7 @@ namespace gazebo {
         }
 
         Vector2d half_size() {
-            return Vector2d(lu.X(), lu.Y());
+            return Vector2d(dA/2, dA/2);
         }
     };
 
@@ -104,6 +106,7 @@ namespace gazebo {
                         { static_cast<float>(tri.v2.X()), static_cast<float>(tri.v2.Y()), 0 },
                         { static_cast<float>(tri.v3.X()), static_cast<float>(tri.v3.Y()), 0 }
                     };
+
             return triBoxOverlap( boxCenter, boxHalfSize, triVerts);
         }
     };

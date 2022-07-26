@@ -135,14 +135,16 @@ namespace gazebo {
             if (meshTri.as_cgal_tri_proj().is_degenerate()) {
                 return;
             }
-
-            std::cout << meshTri.v1 << " " << meshTri.v2 << " " << meshTri.v3 << std::endl;
+    //
+            if(meshTri.v1.Z() == -1 && meshTri.v2.X() == 1) {
+                return;
+            }
 
             std::vector<std::pair<uint32_t, uint32_t>> idx_v;
 
             get_hash_idx_within_tri_rect_bounds(meshTri, idx_v);
 
-            double w = 0.2;
+            double w = 1.0f;
 
             for(const auto& point : idx_v) {
                 auto v3 = _data->get_vertex_at_index(point.first, point.second);
@@ -184,7 +186,7 @@ namespace gazebo {
         }
 
         bool intersects_projected(Triangle meshTri, AABB vertexRect) {
-            return Geometry::intersects_box_tri(meshTri, vertexRect) ;
+            return Geometry::intersects_box_tri(std::move(meshTri), std::move(vertexRect)) ;
         }
 
         void terramx_deform(uint32_t x, uint32_t y, Vector3d v3) {
