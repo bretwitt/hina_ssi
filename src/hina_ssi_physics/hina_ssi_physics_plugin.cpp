@@ -28,7 +28,8 @@ namespace gazebo {
 
         double z;
         Vector3d v3;
-        std::map<std::string, const common::Mesh*> mesh_lookup;
+        std::map<std::string, const common::Mesh*> mesh_lookup {};
+        std::map<std::string, physics::LinkPtr> link_lookup {};
 
         common::Time time;
         double sec;
@@ -54,7 +55,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (50,50,0.1f));
+            soilPtr = new Soil(new SoilData (50,50,0.5f));
         }
 
         void init_transport() {
@@ -84,9 +85,13 @@ namespace gazebo {
                                 if(!meshElemPtr->HasElement("uri")) break;
                                 if(uriElemPtr != nullptr) {
                                     auto model = modelElemPtr->GetAttribute("name")->GetAsString();
+                                    auto link_name = linkElemPtr->GetAttribute("name")->GetAsString();
+                                    auto link = world->ModelByName(model)->GetLink(link_name);
                                     auto uri = uriElemPtr->Get<std::string>();
                                     auto mesh = common::MeshManager::Instance()->Load(uri);
-                                    mesh_lookup.insert(std::pair<std::string, const common::Mesh*>(model, mesh));
+
+                                    mesh_lookup.insert(std::pair<std::string, const common::Mesh*>(link_name, mesh));
+                                    link_lookup.insert(std::pair<std::string, physics::LinkPtr>(link_name, link));
                                 }
                             }
                         }
@@ -114,28 +119,28 @@ namespace gazebo {
         }
 
         void update_soil(Soil* soilPtr) {
-            detect_collisions();
-        }
-
-        void detect_collisions() {
             for(std::pair<std::string, const common::Mesh*> pair : mesh_lookup) {
-                auto modelName = pair.first;
+                auto linkName = pair.first;
+                auto link = link_lookup[linkName];
+
                 auto mesh = pair.second;
                 for(uint32_t i = 0; i < mesh->GetSubMeshCount();) {
                     auto submesh = mesh->GetSubMesh(i++);
                     uint32_t indices = submesh->GetIndexCount();
                     for(uint32_t idx = 0; idx < indices;) {
-                        auto v0 = submesh->Vertex(submesh->GetIndex(idx++));
-                        auto v1 = submesh->Vertex(submesh->GetIndex(idx++));
-                        auto v2 = submesh->Vertex(submesh->GetIndex(idx++));
+                        auto pose = link->WorldPose();
+
+                        auto v0 = submesh->Vertex(submesh->GetIndex(idx++)) + pose.Pos();
+                        auto v1 = submesh->Vertex(submesh->GetIndex(idx++)) + pose.Pos();
+                        auto v2 = submesh->Vertex(submesh->GetIndex(idx++)) + pose.Pos();
                         auto meshTri = Triangle(v0, v1, v2);
 
                         soilPtr->try_deform(meshTri);
-
                     }
                 }
             }
         }
+
 
         void broadcast_soil(Soil* soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;

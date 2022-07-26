@@ -135,16 +135,12 @@ namespace gazebo {
             if (meshTri.as_cgal_tri_proj().is_degenerate()) {
                 return;
             }
-    //
-            if(meshTri.v1.Z() == -1 && meshTri.v2.X() == 1) {
-                return;
-            }
 
             std::vector<std::pair<uint32_t, uint32_t>> idx_v;
 
             get_hash_idx_within_tri_rect_bounds(meshTri, idx_v);
 
-            double w = 1.0f;
+            double w = 0.2f;
 
             for(const auto& point : idx_v) {
                 auto v3 = _data->get_vertex_at_index(point.first, point.second);
