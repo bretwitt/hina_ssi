@@ -26,7 +26,7 @@ namespace gazebo {
             //calculate_vertex_normals(soil, x_size, y_size, vertex_normals);
 
             for(uint32_t i = 0; i < nVerts; i++) {
-                auto v3 = soil->get_data().vertex_at_flattened_index(i);
+                auto v3 = soil->get_data()->vertex_at_flattened_index(i);
                 manObj->position(v3.X(),v3.Y(),v3.Z());
                 //manObj->normal(vertex_normals[i]);
 
@@ -34,7 +34,7 @@ namespace gazebo {
                 if(i == nVerts - 1) manObj->textureCoord(1,1);
             }
 
-            auto indices = soil->get_data().indices;
+            auto indices = soil->get_data()->indices;
             for(uint32_t i = 0; i < (x_size - 1)*(y_size - 1)*3*2;) {
                 manObj->index(indices[i++]);
             }
@@ -52,10 +52,10 @@ namespace gazebo {
                     uint32_t c = (x_size * (x + 1)) + (y + 1);
                     uint32_t d = (x_size * x) + (y + 1);
 
-                    auto vA = soil->get_data().vertex_at_flattened_index(a);
-                    auto vB = soil->get_data().vertex_at_flattened_index(b);
-                    auto vC = soil->get_data().vertex_at_flattened_index(c);
-                    auto vD = soil->get_data().vertex_at_flattened_index(d);
+                    auto vA = soil->get_data()->vertex_at_flattened_index(a);
+                    auto vB = soil->get_data()->vertex_at_flattened_index(b);
+                    auto vC = soil->get_data()->vertex_at_flattened_index(c);
+                    auto vD = soil->get_data()->vertex_at_flattened_index(d);
 
                     auto av0 = Ogre::Vector3(vA.X(), vA.Y(), vA.Z() );
                     auto av1 = Ogre::Vector3(vD.X(), vD.Y(), vD.Z() );
@@ -84,8 +84,8 @@ namespace gazebo {
             auto sceneManager = scenePtr->OgreSceneManager();
             manObj = sceneManager->createManualObject("terrain_mesh");
 
-            uint32_t x_size = soil->get_data().x_width;
-            uint32_t y_size = soil->get_data().y_width;
+            uint32_t x_size = soil->get_data()->x_width;
+            uint32_t y_size = soil->get_data()->y_width;
 
             manObj->begin("Hina/Soil", Ogre::RenderOperation::OT_TRIANGLE_LIST);
             tri_update(soil, manObj, x_size, y_size);
@@ -99,8 +99,8 @@ namespace gazebo {
         }
 
         void update_ogre_mesh(Soil* soil) {
-            uint32_t x_size = soil->get_data().x_width;
-            uint32_t y_size = soil->get_data().y_width;
+            uint32_t x_size = soil->get_data()->x_width;
+            uint32_t y_size = soil->get_data()->y_width;
 
             manObj->beginUpdate(0);
             tri_update(soil, manObj, x_size, y_size);

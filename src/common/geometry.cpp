@@ -9,6 +9,7 @@
 
 
 using ignition::math::Vector3d;
+using ignition::math::Vector2d;
 using namespace CGAL;
 typedef CGAL::Cartesian<double> Kernel;
 
@@ -57,7 +58,10 @@ namespace gazebo {
         Vector3d rd;
 
         AABB(Vector3d centroid, double dA) {
-
+            lu = Vector3d(centroid.X() - (dA/2), centroid.Y() + (dA/2), centroid.Z());
+            ru = Vector3d(centroid.X() + (dA/2), centroid.Y() + (dA/2), centroid.Z());
+            ld = Vector3d(centroid.X() - (dA/2), centroid.Y() - (dA/2), centroid.Z());
+            rd = Vector3d(centroid.X() + (dA/2), centroid.Y() - (dA/2), centroid.Z());
         }
 
         auto as_cgal_rect() {

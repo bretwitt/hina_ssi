@@ -54,12 +54,12 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil({5,5,1.0f});
+            soilPtr = new Soil(new SoilData (5,5,1.0f));
         }
 
         void init_transport() {
             auto df = soilPtr->get_data();
-            soil_v = new msgs::Vector3d[df.x_width * df.y_width];
+            soil_v = new msgs::Vector3d[df->x_width * df->y_width];
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
@@ -130,9 +130,7 @@ namespace gazebo {
                         auto v2 = submesh->Vertex(submesh->GetIndex(idx++));
                         auto meshTri = Triangle(v0, v1, v2);
 
-                        std::vector<std::pair<uint32_t, uint32_t>> candidates;
-                        soilPtr->find_intersection_candidates(meshTri, candidates);
-                        soilPtr->try_deform(meshTri, candidates, 0.1f);
+                        soilPtr->try_deform(meshTri);
 
                     }
                 }
@@ -141,12 +139,12 @@ namespace gazebo {
 
         void broadcast_soil(Soil* soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;
-            auto x_w = soilPtr->get_data().x_width;
-            auto y_w = soilPtr->get_data().y_width;
+            auto x_w = soilPtr->get_data()->x_width;
+            auto y_w = soilPtr->get_data()->y_width;
 
             Vector3d vert;
             for(int idx = 0; idx < x_w*y_w; idx++) {
-                vert = soilPtr->get_data().vertex_at_flattened_index(idx);
+                vert = soilPtr->get_data()->vertex_at_flattened_index(idx);
                 soil_v[idx] = msgs::Vector3d();
                 soil_v[idx].set_x(vert.X());
                 soil_v[idx].set_y(vert.Y());

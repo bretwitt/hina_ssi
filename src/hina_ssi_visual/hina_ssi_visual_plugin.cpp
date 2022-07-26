@@ -57,12 +57,12 @@ namespace gazebo {
             auto v = soil_update->flattened_field();
 
             if(soil == nullptr) {
-                soil = new Soil({x_width,y_width, 1.0});
+                soil = new Soil(new SoilData(x_width,y_width, 1.0));
             }
 
             uint32_t i = 0;
             for(const gazebo::msgs::Vector3d& v0 : v) {
-                soil->get_data().set_vertex_at_flattened_index(i++, Vector3d(v0.x(), v0.y(), v0.z()));
+                soil->get_data()->set_vertex_at_flattened_index(i++, Vector3d(v0.x(), v0.y(), v0.z()));
             }
 
             if(!soil_initialized) {
