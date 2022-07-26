@@ -29,13 +29,13 @@
       <gravity>0</gravity>
       <collision name="collision">
           <geometry>
-              <mesh><uri>file://box.dae</uri></mesh>
+              <mesh><uri>file://wheel_lowpoly.dae</uri></mesh>
           </geometry>
       </collision>
       <visual name='visual'>
         <cast_shadows>1</cast_shadows>
         <geometry>
-            <mesh><uri>file://box.dae</uri></mesh>
+            <mesh><uri>file://wheel_lowpoly.dae</uri></mesh>
         </geometry>
         <material>
           <script>

@@ -145,7 +145,7 @@ namespace gazebo {
             for(const auto& point : idx_v) {
                 auto v3 = _data->get_vertex_at_index(point.first, point.second);
                 if(penetrates(meshTri, v3, w)) {
-                    terramx_deform(point.first, point.second, v3);
+                    terramx_deform(meshTri, point.first, point.second, v3);
                 }
             }
         }
@@ -174,9 +174,10 @@ namespace gazebo {
         }
 
         bool penetrates(Triangle meshTri, const Vector3d& point, double w) {
-            if(intersects_projected(std::move(meshTri), AABB(point, w ))) {
-                // Height check
-                return true;
+            if(intersects_projected(meshTri, AABB(point, w ))) {
+                if(meshTri.centroid().Z() <= point.Z()) {
+                    return true;
+                }
             }
             return false;
         }
@@ -185,8 +186,8 @@ namespace gazebo {
             return Geometry::intersects_box_tri(std::move(meshTri), std::move(vertexRect)) ;
         }
 
-        void terramx_deform(uint32_t x, uint32_t y, Vector3d v3) {
-            auto _v3 = Vector3d(v3.X(), v3.Y(), -1);
+        void terramx_deform(Triangle meshTri, uint32_t x, uint32_t y, Vector3d v3) {
+            auto _v3 = Vector3d(v3.X(), v3.Y(), meshTri.centroid().Z());
             _data->set_vertex_at_index(x, y, _v3);
         }
 
