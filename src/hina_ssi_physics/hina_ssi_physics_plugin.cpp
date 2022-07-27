@@ -55,7 +55,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (50,50,0.2f));
+            soilPtr = new Soil(new SoilData (30,30,0.4f));
         }
 
         void init_transport() {
@@ -108,17 +108,17 @@ namespace gazebo {
             double dt = sec - last_sec;
             double dt_viz = sec - last_sec_viz;
 
-            if(dt > (1./30)) {
-                update_soil(soilPtr);
-                last_sec = sec;
-            }
+            //if(dt > (1./30)) {
+            update_soil(soilPtr, dt);
+            last_sec = sec;
+            //}
             if(dt_viz > (1./5)) {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
             }
         }
 
-        void update_soil(Soil* soilPtr) {
+        void update_soil(Soil* soilPtr, float dt) {
             for(std::pair<std::string, const common::Mesh*> pair : mesh_lookup) {
                 auto linkName = pair.first;
                 auto link = link_lookup[linkName];
@@ -129,13 +129,21 @@ namespace gazebo {
                     uint32_t indices = submesh->GetIndexCount();
                     for(uint32_t idx = 0; idx < indices;) {
                         auto pose = link->WorldPose();
+                        auto rot = pose.Rot();
+                        auto pos = pose.Pos();
 
-                        auto v0 = submesh->Vertex(submesh->GetIndex(idx++)) + pose.Pos();
-                        auto v1 = submesh->Vertex(submesh->GetIndex(idx++)) + pose.Pos();
-                        auto v2 = submesh->Vertex(submesh->GetIndex(idx++)) + pose.Pos();
+                        auto v0 = submesh->Vertex(submesh->GetIndex(idx++)) + pos;
+                        auto v1 = submesh->Vertex(submesh->GetIndex(idx++)) + pos;
+                        auto v2 = submesh->Vertex(submesh->GetIndex(idx++)) + pos;
+
+                        rot.RotateVector(v0);
+                        rot.RotateVector(v1);
+                        rot.RotateVector(v2);
+
                         auto meshTri = Triangle(v0, v1, v2);
 
-                        soilPtr->try_deform(meshTri);
+                        soilPtr->try_deform(meshTri, link, dt);
+
                     }
                 }
             }

@@ -26,16 +26,27 @@
     </spherical_coordinates>
     <model name="wheel">
     <link name='wheel'>
-      <gravity>0</gravity>
+      <gravity>1</gravity>
+      <inertial>
+        <mass>10</mass>
+        <inertia>
+          <ixx>20</ixx>
+          <ixy>20</ixy>
+          <ixz>20</ixz>
+          <iyy>20</iyy>
+          <iyz>20</iyz>
+          <izz>20</izz>
+        </inertia>
+      </inertial>
       <collision name="collision">
           <geometry>
-              <mesh><uri>file://wheel_lowpoly.dae</uri></mesh>
+              <mesh><uri>file://icosphere.dae</uri></mesh>
           </geometry>
       </collision>
       <visual name='visual'>
         <cast_shadows>1</cast_shadows>
         <geometry>
-            <mesh><uri>file://wheel_lowpoly.dae</uri></mesh>
+            <mesh><uri>file://icosphere.dae</uri></mesh>
         </geometry>
         <material>
           <script>

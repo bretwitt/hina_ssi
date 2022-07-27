@@ -2,14 +2,16 @@
 #define SOIL_CPP
 
 #include <gazebo/common/common.hh>
+#include <gazebo/physics/physics.hh>
+
 #include <utility>
 #include "geometry.cpp"
 
 namespace gazebo {
 
     struct SoilData {
-        int x_width = 5;
-        int y_width = 5;
+        uint32_t x_width = 5;
+        uint32_t y_width = 5;
         double scale = 1.0;
         double x_offset = 0;
         double y_offset = 0;
@@ -51,7 +53,7 @@ namespace gazebo {
         }
 
         Vector3d get_vertex_at_index(uint32_t x, uint32_t y) {
-            return (*soil_hashmap)[x][y];
+            return (*soil_hashmap)[min(x, x_width - 1)][min(y, y_width - 1)];
         }
 
         void set_vertex_at_index(uint32_t x, uint32_t y, const ignition::math::Vector3<double>& vtx) const {
@@ -131,7 +133,7 @@ namespace gazebo {
             }
         }
 
-        void try_deform(Triangle& meshTri) {
+        void try_deform(Triangle& meshTri, physics::LinkPtr link, float dt) {
             if (meshTri.as_cgal_tri_proj().is_degenerate()) {
                 return;
             }
@@ -140,12 +142,12 @@ namespace gazebo {
 
             get_hash_idx_within_tri_rect_bounds(meshTri, idx_v);
 
-            double w = 0.2f;
+            double w = _data->scale;
 
             for(const auto& point : idx_v) {
                 auto v3 = _data->get_vertex_at_index(point.first, point.second);
                 if(penetrates(meshTri, v3, w)) {
-                    terramx_deform(meshTri, point.first, point.second, v3);
+                    terramx_deform(link, meshTri, point.first, point.second, v3, w, dt);
                 }
             }
         }
@@ -186,9 +188,76 @@ namespace gazebo {
             return Geometry::intersects_box_tri(std::move(meshTri), std::move(vertexRect)) ;
         }
 
-        void terramx_deform(Triangle meshTri, uint32_t x, uint32_t y, Vector3d v3) {
-            auto _v3 = Vector3d(v3.X(), v3.Y(), meshTri.centroid().Z());
-            _data->set_vertex_at_index(x, y, _v3);
+        void terramx_deform(physics::LinkPtr linkPtr, Triangle meshTri, uint32_t x, uint32_t y, Vector3d v3, double w, float dt) {
+            auto soil_z = v3.Z();
+            auto mesh_z = meshTri.centroid().Z();
+
+            auto gamma = 0.2f;
+            auto modulus = 100.0f;
+            auto damp_coeff = gamma*modulus*0;
+
+            auto k_phi = 814000.0f;
+            auto sigma = k_phi*(-mesh_z) + 100000;
+
+            if(sigma > 0) {
+                auto dA = w * w;
+
+                auto vtx_ul = _data->get_vertex_at_index(x - 1, y + 1);
+                auto vtx_dl = _data->get_vertex_at_index(x - 1, y - 1);
+                auto vtx_ur = _data->get_vertex_at_index(x + 1, y + 1);
+                auto vtx_dr = _data->get_vertex_at_index(x + 1, y - 1);
+
+                auto vtx_u = _data->get_vertex_at_index(x, y + 1);
+                auto vtx_d = _data->get_vertex_at_index(x, y - 1);
+                auto vtx_l = _data->get_vertex_at_index(x - 1, y);
+                auto vtx_r = _data->get_vertex_at_index(x + 1, y);
+                auto vtx = v3;
+
+                auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
+                auto tri2 = Triangle(vtx, vtx_l, vtx_ul);
+                auto tri3 = Triangle(vtx, vtx_u, vtx_r);
+
+                auto tri4 = Triangle(vtx, vtx_r, vtx_d);
+                auto tri5 = Triangle(vtx, vtx_dr, vtx_d);
+
+                auto tri6 = Triangle(vtx, vtx_d, vtx_l);
+
+                auto vtx_normal =
+                        -(tri_normal(tri1)
+                        + tri_normal(tri2)
+                        + tri_normal(tri3)
+                        + tri_normal(tri4)
+                        + tri_normal(tri5)
+                        + tri_normal(tri6))
+                    .Normalize();
+
+
+                auto normal_force = (sigma * dA * vtx_normal);
+                auto force_origin = v3;
+
+                apply_normal_force( std::move(linkPtr), force_origin, normal_force, dt);
+
+                auto ds_p = (soil_z - mesh_z)*dt;
+
+                auto _v3 = Vector3d(v3.X(), v3.Y(), soil_z - ds_p);
+                _data->set_vertex_at_index(x, y, _v3);
+            }
+        }
+
+        Vector3d tri_normal(const Triangle& tri) {
+            auto p0 = tri.v1;
+            auto p1 = tri.v2;
+            auto p2 = tri.v3;
+
+            auto A = p1 - p0;
+            auto B = p2 - p0;
+            auto norm = A.Cross(B).Normalized();
+            return norm;
+        }
+
+        void apply_normal_force(physics::LinkPtr linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt) {
+            //std::cout << normal_force << std::endl;
+            linkPtr->AddForceAtWorldPosition(normal_force * dt, origin) ;
         }
 
 
