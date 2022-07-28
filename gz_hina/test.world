@@ -2,6 +2,9 @@
 <sdf version='1.7'>	
   <world name='empty'>
     <plugin name='hina_physics' filename='src/hina_ssi_physics/libhina_ssi_plugin_physics.so'>
+        <width_x></width_x>
+        <width_y></width_y>
+        <scale></scale>
     </plugin>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
@@ -28,25 +31,25 @@
     <link name='wheel'>
       <gravity>1</gravity>
       <inertial>
-        <mass>20</mass>
+        <mass>5</mass>
         <inertia>
-          <ixx>20</ixx>
-          <ixy>20</ixy>
-          <ixz>20</ixz>
-          <iyy>20</iyy>
-          <iyz>20</iyz>
-          <izz>20</izz>
+          <ixx>2</ixx>
+          <ixy>2</ixy>
+          <ixz>2</ixz>
+          <iyy>2</iyy>
+          <iyz>2</iyz>
+          <izz>2</izz>
         </inertia>
       </inertial>
       <collision name="collision">
           <geometry>
-              <mesh><uri>file://icosphere.dae</uri></mesh>
+              <mesh><uri>file://wheel_lowpoly.dae</uri></mesh>
           </geometry>
       </collision>
       <visual name='visual'>
         <cast_shadows>1</cast_shadows>
         <geometry>
-            <mesh><uri>file://icosphere.dae</uri></mesh>
+            <mesh><uri>file://wheel_lowpoly.dae</uri></mesh>
         </geometry>
         <material>
           <script>

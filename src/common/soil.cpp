@@ -175,12 +175,7 @@ namespace gazebo {
         }
 
         bool penetrates(Triangle meshTri, const Vector3d& point, double w) {
-            if(intersects_projected(meshTri, AABB(point, w ))) {
-                if(meshTri.centroid().Z() <= point.Z()) {
-                    return true;
-                }
-            }
-            return false;
+            return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
         }
 
         bool intersects_projected(Triangle meshTri, AABB vertexRect) {
@@ -255,8 +250,8 @@ namespace gazebo {
         }
 
         void apply_normal_force(physics::LinkPtr linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt) {
-            auto normal_force_z = Vector3d(0,0,normal_force.Z());
-            linkPtr->AddForceAtWorldPosition(normal_force_z * dt, origin) ;
+            //auto normal_force_z = Vector3d(0,0,normal_force.Z());
+            linkPtr->AddForceAtWorldPosition(normal_force * dt, origin) ;
         }
     };
 }
