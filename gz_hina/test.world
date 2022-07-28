@@ -28,7 +28,7 @@
     <link name='wheel'>
       <gravity>1</gravity>
       <inertial>
-        <mass>10</mass>
+        <mass>20</mass>
         <inertia>
           <ixx>20</ixx>
           <ixy>20</ixy>

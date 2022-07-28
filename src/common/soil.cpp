@@ -139,7 +139,6 @@ namespace gazebo {
             }
 
             std::vector<std::pair<uint32_t, uint32_t>> idx_v;
-
             get_hash_idx_within_tri_rect_bounds(meshTri, idx_v);
 
             double w = _data->scale;
@@ -160,8 +159,8 @@ namespace gazebo {
 
             auto scale = _data->scale;
 
-            auto iter_x = ceil( ((max_x - min_x) / scale) );
-            auto iter_y = ceil( ((max_y - min_y) / scale) );
+            auto iter_x = ceil( ((max_x - min_x) / scale) ) + 1;
+            auto iter_y = ceil( ((max_y - min_y) / scale) ) + 1;
 
             uint32_t x_start = 0;
             uint32_t y_start = 0;
@@ -192,12 +191,12 @@ namespace gazebo {
             auto soil_z = v3.Z();
             auto mesh_z = meshTri.centroid().Z();
 
-            auto gamma = 0.2f;
-            auto modulus = 100.0f;
-            auto damp_coeff = gamma*modulus*0;
+            auto rho = 0.2f;
+            auto compress_modulus = 100.0f;
+            auto damp_coeff = rho*compress_modulus*0;
 
             auto k_phi = 814000.0f;
-            auto sigma = k_phi*(-mesh_z) + 100000;
+            auto sigma = k_phi*(-mesh_z) + damp_coeff;
 
             if(sigma > 0) {
                 auto dA = w * w;
@@ -237,9 +236,9 @@ namespace gazebo {
 
                 apply_normal_force( std::move(linkPtr), force_origin, normal_force, dt);
 
-                auto ds_p = (soil_z - mesh_z)*dt;
+                auto plastic_flow = -(soil_z - mesh_z);
 
-                auto _v3 = Vector3d(v3.X(), v3.Y(), soil_z - ds_p);
+                auto _v3 = Vector3d(v3.X(), v3.Y(), soil_z + plastic_flow);
                 _data->set_vertex_at_index(x, y, _v3);
             }
         }
@@ -256,11 +255,9 @@ namespace gazebo {
         }
 
         void apply_normal_force(physics::LinkPtr linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt) {
-            //std::cout << normal_force << std::endl;
-            linkPtr->AddForceAtWorldPosition(normal_force * dt, origin) ;
+            auto normal_force_z = Vector3d(0,0,normal_force.Z());
+            linkPtr->AddForceAtWorldPosition(normal_force_z * dt, origin) ;
         }
-
-
     };
 }
 
