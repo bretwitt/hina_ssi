@@ -45,9 +45,9 @@ namespace gazebo {
         }
 
         Vector3d centroid() {
-            return Vector3d((v1.X() + v2.X() + v3.X()) / 3,
+            return {(v1.X() + v2.X() + v3.X()) / 3,
                                (v1.Y() + v1.Y() + v1.Y()) / 3,
-                            (v1.Z() + v1.Z() + v1.Z()) / 3);
+                            (v1.Z() + v1.Z() + v1.Z()) / 3 };
         }
     };
 
@@ -66,32 +66,12 @@ namespace gazebo {
             rd = Vector3d(centroid.X() + (dA/2), centroid.Y() - (dA/2), 0);
         }
 
-        auto as_cgal_rect() {
-            auto c_lu = Point_2<Kernel>(lu.X(), lu.Y());
-            auto c_ru = Point_2<Kernel>(ru.X(), ru.Y());
-            auto c_ld = Point_2<Kernel>(ld.X(), ld.Y());
-            auto c_rd = Point_2<Kernel>(rd.X(), rd.Y());
-            return Iso_rectangle_2<Kernel>(c_lu, c_ru, c_ld, c_rd);
-        }
-
         Vector2d center() {
-            return Vector2d((lu.X() + ru.X()) * 0.5, (lu.Y() + ld.Y()) * 0.5);
+            return {(lu.X() + ru.X()) * 0.5, (lu.Y() + ld.Y()) * 0.5 };
         }
 
-        Vector2d half_size() {
-            return Vector2d(dA/2, dA/2);
-        }
-    };
-
-    class CGALGeometry {
-
-    public:
-        static bool intersects_projected(Triangle tri, AABB aabb) {
-            auto itsx = CGAL::intersection(aabb.as_cgal_rect(), tri.as_cgal_tri_proj());
-            if(itsx) {
-                return true;
-            }
-            return false;
+        Vector2d half_size() const {
+            return { dA/2, dA/2 };
         }
     };
 

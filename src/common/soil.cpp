@@ -137,21 +137,12 @@ namespace gazebo {
             if (meshTri.as_cgal_tri_proj().is_degenerate()) {
                 return;
             }
-
-            std::vector<std::pair<uint32_t, uint32_t>> idx_v;
-            get_hash_idx_within_tri_rect_bounds(meshTri, idx_v);
-
-            double w = _data->scale;
-
-            for(const auto& point : idx_v) {
-                auto v3 = _data->get_vertex_at_index(point.first, point.second);
-                if(penetrates(meshTri, v3, w)) {
-                    terramx_deform(link, meshTri, point.first, point.second, v3, w, dt);
-                }
-            }
+            footprint_hash_idx_lookup_and_terramx_deform(meshTri, link, dt);
         }
 
-        void get_hash_idx_within_tri_rect_bounds(Triangle meshTri, std::vector<std::pair<uint32_t, uint32_t>>& idx) {
+        void footprint_hash_idx_lookup_and_terramx_deform(Triangle meshTri, physics::LinkPtr link, float dt) {
+            std::vector<std::pair<uint32_t, uint32_t>>& idx();
+
             auto max_x = max(meshTri.v1.X(), max(meshTri.v2.X(), meshTri.v3.X()));
             auto max_y = max(meshTri.v1.Y(), max(meshTri.v2.Y(), meshTri.v3.Y()));
             auto min_x = min(meshTri.v1.X(), min(meshTri.v2.X(), meshTri.v3.X()));
@@ -161,7 +152,6 @@ namespace gazebo {
 
             auto iter_x = ceil( ((max_x - min_x) / scale) ) + 1;
             auto iter_y = ceil( ((max_y - min_y) / scale) ) + 1;
-
             uint32_t x_start = 0;
             uint32_t y_start = 0;
 
@@ -169,7 +159,10 @@ namespace gazebo {
 
             for(uint32_t y = 0; y < iter_y; y++) {
                 for(uint32_t x = 0; x < iter_x; x++) {
-                    idx.emplace_back(x + x_start,y + y_start);
+                    auto v3 = _data->get_vertex_at_index(x + x_start, y + y_start);
+                    if(penetrates(meshTri, v3, scale)) {
+                        terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt);
+                    }
                 }
             }
         }
