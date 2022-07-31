@@ -55,7 +55,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (30,30,0.1f));
+            soilPtr = new Soil(new SoilData (100,100,0.1f));
         }
 
         void init_transport() {
@@ -108,10 +108,9 @@ namespace gazebo {
             double dt = sec - last_sec;
             double dt_viz = sec - last_sec_viz;
 
-            //if(dt > (1./30)) {
             update_soil(soilPtr, dt);
             last_sec = sec;
-            //}
+
             if(dt_viz > (1./5)) {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
@@ -132,14 +131,14 @@ namespace gazebo {
                         auto rot = pose.Rot();
                         auto pos = pose.Pos();
 
-                        auto v0 = submesh->Vertex(submesh->GetIndex(idx++)) + pos;
-                        auto v1 = submesh->Vertex(submesh->GetIndex(idx++)) + pos;
-                        auto v2 = submesh->Vertex(submesh->GetIndex(idx++)) + pos;
+                        auto v0 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++)));
+                        auto v1 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++)));
+                        auto v2 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++)));
 
-                        rot.RotateVector(v0);
-                        rot.RotateVector(v1);
-                        rot.RotateVector(v2);
-
+                        v0 = v0 + pos;
+                        v1 = v1 + pos;
+                        v2 = v2 + pos;
+                        
                         auto meshTri = Triangle(v0, v1, v2);
 
                         soilPtr->try_deform(meshTri, link, dt);

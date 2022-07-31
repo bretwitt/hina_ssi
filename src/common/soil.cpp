@@ -222,7 +222,7 @@ namespace gazebo {
                 auto normal_force = (sigma * dA * vtx_normal);
                 auto force_origin = v3;
 
-                apply_normal_force( std::move(linkPtr), force_origin, normal_force, dt);
+                apply_normal_force( linkPtr, force_origin, normal_force, dt);
 
                 auto plastic_flow = -(soil_z - mesh_z);
 
@@ -242,9 +242,9 @@ namespace gazebo {
             return norm;
         }
 
-        void apply_normal_force(physics::LinkPtr linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt) {
-            //auto normal_force_z = Vector3d(0,0,normal_force.Z());
-            linkPtr->AddForceAtWorldPosition(normal_force * dt, origin) ;
+        void apply_normal_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt) {
+            auto normal_force_z = Vector3d(0,0,normal_force.Z());
+            linkPtr->AddForceAtWorldPosition(normal_force_z * dt, origin) ;
         }
     };
 }
