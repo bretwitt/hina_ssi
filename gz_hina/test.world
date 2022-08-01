@@ -28,11 +28,11 @@
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
     <model name="wheel">
-        <pose>0 0 0.1 0 0 0</pose>
+        <pose>0 0 0.4 0 0 0</pose>
         <link name='wheel'>
           <gravity>1</gravity>
           <inertial>
-            <mass>1</mass>
+            <mass>0.3</mass>
             <inertia>
               <ixx>0.5</ixx>
               <ixy>0.000</ixy>

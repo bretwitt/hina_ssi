@@ -1,71 +1,34 @@
-#ifndef HINASSI_GEOMETRY_CPP
-#define HINASSI_GEOMETRY_CPP
+#include "geometry.h"
 
-#include <gazebo/common/common.hh>
-#include "../../thirdparty/MollerTest.h"
+Geometry* Geometry::INSTANCE = nullptr;
 
-using ignition::math::Vector3d;
-using ignition::math::Vector2d;
-
-namespace gazebo {
-
-    struct Triangle {
-        Vector3d v1;
-        Vector3d v2;
-        Vector3d v3;
-
-        Triangle(const Vector3d& v1, const Vector3d& v2, const Vector3d& v3) {
-            this->v1 = v1;
-            this->v2 = v2;
-            this->v3 = v3;
-        }
-
-        Vector3d centroid() const {
-            return {(v1.X() + v2.X() + v3.X()) / 3,
-                               (v1.Y() + v1.Y() + v1.Y()) / 3,
-                            (v1.Z() + v1.Z() + v1.Z()) / 3 };
-        }
-    };
-
-    struct AABB {
-        Vector3d lu;
-        Vector3d ru;
-        Vector3d ld;
-        Vector3d rd;
-        double dA;
-
-        AABB(Vector3d centroid, double dA) {
-            this->dA = dA;
-            lu = Vector3d(centroid.X() - (dA/2), centroid.Y() + (dA/2), 0);
-            ru = Vector3d(centroid.X() + (dA/2), centroid.Y() + (dA/2), 0);
-            ld = Vector3d(centroid.X() - (dA/2), centroid.Y() - (dA/2), 0);
-            rd = Vector3d(centroid.X() + (dA/2), centroid.Y() - (dA/2), 0);
-        }
-
-        Vector2d center() {
-            return {(lu.X() + ru.X()) * 0.5, (lu.Y() + ld.Y()) * 0.5 };
-        }
-
-        Vector2d half_size() const {
-            return { dA/2, dA/2 };
-        }
-    };
-
-    class Geometry {
-    public:
-        static bool intersects_box_tri(Triangle tri, AABB aabb) {
-            float boxCenter[3] = { static_cast<float>(aabb.center().X()), static_cast<float>(aabb.center().Y()), 0.0 };
-            float boxHalfSize[3] = { static_cast<float>(aabb.half_size().X()), static_cast<float>(aabb.half_size().Y()), 0.0 };
-            float triVerts[3][3] =
-                    {
-                        { static_cast<float>(tri.v1.X()), static_cast<float>(tri.v1.Y()), 0 },
-                        { static_cast<float>(tri.v2.X()), static_cast<float>(tri.v2.Y()), 0 },
-                        { static_cast<float>(tri.v3.X()), static_cast<float>(tri.v3.Y()), 0 }
-                    };
-
-            return triBoxOverlap( boxCenter, boxHalfSize, triVerts);
-        }
-    };
+Geometry* Geometry::getInstance() {
+    if(!INSTANCE) {
+        INSTANCE = new Geometry();
+    }
+    return INSTANCE;
 }
 
-#endif
+bool Geometry::intersects_box_tri(const Triangle& tri, const AABB& aabb) {
+    box_center_bf[0] = static_cast<float>(aabb.center().X());
+    box_center_bf[1] = static_cast<float>(aabb.center().Y());
+    //box_center_bf[2] = 0.0;
+
+    box_half_size_bf[0] = static_cast<float>(aabb.half_size().X());
+    box_half_size_bf[1] = static_cast<float>(aabb.half_size().Y());
+    //box_half_size_bf[2] = 0.0;
+
+    tri_vert_bf[0][0] = static_cast<float>(tri.v1.X());
+    tri_vert_bf[0][1] = static_cast<float>(tri.v1.Y());
+    //tri_vert_bf[0][2] = 0.0;
+
+    tri_vert_bf[1][0] = static_cast<float>(tri.v2.X());
+    tri_vert_bf[1][1] = static_cast<float>(tri.v2.Y());
+    //tri_vert_bf[1][2] = 0.0;
+
+    tri_vert_bf[2][0] = static_cast<float>(tri.v3.X());
+    tri_vert_bf[2][1] = static_cast<float>(tri.v3.Y());
+    //tri_vert_bf[2][2] = 0.0;
+
+    return triBoxOverlap( box_center_bf, box_half_size_bf, tri_vert_bf);
+}

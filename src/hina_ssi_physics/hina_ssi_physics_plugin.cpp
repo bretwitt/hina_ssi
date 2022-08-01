@@ -8,7 +8,6 @@
 #include <utility>
 #include "../common/soil.cpp"
 #include "Soil.pb.h"
-#include "../../thirdparty/PerlinNoise.h"
 
 namespace gazebo {
     class HinaSSIWorldPlugin : public WorldPlugin {
@@ -22,9 +21,6 @@ namespace gazebo {
         event::ConnectionPtr updateEventPtr = nullptr;
         physics::WorldPtr world = nullptr;
         sdf::ElementPtr sdf = nullptr;
-
-        const siv::PerlinNoise::seed_type seed = 123456u;
-        const siv::PerlinNoise perlin{ seed };
 
         double z;
         Vector3d v3;
@@ -55,7 +51,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (70,70,0.01f));
+            soilPtr = new Soil(new SoilData (70,70,0.02f));
         }
 
         void init_transport() {
@@ -120,26 +116,31 @@ namespace gazebo {
         void update_soil(Soil* soilPtr, float dt) {
             for(std::pair<std::string, const common::Mesh*> pair : mesh_lookup) {
                 auto linkName = pair.first;
+                auto mesh = pair.second;
+
                 auto link = link_lookup[linkName];
 
-                auto mesh = pair.second;
-                for(uint32_t i = 0; i < mesh->GetSubMeshCount();) {
-                    auto submesh = mesh->GetSubMesh(i++);
+                for(uint32_t i = 0; i < mesh->GetSubMeshCount(); i++) {
+
+                    auto submesh = mesh->GetSubMesh(i);
                     uint32_t indices = submesh->GetIndexCount();
+
+                    auto pose = link->WorldPose();
+                    auto rot = pose.Rot();
+                    auto pos = pose.Pos();
+
                     for(uint32_t idx = 0; idx < indices;) {
-                        auto pose = link->WorldPose();
-                        auto rot = pose.Rot();
-                        auto pos = pose.Pos();
 
-                        auto v0 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++)));
-                        auto v1 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++)));
-                        auto v2 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++)));
+                        auto v0 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++))) + pos;
+                        auto v1 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++))) + pos;
+                        auto v2 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++))) + pos;
 
-                        v0 = v0 + pos;
-                        v1 = v1 + pos;
-                        v2 = v2 + pos;
+                        auto meshTri = Triangle(
+                                v0,
+                                v1,
+                                v2
+                        );
 
-                        auto meshTri = Triangle(v0, v1, v2);
                         soilPtr->try_deform(meshTri, link, dt);
                     }
                 }

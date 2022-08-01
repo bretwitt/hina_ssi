@@ -5,7 +5,7 @@
 #include <gazebo/physics/physics.hh>
 
 #include <utility>
-#include "geometry.cpp"
+#include "geometry.h"
 
 namespace gazebo {
 
@@ -133,13 +133,11 @@ namespace gazebo {
             }
         }
 
-        void try_deform(const Triangle& meshTri, physics::LinkPtr link, float dt) {
+        void try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt) {
             footprint_hash_idx_lookup_and_terramx_deform(meshTri, link, dt);
         }
 
-        void footprint_hash_idx_lookup_and_terramx_deform(const Triangle& meshTri, physics::LinkPtr link, float dt) {
-            std::vector<std::pair<uint32_t, uint32_t>>& idx();
-
+        void footprint_hash_idx_lookup_and_terramx_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt) {
             auto max_x = std::max(meshTri.v1.X(), std::max(meshTri.v2.X(), meshTri.v3.X()));
             auto max_y = std::max(meshTri.v1.Y(), std::max(meshTri.v2.Y(), meshTri.v3.Y()));
             auto min_x = std::min(meshTri.v1.X(), std::min(meshTri.v2.X(), meshTri.v3.X()));
@@ -169,10 +167,10 @@ namespace gazebo {
         }
 
         bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect) {
-            return Geometry::intersects_box_tri(meshTri, std::move(vertexRect)) ;
+            return Geometry::getInstance()->intersects_box_tri(meshTri, vertexRect) ;
         }
 
-        void terramx_deform(physics::LinkPtr linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, Vector3d v3, double w, float dt) {
+        void terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, Vector3d v3, double w, float dt) {
             auto soil_z = v3.Z();
             auto mesh_z = meshTri.centroid().Z();
 
