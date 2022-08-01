@@ -7,7 +7,7 @@
 #include <ignition/math.hh>
 #include <utility>
 #include <gazebo/rendering/ogre_gazebo.h>
-#include "../common/soil.cpp"
+#include "../common/soil.h"
 
 using ignition::math::Vector2d;
 

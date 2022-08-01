@@ -10,5 +10,6 @@ link_directories(${GAZEBO_LIBRARY_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/src/msgs)
 list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
 
 add_subdirectory(src/msgs)
+add_subdirectory(src/common)
 add_subdirectory(src/hina_ssi_visual)
 add_subdirectory(src/hina_ssi_physics)

@@ -6,7 +6,7 @@
 #include <gazebo/rendering/rendering.hh>
 #include <gazebo/physics/physics.hh>
 #include <utility>
-#include "../common/soil.cpp"
+#include "../common/soil.h"
 #include "Soil.pb.h"
 
 namespace gazebo {
@@ -22,15 +22,15 @@ namespace gazebo {
         physics::WorldPtr world = nullptr;
         sdf::ElementPtr sdf = nullptr;
 
-        double z;
+        double z{};
         Vector3d v3;
         std::map<std::string, const common::Mesh*> mesh_lookup {};
         std::map<std::string, physics::LinkPtr> link_lookup {};
 
         common::Time time;
-        double sec;
-        double last_sec;
-        double last_sec_viz;
+        double sec{};
+        double last_sec{};
+        double last_sec_viz{};
 
     public:
         HinaSSIWorldPlugin() : WorldPlugin() {
@@ -51,7 +51,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (70,70,0.02f));
+            soilPtr = new Soil(new SoilData (50,50,0.01f));
         }
 
         void init_transport() {
@@ -106,6 +106,7 @@ namespace gazebo {
 
             update_soil(soilPtr, dt);
             last_sec = sec;
+
 
             if(dt_viz > (1./5.f)) {
                 broadcast_soil(soilPtr);

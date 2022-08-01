@@ -6,6 +6,7 @@
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
+
 struct Triangle {
     Vector3d v1;
     Vector3d v2;
