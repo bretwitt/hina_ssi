@@ -28,30 +28,30 @@
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
     <model name="wheel">
-        <pose>0 0 3 0 0 0</pose>
+        <pose>0 0 0.1 0 0 0</pose>
         <link name='wheel'>
           <gravity>1</gravity>
           <inertial>
-            <mass>6.25</mass>
+            <mass>1</mass>
             <inertia>
-              <ixx>3.63</ixx>
-              <ixy>0.006</ixy>
-              <ixz>0.006</ixz>
-              <iyy>3.1</iyy>
-              <iyz>0.006</iyz>
-              <izz>3.63</izz>
+              <ixx>0.5</ixx>
+              <ixy>0.000</ixy>
+              <ixz>0.000</ixz>
+              <iyy>0.5</iyy>
+              <iyz>0.006306</iyz>
+              <izz>0.5</izz>
             </inertia>
             <pose>0 0 0 0 0 0</pose>
           </inertial>
           <collision name="collision">
               <geometry>
-                  <mesh><uri>file://wheel_lowpoly.dae</uri></mesh>
+                  <mesh><uri>file://astrowheel.dae</uri></mesh>
               </geometry>
           </collision>
           <visual name='visual'>
             <cast_shadows>1</cast_shadows>
             <geometry>
-                <mesh><uri>file://wheel_lowpoly.dae</uri></mesh>
+                <mesh><uri>file://astrowheel.dae</uri></mesh>
             </geometry>
             <material>
               <script>

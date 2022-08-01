@@ -52,8 +52,8 @@ namespace gazebo {
             y = floor(idx / x_width);
         }
 
-        Vector3d get_vertex_at_index(uint32_t x, uint32_t y) {
-            return (*soil_hashmap)[min(x, x_width - 1)][min(y, y_width - 1)];
+        Vector3d get_vertex_at_index(uint32_t x, uint32_t y) const {
+            return (*soil_hashmap)[std::min(x, x_width - 1)][std::min(y, y_width - 1)];
         }
 
         void set_vertex_at_index(uint32_t x, uint32_t y, const ignition::math::Vector3<double>& vtx) const {
@@ -133,20 +133,17 @@ namespace gazebo {
             }
         }
 
-        void try_deform(Triangle& meshTri, physics::LinkPtr link, float dt) {
-            if (meshTri.as_cgal_tri_proj().is_degenerate()) {
-                return;
-            }
+        void try_deform(const Triangle& meshTri, physics::LinkPtr link, float dt) {
             footprint_hash_idx_lookup_and_terramx_deform(meshTri, link, dt);
         }
 
-        void footprint_hash_idx_lookup_and_terramx_deform(Triangle meshTri, physics::LinkPtr link, float dt) {
+        void footprint_hash_idx_lookup_and_terramx_deform(const Triangle& meshTri, physics::LinkPtr link, float dt) {
             std::vector<std::pair<uint32_t, uint32_t>>& idx();
 
-            auto max_x = max(meshTri.v1.X(), max(meshTri.v2.X(), meshTri.v3.X()));
-            auto max_y = max(meshTri.v1.Y(), max(meshTri.v2.Y(), meshTri.v3.Y()));
-            auto min_x = min(meshTri.v1.X(), min(meshTri.v2.X(), meshTri.v3.X()));
-            auto min_y = min(meshTri.v1.Y(), min(meshTri.v2.Y(), meshTri.v3.Y()));
+            auto max_x = std::max(meshTri.v1.X(), std::max(meshTri.v2.X(), meshTri.v3.X()));
+            auto max_y = std::max(meshTri.v1.Y(), std::max(meshTri.v2.Y(), meshTri.v3.Y()));
+            auto min_x = std::min(meshTri.v1.X(), std::min(meshTri.v2.X(), meshTri.v3.X()));
+            auto min_y = std::min(meshTri.v1.Y(), std::min(meshTri.v2.Y(), meshTri.v3.Y()));
 
             auto scale = _data->scale;
 
@@ -167,21 +164,21 @@ namespace gazebo {
             }
         }
 
-        bool penetrates(Triangle meshTri, const Vector3d& point, double w) {
+        bool penetrates(const Triangle& meshTri, const Vector3d& point, double w) {
             return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
         }
 
-        bool intersects_projected(Triangle meshTri, AABB vertexRect) {
-            return Geometry::intersects_box_tri(std::move(meshTri), std::move(vertexRect)) ;
+        bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect) {
+            return Geometry::intersects_box_tri(meshTri, std::move(vertexRect)) ;
         }
 
-        void terramx_deform(physics::LinkPtr linkPtr, Triangle meshTri, uint32_t x, uint32_t y, Vector3d v3, double w, float dt) {
+        void terramx_deform(physics::LinkPtr linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, Vector3d v3, double w, float dt) {
             auto soil_z = v3.Z();
             auto mesh_z = meshTri.centroid().Z();
 
-            auto rho = 0.2f;
-            auto compress_modulus = 100.0f;
-            auto damp_coeff = rho*compress_modulus*0;
+            auto rho = 2.0f;
+            auto compress_modulus = 1000.0f;
+            auto damp_coeff = rho*compress_modulus;
 
             auto k_phi = 814000.0f;
             auto sigma = k_phi*(-mesh_z) + damp_coeff;
@@ -220,9 +217,8 @@ namespace gazebo {
 
 
                 auto normal_force = (sigma * dA * vtx_normal);
-                auto force_origin = v3;
 
-                apply_normal_force( linkPtr, force_origin, normal_force, dt);
+                apply_normal_force( linkPtr, v3, normal_force, dt);
 
                 auto plastic_flow = -(soil_z - mesh_z);
 

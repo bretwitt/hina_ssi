@@ -55,7 +55,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (100,100,0.1f));
+            soilPtr = new Soil(new SoilData (70,70,0.01f));
         }
 
         void init_transport() {
@@ -111,7 +111,7 @@ namespace gazebo {
             update_soil(soilPtr, dt);
             last_sec = sec;
 
-            if(dt_viz > (1./5)) {
+            if(dt_viz > (1./5.f)) {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
             }
@@ -138,11 +138,9 @@ namespace gazebo {
                         v0 = v0 + pos;
                         v1 = v1 + pos;
                         v2 = v2 + pos;
-                        
+
                         auto meshTri = Triangle(v0, v1, v2);
-
                         soilPtr->try_deform(meshTri, link, dt);
-
                     }
                 }
             }

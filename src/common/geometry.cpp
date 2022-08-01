@@ -2,16 +2,10 @@
 #define HINASSI_GEOMETRY_CPP
 
 #include <gazebo/common/common.hh>
-#include <CGAL/intersections.h>
-#include <CGAL/Triangle_2.h>
-#include <CGAL/Cartesian.h>
-#include <CGAL/Point_2.h>
 #include "../../thirdparty/MollerTest.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
-using namespace CGAL;
-typedef CGAL::Cartesian<double> Kernel;
 
 namespace gazebo {
 
@@ -20,31 +14,13 @@ namespace gazebo {
         Vector3d v2;
         Vector3d v3;
 
-        Triangle(Vector3d v1, Vector3d v2, Vector3d v3) {
+        Triangle(const Vector3d& v1, const Vector3d& v2, const Vector3d& v3) {
             this->v1 = v1;
             this->v2 = v2;
             this->v3 = v3;
         }
 
-        auto as_cgal_p3(Vector3d v) {
-            return Point_3<Kernel>(v.X(), v.Y(), v.Z());
-        }
-
-        auto as_cgal_p2(Vector3d v) {
-            return Point_2<Kernel>(v.X(), v.Y());
-        }
-
-        auto as_cgal_tri() {
-            auto t3 = Triangle_3<Kernel>(as_cgal_p3(v1), as_cgal_p3(v2), as_cgal_p3(v3));
-            return t3;
-        }
-
-        auto as_cgal_tri_proj() {
-            auto t2 = Triangle_2<Kernel>(as_cgal_p2(v1), as_cgal_p2(v2), as_cgal_p2(v3));
-            return t2;
-        }
-
-        Vector3d centroid() {
+        Vector3d centroid() const {
             return {(v1.X() + v2.X() + v3.X()) / 3,
                                (v1.Y() + v1.Y() + v1.Y()) / 3,
                             (v1.Z() + v1.Z() + v1.Z()) / 3 };
