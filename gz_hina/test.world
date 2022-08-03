@@ -30,121 +30,16 @@
     <model name="wheel">
         <pose>0 0 0.125 0 0 0</pose>
         <link name='wheel'>
-          <gravity>1</gravity>
+          <gravity>0</gravity>
           <inertial>
-            <mass>0.05</mass>
+            <mass>1</mass>
             <inertia>
-              <ixx>0.5</ixx>
+              <ixx>10.5</ixx>
               <ixy>0.000</ixy>
               <ixz>0.000</ixz>
-              <iyy>0.5</iyy>
+              <iyy>10.5</iyy>
               <iyz>0.006306</iyz>
-              <izz>0.5</izz>
-            </inertia>
-            <pose>0 0 0 0 0 0</pose>
-          </inertial>
-          <collision name="collision">
-              <geometry>
-                  <mesh><uri>file://astrowheel.dae</uri></mesh>
-              </geometry>
-          </collision>
-          <visual name='visual'>
-            <cast_shadows>1</cast_shadows>
-            <geometry>
-                <mesh><uri>file://astrowheel.dae</uri></mesh>
-            </geometry>
-            <material>
-              <script>
-                <uri>file://media/materials/scripts/gazebo.material</uri>
-                <name>Gazebo/Grey</name>
-              </script>
-            </material>
-          </visual>
-        </link>
-    </model>
-    <model name="wheel1">
-        <pose>0.15 0 0.125 0 0 0</pose>
-        <link name='wheel1'>
-          <gravity>1</gravity>
-          <inertial>
-            <mass>0.05</mass>
-            <inertia>
-              <ixx>0.5</ixx>
-              <ixy>0.000</ixy>
-              <ixz>0.000</ixz>
-              <iyy>0.5</iyy>
-              <iyz>0.006306</iyz>
-              <izz>0.5</izz>
-            </inertia>
-            <pose>0 0 0 0 0 0</pose>
-          </inertial>
-          <collision name="collision">
-              <geometry>
-                  <mesh><uri>file://astrowheel.dae</uri></mesh>
-              </geometry>
-          </collision>
-          <visual name='visual'>
-            <cast_shadows>1</cast_shadows>
-            <geometry>
-                <mesh><uri>file://astrowheel.dae</uri></mesh>
-            </geometry>
-            <material>
-              <script>
-                <uri>file://media/materials/scripts/gazebo.material</uri>
-                <name>Gazebo/Grey</name>
-              </script>
-            </material>
-          </visual>
-        </link>
-    </model>
-    <model name="wheel2">
-        <pose>0 0.2 0.125 0 0 0</pose>
-        <link name='wheel2'>
-          <gravity>1</gravity>
-          <inertial>
-            <mass>0.05</mass>
-            <inertia>
-              <ixx>0.5</ixx>
-              <ixy>0.000</ixy>
-              <ixz>0.000</ixz>
-              <iyy>0.5</iyy>
-              <iyz>0.006306</iyz>
-              <izz>0.5</izz>
-            </inertia>
-            <pose>0 0 0 0 0 0</pose>
-          </inertial>
-          <collision name="collision">
-              <geometry>
-                  <mesh><uri>file://astrowheel.dae</uri></mesh>
-              </geometry>
-          </collision>
-          <visual name='visual'>
-            <cast_shadows>1</cast_shadows>
-            <geometry>
-                <mesh><uri>file://astrowheel.dae</uri></mesh>
-            </geometry>
-            <material>
-              <script>
-                <uri>file://media/materials/scripts/gazebo.material</uri>
-                <name>Gazebo/Grey</name>
-              </script>
-            </material>
-          </visual>
-        </link>
-    </model>
-    <model name="wheel3">
-        <pose>0.15 0.2 0.125 0 0 0</pose>
-        <link name='wheel3'>
-          <gravity>1</gravity>
-          <inertial>
-            <mass>0.05</mass>
-            <inertia>
-              <ixx>0.5</ixx>
-              <ixy>0.000</ixy>
-              <ixz>0.000</ixz>
-              <iyy>0.5</iyy>
-              <iyz>0.006306</iyz>
-              <izz>0.5</izz>
+              <izz>10.5</izz>
             </inertia>
             <pose>0 0 0 0 0 0</pose>
           </inertial>
@@ -213,7 +108,7 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>14.6837 -7.41372 7.83224 0 0.565796 2.52419</pose>
+        <pose>2 2 2 0 0.565796 2.52419</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>

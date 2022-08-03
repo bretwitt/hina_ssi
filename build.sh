@@ -3,7 +3,8 @@
 mkdir -p build && cd build 
 
 skip="false"
-while getopts 's' OPTION; do
+debug="false"
+while getopts 'sd' OPTION; do
 	case "$OPTION" in
 	  s) skip="true" ;;
 	  d) debug="true";;
@@ -16,7 +17,7 @@ then flags = "Debug"
 fi
 
 if [[ $skip == false ]];
-then cmake .. -DCMAKE_BUILD_TYPE={$flags}
+then cmake .. -DCMAKE_BUILD_TYPE=Release
 fi
 	
 sudo make

@@ -104,14 +104,15 @@ namespace gazebo {
             double dt = sec - last_sec;
             double dt_viz = sec - last_sec_viz;
 
+
             update_soil(soilPtr, dt);
             last_sec = sec;
-
 
             if(dt_viz > (1./5.f)) {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
             }
+
         }
 
         void update_soil(Soil* soilPtr, float dt) {
@@ -136,11 +137,7 @@ namespace gazebo {
                         auto v1 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++))) + pos;
                         auto v2 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++))) + pos;
 
-                        auto meshTri = Triangle(
-                                v0,
-                                v1,
-                                v2
-                        );
+                        auto meshTri = Triangle(v0,v1,v2);
 
                         soilPtr->try_deform(meshTri, link, dt);
                     }
@@ -156,7 +153,7 @@ namespace gazebo {
 
             Vector3d vert;
             for(int idx = 0; idx < x_w*y_w; idx++) {
-                vert = soilPtr->get_data()->vertex_at_flattened_index(idx);
+                vert = soilPtr->get_data()->vertex_at_flattened_index(idx)->v3;
                 soil_v[idx] = msgs::Vector3d();
                 soil_v[idx].set_x(vert.X());
                 soil_v[idx].set_y(vert.Y());

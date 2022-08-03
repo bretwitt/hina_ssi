@@ -7,6 +7,19 @@ using ignition::math::Vector3d;
 using ignition::math::Vector2d;
 
 namespace gazebo {
+
+    struct VertexAttributes {
+        Vector3d v3;
+        double k_phi = 814000.0f;
+
+        VertexAttributes(Vector3d v3) {
+            this->v3 = v3;
+        }
+
+        ~VertexAttributes() {
+        }
+    };
+
     struct SoilData {
         uint32_t x_width = 5;
         uint32_t y_width = 5;
@@ -14,7 +27,7 @@ namespace gazebo {
         double x_offset = 0;
         double y_offset = 0;
         uint32_t *indices{};
-        std::unordered_map<uint32_t, std::unordered_map<uint32_t, Vector3d>>* soil_hashmap{};
+        std::unordered_map<uint32_t, std::unordered_map<uint32_t, VertexAttributes*>>* soil_hashmap{};
 
         SoilData(int x_width, int y_width, double scale) {
             this->x_width = x_width;
@@ -22,26 +35,35 @@ namespace gazebo {
             this->scale = scale;
         }
 
-        ~SoilData() = default;
+        ~SoilData() {
+            delete[] soil_hashmap;
+            delete[] indices;
+
+            for(uint32_t x = 0; x < x_width; x++) {
+                for(uint32_t y = 0; y < y_width; y++) {
+                    delete (*soil_hashmap)[x][y];
+                }
+            }
+        };
 
 
         void init_field() {
-            soil_hashmap = new std::unordered_map<uint32_t, std::unordered_map<uint32_t, Vector3d>>();
+            soil_hashmap = new std::unordered_map<uint32_t, std::unordered_map<uint32_t, VertexAttributes*>>();
             indices = new uint32_t[(x_width - 1) * (y_width - 1) * 3 * 2];
         }
 
-        Vector3d vertex_at_flattened_index(uint32_t idx) const {
+        VertexAttributes* vertex_at_flattened_index(uint32_t idx) const {
             uint32_t x;
             uint32_t y;
             unflatten_index(idx, x, y);
             return (*soil_hashmap)[x][y];
         }
 
-        void set_vertex_at_flattened_index(uint32_t idx, Vector3d vtx) const {
+        void set_vertex_at_flattened_index(uint32_t idx, VertexAttributes* vtx) const {
             uint32_t x;
             uint32_t y;
             unflatten_index(idx, x, y);
-            (*soil_hashmap)[x][y] = vtx;
+            set_vertex_at_index(x, y, vtx);
         }
 
         void unflatten_index(uint32_t idx, uint32_t& x, uint32_t& y) const {
@@ -49,11 +71,11 @@ namespace gazebo {
             y = floor(idx / x_width);
         }
 
-        Vector3d get_vertex_at_index(uint32_t x, uint32_t y) const {
+        VertexAttributes* get_vertex_at_index(uint32_t x, uint32_t y) const {
             return (*soil_hashmap)[std::min(x, x_width - 1)][std::min(y, y_width - 1)];
         }
 
-        void set_vertex_at_index(uint32_t x, uint32_t y, const ignition::math::Vector3<double>& vtx) const {
+        void set_vertex_at_index(uint32_t x, uint32_t y, VertexAttributes* vtx) const {
             (*soil_hashmap)[x][y] = vtx;
         }
 

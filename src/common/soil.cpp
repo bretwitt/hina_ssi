@@ -1,4 +1,5 @@
 #include "soil.h"
+#include <cmath>
 
 using namespace gazebo;
 
@@ -12,8 +13,6 @@ Soil::Soil(SoilData* soil_data) {
 }
 
 Soil::~Soil()  {
-    delete[] _data->soil_hashmap;
-    delete[] _data->indices;
     delete _data;
 }
 
@@ -31,7 +30,7 @@ void Soil::generate_soil_vertices() {
             auto j_f = (float) j;
             auto v3 = Vector3d(_data->scale * (i_f + _data->x_offset), _data->scale * (j_f + _data->y_offset), 0.0);
 
-            _data->set_vertex_at_index(i, j, v3);
+            _data->set_vertex_at_index(i, j, new VertexAttributes(v3));
         }
     }
 }
@@ -52,6 +51,7 @@ void Soil::generate_indices() const {
             indices[idx++] = a;
             indices[idx++] = d;
             indices[idx++] = c;
+
             indices[idx++] = c;
             indices[idx++] = b;
             indices[idx++] = a;
@@ -64,15 +64,16 @@ void Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, flo
 }
 
 void Soil::footprint_hash_idx_lookup_and_terramx_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt) {
-    auto max_x = std::max(meshTri.v1.X(), std::max(meshTri.v2.X(), meshTri.v3.X()));
-    auto max_y = std::max(meshTri.v1.Y(), std::max(meshTri.v2.Y(), meshTri.v3.Y()));
-    auto min_x = std::min(meshTri.v1.X(), std::min(meshTri.v2.X(), meshTri.v3.X()));
-    auto min_y = std::min(meshTri.v1.Y(), std::min(meshTri.v2.Y(), meshTri.v3.Y()));
+
+    auto max_x = fmax(meshTri.v1.X(), fmax(meshTri.v2.X(), meshTri.v3.X()));
+    auto max_y = fmax(meshTri.v1.Y(), fmax(meshTri.v2.Y(), meshTri.v3.Y()));
+    auto min_x = fmin(meshTri.v1.X(), fmin(meshTri.v2.X(), meshTri.v3.X()));
+    auto min_y = fmin(meshTri.v1.Y(), fmin(meshTri.v2.Y(), meshTri.v3.Y()));
 
     auto scale = _data->scale;
-
     auto iter_x = ceil( ((max_x - min_x) / scale) ) + 1;
     auto iter_y = ceil( ((max_y - min_y) / scale) ) + 1;
+
     uint32_t x_start = 0;
     uint32_t y_start = 0;
 
@@ -86,9 +87,11 @@ void Soil::footprint_hash_idx_lookup_and_terramx_deform(const Triangle& meshTri,
             }
         }
     }
+
 }
 
-bool Soil::penetrates(const Triangle& meshTri, const Vector3d& point, double w) {
+bool Soil::penetrates(const Triangle& meshTri, VertexAttributes* vtx, double w) {
+    auto point = vtx->v3;
     return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
 }
 
@@ -96,29 +99,33 @@ bool Soil::intersects_projected(const Triangle& meshTri, const AABB& vertexRect)
     return Geometry::getInstance()->intersects_box_tri(meshTri, vertexRect) ;
 }
 
-void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, Vector3d v3, double w, float dt) {
+
+void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt) {
+    auto v3 = vertex->v3;
     auto soil_z = v3.Z();
     auto mesh_z = meshTri.centroid().Z();
 
     auto rho = 2.0f;
-    auto compress_modulus = 1000.0f;
+    auto compress_modulus = 0*5000.0f;
     auto damp_coeff = rho*compress_modulus;
 
-    auto k_phi = 814000.0f;
-    auto sigma = k_phi*(-mesh_z) + damp_coeff;
+    auto k_phi = vertex->k_phi;
 
-    if(sigma > 0) {
+    auto sigma_t = k_phi*(soil_z-mesh_z) + damp_coeff;
+    auto sigma_j = k_phi*(-mesh_z) + damp_coeff;
+
+    if(sigma_t > 0) {
         auto dA = w * w;
 
-        auto vtx_ul = _data->get_vertex_at_index(x - 1, y + 1);
-        auto vtx_dl = _data->get_vertex_at_index(x - 1, y - 1);
-        auto vtx_ur = _data->get_vertex_at_index(x + 1, y + 1);
-        auto vtx_dr = _data->get_vertex_at_index(x + 1, y - 1);
+        auto vtx_ul = _data->get_vertex_at_index(x - 1, y + 1)->v3;
+        auto vtx_dl = _data->get_vertex_at_index(x - 1, y - 1)->v3;
+        auto vtx_ur = _data->get_vertex_at_index(x + 1, y + 1)->v3;
+        auto vtx_dr = _data->get_vertex_at_index(x + 1, y - 1)->v3;
 
-        auto vtx_u = _data->get_vertex_at_index(x, y + 1);
-        auto vtx_d = _data->get_vertex_at_index(x, y - 1);
-        auto vtx_l = _data->get_vertex_at_index(x - 1, y);
-        auto vtx_r = _data->get_vertex_at_index(x + 1, y);
+        auto vtx_u = _data->get_vertex_at_index(x, y + 1)->v3;
+        auto vtx_d = _data->get_vertex_at_index(x, y - 1)->v3;
+        auto vtx_l = _data->get_vertex_at_index(x - 1, y)->v3;
+        auto vtx_r = _data->get_vertex_at_index(x + 1, y)->v3;
         auto vtx = v3;
 
         auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
@@ -130,39 +137,21 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
 
         auto tri6 = Triangle(vtx, vtx_d, vtx_l);
 
-        auto vtx_normal =
-                -(tri_normal(tri1)
-                  + tri_normal(tri2)
-                  + tri_normal(tri3)
-                  + tri_normal(tri4)
-                  + tri_normal(tri5)
-                  + tri_normal(tri6))
-                        .Normalize();
+        auto sum = tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() + tri6.normal();
 
-
-        auto normal_force = (sigma * dA * vtx_normal);
+        auto normal_force = (sigma_t * dA * -sum.Normalize());
 
         apply_normal_force( linkPtr, v3, normal_force, dt);
 
-        auto plastic_flow = -(soil_z - mesh_z);
+        auto plastic_flow = -(soil_z - mesh_z)*dt;
 
         auto _v3 = Vector3d(v3.X(), v3.Y(), soil_z + plastic_flow);
-        _data->set_vertex_at_index(x, y, _v3);
+        vertex->v3 = _v3;
+        _data->set_vertex_at_index(x, y, vertex);
     }
-}
-
-Vector3d Soil::tri_normal(const Triangle& tri) {
-    auto p0 = tri.v1;
-    auto p1 = tri.v2;
-    auto p2 = tri.v3;
-
-    auto A = p1 - p0;
-    auto B = p2 - p0;
-    auto norm = A.Cross(B).Normalized();
-    return norm;
 }
 
 void Soil::apply_normal_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt) {
     auto normal_force_z = Vector3d(0,0,normal_force.Z());
-    linkPtr->AddForceAtWorldPosition(normal_force_z * dt, origin) ;
+    linkPtr->AddForceAtWorldPosition(normal_force_z, origin) ;
 }

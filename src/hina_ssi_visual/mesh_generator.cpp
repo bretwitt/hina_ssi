@@ -26,7 +26,7 @@ namespace gazebo {
             //calculate_vertex_normals(soil, x_size, y_size, vertex_normals);
 
             for(uint32_t i = 0; i < nVerts; i++) {
-                auto v3 = soil->get_data()->vertex_at_flattened_index(i);
+                auto v3 = soil->get_data()->vertex_at_flattened_index(i)->v3;
                 manObj->position(v3.X(),v3.Y(),v3.Z());
                 //manObj->normal(vertex_normals[i]);
 
@@ -44,7 +44,6 @@ namespace gazebo {
 
             std::fill_n(vertex_normals, x_size*y_size, Ogre::Vector3(0,0,0));
 
-
             for(uint32_t y = 0; y < y_size - 1; y++) {
                 for(uint32_t x = 0; x < x_size - 1; x++) {
                     uint32_t a = (x_size * x) + y;
@@ -52,10 +51,10 @@ namespace gazebo {
                     uint32_t c = (x_size * (x + 1)) + (y + 1);
                     uint32_t d = (x_size * x) + (y + 1);
 
-                    auto vA = soil->get_data()->vertex_at_flattened_index(a);
-                    auto vB = soil->get_data()->vertex_at_flattened_index(b);
-                    auto vC = soil->get_data()->vertex_at_flattened_index(c);
-                    auto vD = soil->get_data()->vertex_at_flattened_index(d);
+                    auto vA = soil->get_data()->vertex_at_flattened_index(a)->v3;
+                    auto vB = soil->get_data()->vertex_at_flattened_index(b)->v3;
+                    auto vC = soil->get_data()->vertex_at_flattened_index(c)->v3;
+                    auto vD = soil->get_data()->vertex_at_flattened_index(d)->v3;
 
                     auto av0 = Ogre::Vector3(vA.X(), vA.Y(), vA.Z() );
                     auto av1 = Ogre::Vector3(vD.X(), vD.Y(), vD.Z() );
