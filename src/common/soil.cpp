@@ -106,13 +106,13 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
     auto mesh_z = meshTri.centroid().Z();
 
     auto rho = 2.0f;
-    auto compress_modulus = 0*5000.0f;
+    auto compress_modulus = 1000.0f;
     auto damp_coeff = rho*compress_modulus;
 
     auto k_phi = vertex->k_phi;
 
-    auto sigma_t = k_phi*(soil_z-mesh_z) + damp_coeff;
-    auto sigma_j = k_phi*(-mesh_z) + damp_coeff;
+    auto sigma_t = k_phi*(soil_z-mesh_z);
+    auto sigma_j = k_phi*(-mesh_z);
 
     if(sigma_t > 0) {
         auto dA = w * w;
@@ -139,19 +139,24 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
 
         auto sum = tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() + tri6.normal();
 
-        auto normal_force = (sigma_t * dA * -sum.Normalize());
+        auto normal_force = ((sigma_j + damp_coeff) * dA * -sum.Normalize());
+        auto normal_force_z = Vector3d( 0, 0, normal_force.Z());
 
-        apply_normal_force( linkPtr, v3, normal_force, dt);
+//        auto c = 0.8;
+//        auto phi = 0.645772;
+//        auto tau_max = c + ((sigma_j + damp_coeff) * tan(phi) * dA * -sum.Normalize());
+//        auto tau = Vector3d( tau_max.X(), tau_max.Y(), 0);
 
-        auto plastic_flow = -(soil_z - mesh_z)*dt;
+        //apply_force(linkPtr, v3, tau, dt);
+        apply_force( linkPtr, v3, normal_force_z, dt);
 
+        auto plastic_flow = -(soil_z - mesh_z) / 60.0f;
         auto _v3 = Vector3d(v3.X(), v3.Y(), soil_z + plastic_flow);
         vertex->v3 = _v3;
         _data->set_vertex_at_index(x, y, vertex);
     }
 }
 
-void Soil::apply_normal_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt) {
-    auto normal_force_z = Vector3d(0,0,normal_force.Z());
-    linkPtr->AddForceAtWorldPosition(normal_force_z, origin) ;
+void Soil::apply_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt) {
+    linkPtr->AddForceAtWorldPosition(normal_force, origin) ;
 }

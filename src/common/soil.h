@@ -30,7 +30,7 @@ namespace gazebo {
 
         void terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt);
         //Vector3d tri_normal(const Triangle& tri);
-        void apply_normal_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt);
+        void apply_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt);
     };
 }
 
