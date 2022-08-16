@@ -47,6 +47,10 @@ struct Triangle {
                 (v1.Z() + v1.Z() + v1.Z()) / 3 };
     }
 
+    double area() const {
+        return 0.5 * (v2 - v1).Cross(v3 - v1).Length();
+    }
+
     Vector3d normal() const {
         return (v2 - v1).Cross(v3 - v1);
     }

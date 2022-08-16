@@ -19,13 +19,15 @@ namespace gazebo {
         transport::NodePtr node = nullptr;
         transport::PublisherPtr soilPub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
+        event::ConnectionPtr onEntityAddedEventPtr = nullptr;
         physics::WorldPtr world = nullptr;
         sdf::ElementPtr sdf = nullptr;
 
         double z{};
         Vector3d v3;
-        std::map<std::string, const common::Mesh*> mesh_lookup {};
-        std::map<std::string, physics::LinkPtr> link_lookup {};
+        //std::map<std::string, const common::Mesh*> mesh_lookup {};
+        std::map<physics::LinkPtr, const common::Mesh*> mesh_lookup {};
+        //std::map<std::string, physics::LinkPtr> link_lookup {};
 
         common::Time time;
         double sec{};
@@ -43,15 +45,47 @@ namespace gazebo {
 
         void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
             updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
+            onEntityAddedEventPtr = event::Events::ConnectAddEntity(boost::bind(&HinaSSIWorldPlugin::OnEntityAdded, this, _1));
             world = _world;
             sdf = _sdf;
             init_soil();
             init_transport();
-            load_meshes();
+            //load_meshes();
+        }
+
+        void OnEntityAdded(const std::string str) {
+            std::string links[6] = { "wheel_RR_link", "wheel_FR_link", "wheel_RL_link", "wheel_FL_link", "wheel_R_link", "wheel_L_link" };
+            //std::string links[6] = { " ", " ", " ", " ", " ", " " };
+
+            auto model = world->EntityByName(str)->GetParentModel();
+            auto link_v = model->GetLinks();
+            for(const auto& link : link_v) {
+
+                if(std::end(links) == std::find(std::begin(links), std::end(links), link->GetName())) continue;
+
+                auto collElemPtr = link->GetSDF()->GetElement("collision");
+                if (collElemPtr != nullptr) {
+                    if (!collElemPtr->HasElement("geometry")) break;
+                    auto geomElemPtr = collElemPtr->GetElement("geometry");
+                    if (geomElemPtr != nullptr) {
+                        auto meshElemPtr = geomElemPtr->GetElement("mesh");
+                        if (!geomElemPtr->HasElement("mesh")) break;
+                        if (meshElemPtr != nullptr) {
+                            auto uriElemPtr = meshElemPtr->GetElement("uri");
+                            if (!meshElemPtr->HasElement("uri")) break;
+                            if (uriElemPtr != nullptr) {
+                                auto model_name = model->GetName();
+                                auto uri = uriElemPtr->Get<std::string>();
+                                load_mesh(link, uri);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (70,70,0.01f));
+            soilPtr = new Soil(new SoilData (150,150,0.005f));
         }
 
         void init_transport() {
@@ -62,40 +96,9 @@ namespace gazebo {
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
         }
 
-        void load_meshes() {
-            auto modelElemPtr = sdf->GetParent()->GetElement("model");
-            while(modelElemPtr != nullptr) {
-                if(!modelElemPtr->HasElement("link")) break;
-                auto linkElemPtr = modelElemPtr->GetElement("link");
-                while(linkElemPtr != nullptr) {
-                    if(!linkElemPtr->HasElement("collision")) break;
-                    auto collElemPtr = linkElemPtr->GetElement("collision");
-                    if(collElemPtr != nullptr) {
-                        if(!collElemPtr->HasElement("geometry")) break;
-                        auto geomElemPtr = collElemPtr->GetElement("geometry");
-                        if(geomElemPtr != nullptr) {
-                            auto meshElemPtr = geomElemPtr->GetElement("mesh");
-                            if(!geomElemPtr->HasElement("mesh")) break;
-                            if(meshElemPtr != nullptr) {
-                                auto uriElemPtr = meshElemPtr->GetElement("uri");
-                                if(!meshElemPtr->HasElement("uri")) break;
-                                if(uriElemPtr != nullptr) {
-                                    auto model = modelElemPtr->GetAttribute("name")->GetAsString();
-                                    auto link_name = linkElemPtr->GetAttribute("name")->GetAsString();
-                                    auto link = world->ModelByName(model)->GetLink(link_name);
-                                    auto uri = uriElemPtr->Get<std::string>();
-                                    auto mesh = common::MeshManager::Instance()->Load(uri);
-
-                                    mesh_lookup.insert(std::pair<std::string, const common::Mesh*>(link_name, mesh));
-                                    link_lookup.insert(std::pair<std::string, physics::LinkPtr>(link_name, link));
-                                }
-                            }
-                        }
-                    }
-                    linkElemPtr = linkElemPtr->GetNextElement();
-                }
-                modelElemPtr = modelElemPtr->GetNextElement();
-            }
+        void load_mesh(const physics::LinkPtr& link, const std::string& mesh_uri) {
+            auto mesh = common::MeshManager::Instance()->Load(mesh_uri);
+            mesh_lookup.insert(std::pair<physics::LinkPtr, const common::Mesh*>(link, mesh));
         }
 
         void update() {
@@ -116,16 +119,18 @@ namespace gazebo {
         }
 
         void update_soil(Soil* soilPtr, float dt) {
-            for(std::pair<std::string, const common::Mesh*> pair : mesh_lookup) {
-                auto linkName = pair.first;
+            for(std::pair<physics::LinkPtr, const common::Mesh*> pair : mesh_lookup) {
+                auto link = pair.first;
                 auto mesh = pair.second;
-
-                auto link = link_lookup[linkName];
 
                 for(uint32_t i = 0; i < mesh->GetSubMeshCount(); i++) {
 
                     auto submesh = mesh->GetSubMesh(i);
                     uint32_t indices = submesh->GetIndexCount();
+
+                    auto col_pose = link->GetCollision(0.)->RelativePose();
+                    auto cpos = col_pose.Pos();
+                    auto crot = col_pose.Rot();
 
                     auto pose = link->WorldPose();
                     auto rot = pose.Rot();
@@ -133,12 +138,19 @@ namespace gazebo {
 
                     for(uint32_t idx = 0; idx < indices;) {
 
-                        auto v0 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++))) + pos;
-                        auto v1 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++))) + pos;
-                        auto v2 = rot.RotateVector(submesh->Vertex(submesh->GetIndex(idx++))) + pos;
+                        auto v0 = submesh->Vertex(submesh->GetIndex(idx++));
+                        auto v1 = submesh->Vertex(submesh->GetIndex(idx++));
+                        auto v2 = submesh->Vertex(submesh->GetIndex(idx++));
 
-                        auto meshTri = Triangle(v0,v1,v2);
+                        auto cv0 = crot.RotateVector(v0) + cpos;
+                        auto cv1 = crot.RotateVector(v1) + cpos;
+                        auto cv2 = crot.RotateVector(v2) + cpos;
 
+                        auto c1v0 = rot.RotateVector(cv0) + pos;
+                        auto c1v1 = rot.RotateVector(cv1) + pos;
+                        auto c1v2 = rot.RotateVector(cv2) + pos;
+
+                        auto meshTri = Triangle(c1v0,c1v1,c1v2);
                         soilPtr->try_deform(meshTri, link, dt);
                     }
                 }

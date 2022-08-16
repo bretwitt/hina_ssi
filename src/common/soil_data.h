@@ -11,6 +11,10 @@ namespace gazebo {
     struct VertexAttributes {
         Vector3d v3;
         double k_phi = 814000.0f;
+        double k_e = 10000.0f;
+        double sigma_yield = 0;
+        double sigma = 0;
+        double ds_p = 0;
 
         VertexAttributes(Vector3d v3) {
             this->v3 = v3;

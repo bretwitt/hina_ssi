@@ -11,6 +11,7 @@ namespace gazebo {
     class Soil {
     private:
         SoilData* _data;
+        double sigma_yield = 0;
 
     public:
 
@@ -30,7 +31,7 @@ namespace gazebo {
 
         void terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt);
         //Vector3d tri_normal(const Triangle& tri);
-        void apply_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt);
+        void apply_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force);
     };
 }
 

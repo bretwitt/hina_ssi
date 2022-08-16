@@ -102,21 +102,17 @@ bool Soil::intersects_projected(const Triangle& meshTri, const AABB& vertexRect)
 
 void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt) {
     auto v3 = vertex->v3;
-    auto soil_z = v3.Z();
-    auto mesh_z = meshTri.centroid().Z();
-
-    auto rho = 2.0f;
-    auto compress_modulus = 1000.0f;
-    auto damp_coeff = rho*compress_modulus;
+    auto s_p = -v3.Z();
+    auto y_z = meshTri.centroid().Z();
 
     auto k_phi = vertex->k_phi;
 
-    auto sigma_t = k_phi*(soil_z-mesh_z);
-    auto sigma_j = k_phi*(-mesh_z);
+    double s_y = -y_z;
 
-    if(sigma_t > 0) {
-        auto dA = w * w;
+    auto sigma_t = k_phi*(s_y - s_p);
+    auto sigma_p = k_phi*(s_y);
 
+    if(sigma_t > 0) { // Unilateral Contact
         auto vtx_ul = _data->get_vertex_at_index(x - 1, y + 1)->v3;
         auto vtx_dl = _data->get_vertex_at_index(x - 1, y - 1)->v3;
         auto vtx_ur = _data->get_vertex_at_index(x + 1, y + 1)->v3;
@@ -126,7 +122,7 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
         auto vtx_d = _data->get_vertex_at_index(x, y - 1)->v3;
         auto vtx_l = _data->get_vertex_at_index(x - 1, y)->v3;
         auto vtx_r = _data->get_vertex_at_index(x + 1, y)->v3;
-        auto vtx = v3;
+        const auto& vtx = v3;
 
         auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
         auto tri2 = Triangle(vtx, vtx_l, vtx_ul);
@@ -138,25 +134,26 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
         auto tri6 = Triangle(vtx, vtx_d, vtx_l);
 
         auto sum = tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() + tri6.normal();
+        auto area = tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area();
 
-        auto normal_force = ((sigma_j + damp_coeff) * dA * -sum.Normalize());
+        auto normal_force = (sigma_p * area * -sum.Normalize()) / 3;
         auto normal_force_z = Vector3d( 0, 0, normal_force.Z());
-
-//        auto c = 0.8;
-//        auto phi = 0.645772;
-//        auto tau_max = c + ((sigma_j + damp_coeff) * tan(phi) * dA * -sum.Normalize());
-//        auto tau = Vector3d( tau_max.X(), tau_max.Y(), 0);
-
-        //apply_force(linkPtr, v3, tau, dt);
-        apply_force( linkPtr, v3, normal_force_z, dt);
-
-        auto plastic_flow = -(soil_z - mesh_z) / 60.0f;
-        auto _v3 = Vector3d(v3.X(), v3.Y(), soil_z + plastic_flow);
+        apply_force( linkPtr, v3, normal_force_z);
+        
+        auto _v3 = Vector3d(v3.X(), v3.Y(), v3.Z() + vertex->ds_p);
         vertex->v3 = _v3;
         _data->set_vertex_at_index(x, y, vertex);
+
+        auto plastic_flow = -(s_y - s_p)*dt;
+        vertex->ds_p = plastic_flow;
+
+    } else {
+        vertex->sigma = 0;
+        vertex->ds_p = 0;
     }
+
 }
 
-void Soil::apply_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force, float dt) {
+void Soil::apply_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force) {
     linkPtr->AddForceAtWorldPosition(normal_force, origin) ;
 }
