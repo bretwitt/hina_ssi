@@ -2,8 +2,6 @@
 
 Plugins for Gazebo 11 to simulate soft soil interaction with rigidbodies.
 
-Requires CGAL (libcgal-dev) and Gazebo 11 
-
 ## Build instructions
 
 Building (-s flag to skip CMake config)
