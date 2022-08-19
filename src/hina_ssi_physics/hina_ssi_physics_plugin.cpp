@@ -85,7 +85,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (150,150,0.005f));
+            soilPtr = new Soil(new SoilData (200,200,0.0025f));
         }
 
         void init_transport() {
@@ -119,6 +119,8 @@ namespace gazebo {
         }
 
         void update_soil(Soil* soilPtr, float dt) {
+            soilPtr->pre_update();
+
             for(std::pair<physics::LinkPtr, const common::Mesh*> pair : mesh_lookup) {
                 auto link = pair.first;
                 auto mesh = pair.second;
@@ -154,6 +156,7 @@ namespace gazebo {
                         soilPtr->try_deform(meshTri, link, dt);
                     }
                 }
+                soilPtr->apply_shear_stress(link);
             }
         }
 

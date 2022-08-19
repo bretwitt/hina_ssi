@@ -10,10 +10,7 @@ namespace gazebo {
 
     struct VertexAttributes {
         Vector3d v3;
-        double k_phi = 814000.0f;
-        double k_e = 10000.0f;
-        double sigma_yield = 0;
-        double sigma = 0;
+        double k_phi = 500000; //814000.0f;
         double ds_p = 0;
 
         VertexAttributes(Vector3d v3) {
@@ -25,13 +22,26 @@ namespace gazebo {
     };
 
     struct SoilData {
+
+        /* Terrain parameters */
         uint32_t x_width = 5;
         uint32_t y_width = 5;
         double scale = 1.0;
+
+        /* Runtime */
         double x_offset = 0;
         double y_offset = 0;
         uint32_t *indices{};
         std::unordered_map<uint32_t, std::unordered_map<uint32_t, VertexAttributes*>>* soil_hashmap{};
+
+        /* Physics Parameters */
+        double c = 0; //3500;
+        double phi = 0.65;
+        double K = 0.036;
+
+        /* Frame physics data */
+        double tangential_vel_sum = 0;
+        double sigma_tot = 0;
 
         SoilData(int x_width, int y_width, double scale) {
             this->x_width = x_width;

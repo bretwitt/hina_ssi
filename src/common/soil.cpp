@@ -99,6 +99,9 @@ bool Soil::intersects_projected(const Triangle& meshTri, const AABB& vertexRect)
     return Geometry::getInstance()->intersects_box_tri(meshTri, vertexRect) ;
 }
 
+void Soil::pre_update() {
+    get_data()->sigma_tot = 0;
+}
 
 void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt) {
     auto v3 = vertex->v3;
@@ -113,6 +116,8 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
     auto sigma_p = k_phi*(s_y);
 
     if(sigma_t > 0) { // Unilateral Contact
+
+        /* Geometry Calculations */
         auto vtx_ul = _data->get_vertex_at_index(x - 1, y + 1)->v3;
         auto vtx_dl = _data->get_vertex_at_index(x - 1, y - 1)->v3;
         auto vtx_ur = _data->get_vertex_at_index(x + 1, y + 1)->v3;
@@ -133,25 +138,43 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
 
         auto tri6 = Triangle(vtx, vtx_d, vtx_l);
 
-        auto sum = tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() + tri6.normal();
-        auto area = tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area();
+        auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() + tri6.normal()).Normalized();
+        //auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area()) / 3;
+        /* --- Stress --- */
 
-        auto normal_force = (sigma_p * area * -sum.Normalize()) / 3;
-        auto normal_force_z = Vector3d( 0, 0, normal_force.Z());
-        apply_force( linkPtr, v3, normal_force_z);
-        
-        auto _v3 = Vector3d(v3.X(), v3.Y(), v3.Z() + vertex->ds_p);
-        vertex->v3 = _v3;
-        _data->set_vertex_at_index(x, y, vertex);
+        // Calculate force
+        auto normal_dA = -normal_sum * w * w;
+        auto force_v = Vector3d((get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.X(),
+                                (get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.Y(),
+                                sigma_p * normal_dA.Z());
 
+        // Calculate torque
+        auto r = linkPtr->WorldCoGPose().Pos() - v3;
+        auto torque_v = r.Cross(force_v);
+
+        // Apply f/t
+        linkPtr->AddForceAtWorldPosition(force_v, v3);
+        linkPtr->AddTorque(torque_v);
+
+        /* --- Plastic Flow --- */
         auto plastic_flow = -(s_y - s_p)*dt;
         vertex->ds_p = plastic_flow;
+        vertex->v3 = Vector3d(v3.X(), v3.Y(), v3.Z() + vertex->ds_p);
 
+        get_data()->sigma_tot += sigma_p;
     } else {
-        vertex->sigma = 0;
         vertex->ds_p = 0;
     }
 
+}
+
+void Soil::apply_shear_stress(const physics::LinkPtr& linkPtr) {
+//    // Angular Velocity
+//    auto rel_omega = linkPtr->RelativeAngularVel();
+//    auto integr_ratio = get_data()->tangential_vel_sum / rel_omega;
+//    auto tau_max = get_data()->c +
+
+    // Janosi-Hanamoto Shear Stress
 }
 
 void Soil::apply_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force) {

@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 project(hina_ssi_plugin)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 find_package(gazebo REQUIRED)
 find_package(CGAL REQUIRED)
 
