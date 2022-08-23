@@ -21,16 +21,14 @@ namespace gazebo {
 
         SoilData* get_data();
 
+        void generate_geometry();
         void generate_soil_vertices();
         void generate_indices() const;
 
         void pre_update();
         void try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt);
-        void footprint_hash_idx_lookup_and_terramx_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt);
         bool penetrates(const Triangle& meshTri, VertexAttributes* vertex, double w);
         bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect);
-
-        void apply_shear_stress(const physics::LinkPtr& linkPtr);
 
         void terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt);
         //Vector3d tri_normal(const Triangle& tri);

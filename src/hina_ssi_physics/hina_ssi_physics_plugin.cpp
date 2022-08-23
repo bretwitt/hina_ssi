@@ -25,9 +25,7 @@ namespace gazebo {
 
         double z{};
         Vector3d v3;
-        //std::map<std::string, const common::Mesh*> mesh_lookup {};
         std::map<physics::LinkPtr, const common::Mesh*> mesh_lookup {};
-        //std::map<std::string, physics::LinkPtr> link_lookup {};
 
         common::Time time;
         double sec{};
@@ -55,7 +53,6 @@ namespace gazebo {
 
         void OnEntityAdded(const std::string str) {
             std::string links[6] = { "wheel_RR_link", "wheel_FR_link", "wheel_RL_link", "wheel_FL_link", "wheel_R_link", "wheel_L_link" };
-            //std::string links[6] = { " ", " ", " ", " ", " ", " " };
 
             auto model = world->EntityByName(str)->GetParentModel();
             auto link_v = model->GetLinks();
@@ -85,7 +82,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (200,200,0.0025f));
+            soilPtr = new Soil(new SoilData (200,200,0.005f));
         }
 
         void init_transport() {
@@ -104,11 +101,12 @@ namespace gazebo {
         void update() {
             time = common::Time::GetWallTime();
             sec = time.Double();
+
             double dt = sec - last_sec;
             double dt_viz = sec - last_sec_viz;
 
-
             update_soil(soilPtr, dt);
+
             last_sec = sec;
 
             if(dt_viz > (1./5.f)) {
@@ -121,14 +119,15 @@ namespace gazebo {
         void update_soil(Soil* soilPtr, float dt) {
             soilPtr->pre_update();
 
-            for(std::pair<physics::LinkPtr, const common::Mesh*> pair : mesh_lookup) {
-                auto link = pair.first;
-                auto mesh = pair.second;
+            for(auto & iter : mesh_lookup)
+            {
+                auto link = iter.first;
+                auto mesh = iter.second;
 
-                for(uint32_t i = 0; i < mesh->GetSubMeshCount(); i++) {
+                for (uint32_t i = 0; i < mesh->GetSubMeshCount(); i++) {
 
                     auto submesh = mesh->GetSubMesh(i);
-                    uint32_t indices = submesh->GetIndexCount();
+                    auto indices = submesh->GetIndexCount();
 
                     auto col_pose = link->GetCollision(0.)->RelativePose();
                     auto cpos = col_pose.Pos();
@@ -138,25 +137,30 @@ namespace gazebo {
                     auto rot = pose.Rot();
                     auto pos = pose.Pos();
 
-                    for(uint32_t idx = 0; idx < indices;) {
+                    #pragma omp parallel num_threads(8)
+                    {
+                        #pragma omp for //nowait   //private(link, soilPtr, indices, submesh, crot, cpos, rot, pos, dt) default(none)
+                        for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
 
-                        auto v0 = submesh->Vertex(submesh->GetIndex(idx++));
-                        auto v1 = submesh->Vertex(submesh->GetIndex(idx++));
-                        auto v2 = submesh->Vertex(submesh->GetIndex(idx++));
+                            auto idx = idx_unrolled*3;
 
-                        auto cv0 = crot.RotateVector(v0) + cpos;
-                        auto cv1 = crot.RotateVector(v1) + cpos;
-                        auto cv2 = crot.RotateVector(v2) + cpos;
+                            auto v0 = submesh->Vertex(submesh->GetIndex(idx));
+                            auto v1 = submesh->Vertex(submesh->GetIndex(idx + 1));
+                            auto v2 = submesh->Vertex(submesh->GetIndex(idx + 2));
 
-                        auto c1v0 = rot.RotateVector(cv0) + pos;
-                        auto c1v1 = rot.RotateVector(cv1) + pos;
-                        auto c1v2 = rot.RotateVector(cv2) + pos;
+                            auto cv0 = crot.RotateVector(v0) + cpos;
+                            auto cv1 = crot.RotateVector(v1) + cpos;
+                            auto cv2 = crot.RotateVector(v2) + cpos;
 
-                        auto meshTri = Triangle(c1v0,c1v1,c1v2);
-                        soilPtr->try_deform(meshTri, link, dt);
-                    }
+                            auto c1v0 = rot.RotateVector(cv0) + pos;
+                            auto c1v1 = rot.RotateVector(cv1) + pos;
+                            auto c1v2 = rot.RotateVector(cv2) + pos;
+
+                            auto meshTri = Triangle(c1v0, c1v1, c1v2);
+                            soilPtr->try_deform(meshTri, link, dt);
+                        }
+                    };
                 }
-                soilPtr->apply_shear_stress(link);
             }
         }
 
