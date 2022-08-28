@@ -70,8 +70,6 @@ void Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, flo
     int iter_x, iter_y;
     uint32_t x_start, y_start;
 
-    //#pragma omp parallel default(none) shared(meshTri, link, _data) private(dt, max_x, max_y, min_x, min_y, iter_x, iter_y, x_start, y_start, scale)
-
     max_x = fmax(meshTri.v1.X(), fmax(meshTri.v2.X(), meshTri.v3.X()));
     max_y = fmax(meshTri.v1.Y(), fmax(meshTri.v2.Y(), meshTri.v3.Y()));
     min_x = fmin(meshTri.v1.X(), fmin(meshTri.v2.X(), meshTri.v3.X()));
@@ -86,13 +84,12 @@ void Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, flo
 
     _data->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
-    //#pragma omp parallel for collapse(2) num_threads(8)
-    for(int x = 0; x < iter_x; x++) {
-        for(int y = 0; y < iter_y; y++) {
-            auto v3 = _data->get_vertex_at_index(x + x_start, y + y_start);
-            if(penetrates(meshTri, v3, scale)) {
-                terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt);
-            }
+    for(uint32_t k = 0; k < iter_x*iter_y; k++) {
+        auto y = floor(k / iter_y);
+        auto x = k - (iter_x*y);
+        auto v3 = _data->get_vertex_at_index(x + x_start, y + y_start);
+        if(penetrates(meshTri, v3, scale)) {
+            terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt);
         }
     }
 }
@@ -165,8 +162,8 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
         auto friction_v = 0.8*sigma_p*vtx_tangent;
 
         /* Shear Effects, Normal Pressure, Friction */
-        auto force_v = Vector3d((get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.X() * 0,
-                                (get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.Y() * 0,
+        auto force_v = Vector3d((get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.X(),
+                                (get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.Y(),
                                 sigma_p * normal_dA.Z());// + friction_v;
 
 
@@ -175,7 +172,7 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
 
         // Apply f/t
         linkPtr->AddForceAtWorldPosition(force_v, v3);
-        //linkPtr->AddRelativeTorque(torque_v);
+        linkPtr->AddRelativeTorque(torque_v);
 
         /* --- Plastic Flow --- */
         auto plastic_flow = -(s_y - s_p)*dt;

@@ -10,15 +10,14 @@ namespace gazebo {
 
     struct VertexAttributes {
         Vector3d v3;
-        double k_phi = 500000; //814000.0f;
+        double k_phi = 814000.0f; //814000.0f;
         double ds_p = 0;
 
-        VertexAttributes(Vector3d v3) {
+        explicit VertexAttributes(Vector3d v3) {
             this->v3 = v3;
         }
 
-        ~VertexAttributes() {
-        }
+        ~VertexAttributes() = default;
     };
 
     struct SoilData {
@@ -35,8 +34,8 @@ namespace gazebo {
         std::unordered_map<uint32_t, std::unordered_map<uint32_t, VertexAttributes*>>* soil_hashmap{};
 
         /* Physics Parameters */
-        double c = 0; //3500;
-        double phi = 0.65;
+        double c = 800;
+        double phi = 0.55;
         double K = 0.036;
 
         /* Frame physics data */
@@ -50,7 +49,6 @@ namespace gazebo {
         }
 
         ~SoilData() {
-            delete[] soil_hashmap;
             delete[] indices;
 
             for(uint32_t x = 0; x < x_width; x++) {
@@ -58,6 +56,7 @@ namespace gazebo {
                     delete (*soil_hashmap)[x][y];
                 }
             }
+            delete[] soil_hashmap;
         };
 
 

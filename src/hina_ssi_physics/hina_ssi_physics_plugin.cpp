@@ -125,7 +125,6 @@ namespace gazebo {
                 auto mesh = iter.second;
 
                 for (uint32_t i = 0; i < mesh->GetSubMeshCount(); i++) {
-
                     auto submesh = mesh->GetSubMesh(i);
                     auto indices = submesh->GetIndexCount();
 
@@ -137,12 +136,11 @@ namespace gazebo {
                     auto rot = pose.Rot();
                     auto pos = pose.Pos();
 
-                    #pragma omp parallel num_threads(8)
+                    #pragma omp parallel num_threads(7) default(none) /*shared()*/ firstprivate(submesh, soilPtr, crot, cpos, pos, rot, indices, dt, link)
                     {
-                        #pragma omp for //nowait   //private(link, soilPtr, indices, submesh, crot, cpos, rot, pos, dt) default(none)
+                    #pragma omp for nowait schedule(guided)
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
-
-                            auto idx = idx_unrolled*3;
+                            auto idx = idx_unrolled * 3;
 
                             auto v0 = submesh->Vertex(submesh->GetIndex(idx));
                             auto v1 = submesh->Vertex(submesh->GetIndex(idx + 1));
@@ -159,7 +157,7 @@ namespace gazebo {
                             auto meshTri = Triangle(c1v0, c1v1, c1v2);
                             soilPtr->try_deform(meshTri, link, dt);
                         }
-                    };
+                    }
                 }
             }
         }

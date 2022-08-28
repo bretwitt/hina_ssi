@@ -28,7 +28,7 @@ namespace gazebo {
         void pre_update();
         void try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt);
         bool penetrates(const Triangle& meshTri, VertexAttributes* vertex, double w);
-        bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect);
+        static bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect);
 
         void terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt);
         //Vector3d tri_normal(const Triangle& tri);
