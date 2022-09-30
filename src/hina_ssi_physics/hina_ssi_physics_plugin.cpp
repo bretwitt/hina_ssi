@@ -48,13 +48,26 @@ namespace gazebo {
             sdf = _sdf;
             init_soil();
             init_transport();
+            init_models();
             //load_meshes();
         }
 
-        void OnEntityAdded(const std::string str) {
-            std::string links[6] = { "wheel_RR_link", "wheel_FR_link", "wheel_RL_link", "wheel_FL_link", "wheel_R_link", "wheel_L_link" };
+        void OnEntityAdded(const std::string& str) {
+            //std::string links[6] = { "wheel_RR_link", "wheel_FR_link", "wheel_RL_link", "wheel_FL_link", "wheel_R_link", "wheel_L_link" };
+            init_links(str);
+        }
 
-            auto model = world->EntityByName(str)->GetParentModel();
+        void init_models() {
+            auto model_v = world->Models();
+            for(const auto& model : model_v) {
+                init_links(model->GetName());
+            }
+        }
+
+        void init_links(std::string model_name) {
+            std::string links[1] = { "wheel" };
+
+            auto model = world->EntityByName(model_name)->GetParentModel();
             auto link_v = model->GetLinks();
             for(const auto& link : link_v) {
 

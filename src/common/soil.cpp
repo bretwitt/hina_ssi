@@ -84,14 +84,27 @@ void Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, flo
 
     _data->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
+    std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> penetrating_coords;
+
     for(uint32_t k = 0; k < iter_x*iter_y; k++) {
-        auto y = floor(k / iter_y);
-        auto x = k - (iter_x*y);
+        uint32_t y = floor(k / iter_y);
+        uint32_t x = k - (iter_x*y);
         auto v3 = _data->get_vertex_at_index(x + x_start, y + y_start);
         if(penetrates(meshTri, v3, scale)) {
-            terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt);
+            penetrating_coords.emplace_back(x + x_start,y + y_start,v3);
+            //terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt);
         }
     }
+
+    // TODO: CUDA this
+    for(auto & penetrating_coord : penetrating_coords) {
+        auto x = std::get<0>(penetrating_coord);
+        auto y = std::get<1>(penetrating_coord);
+        auto v3 = std::get<2>(penetrating_coord);
+
+        terramx_deform(link, meshTri, x, y, v3, scale, dt);
+    }
+
 }
 
 
@@ -172,7 +185,7 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
 
         // Apply f/t
         linkPtr->AddForceAtWorldPosition(force_v, v3);
-        linkPtr->AddRelativeTorque(torque_v);
+        //linkPtr->AddRelativeTorque(torque_v);
 
         /* --- Plastic Flow --- */
         auto plastic_flow = -(s_y - s_p)*dt;
@@ -183,9 +196,4 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
         vertex->ds_p = 0;
     }
 
-}
-
-
-void Soil::apply_force(const physics::LinkPtr& linkPtr, const Vector3d& origin, const Vector3d& normal_force) {
-    linkPtr->AddForceAtWorldPosition(normal_force, origin) ;
 }

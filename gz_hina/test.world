@@ -5,6 +5,7 @@
         <width_x></width_x>
         <width_y></width_y>
         <scale></scale>
+        <paused>1</paused>
     </plugin>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
@@ -34,12 +35,12 @@
           <inertial>
             <mass>1</mass>
             <inertia>
-              <ixx>10.5</ixx>
+              <ixx>2.5</ixx>
               <ixy>0.000</ixy>
               <ixz>0.000</ixz>
-              <iyy>10.5</iyy>
-              <iyz>0.006306</iyz>
-              <izz>10.5</izz>
+              <iyy>2.5</iyy>
+              <iyz>0.000</iyz>
+              <izz>2.5</izz>
             </inertia>
             <pose>0 0 0 0 0 0</pose>
           </inertial>
