@@ -17,3 +17,7 @@ chmod +x launch.sh
 ```
 
 .so files needed will be in the build folders, see ```gz_hina/test.world``` for example on how to use the .so files in your own world
+
+CubeRover on Lunar Regolith
+
+<img src="https://user-images.githubusercontent.com/14039800/193426261-92fd8d30-0efa-45d7-9ba5-f4dc6935d1c7.png"/>
