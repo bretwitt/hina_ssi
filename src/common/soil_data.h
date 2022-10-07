@@ -19,6 +19,8 @@ namespace gazebo {
             this->v3 = v3;
         }
 
+
+
         ~VertexAttributes() = default;
     };
 
@@ -79,6 +81,14 @@ namespace gazebo {
             uint32_t y;
             unflatten_index(idx, x, y);
             set_vertex_at_index(x, y, vtx);
+        }
+
+        void set_vertex_at_flattened_index(uint32_t idx, VertexAttributes vtx) const {
+            uint32_t x;
+            uint32_t y;
+            unflatten_index(idx, x, y);
+            auto _vtx = get_vertex_at_index(x, y);
+            *_vtx = vtx;
         }
 
         void unflatten_index(uint32_t idx, uint32_t& x, uint32_t& y) const {

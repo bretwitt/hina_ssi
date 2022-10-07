@@ -61,7 +61,7 @@ namespace gazebo {
 
             uint32_t i = 0;
             for(const gazebo::msgs::Vector3d& v0 : v) {
-                soil->get_data()->set_vertex_at_flattened_index(i++, new VertexAttributes(Vector3d(v0.x(), v0.y(), v0.z())));
+                soil->get_data()->set_vertex_at_flattened_index(i++, VertexAttributes(Vector3d(v0.x(), v0.y(), v0.z())));
             }
 
             if(!soil_initialized) {
