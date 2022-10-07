@@ -1,6 +1,7 @@
 #include "soil.h"
 #include <cmath>
 #include <omp.h>
+#include "../../thirdparty/PerlinNoise.h"
 
 using namespace gazebo;
 
@@ -29,11 +30,22 @@ void Soil::generate_soil_vertices() {
     _data->x_offset = -(double) (_data->x_width - 1) / 2;
     _data->y_offset = -(double) (_data->y_width - 1) / 2;
 
+//    const siv::PerlinNoise::seed_type seed = 123456u;
+//    const siv::PerlinNoise perlin{ seed };
+
+
     for (int i = 0; i < _data->x_width; i++) {
         for (int j = 0; j < _data->y_width; j++) {
             auto i_f = (float) i;
             auto j_f = (float) j;
-            auto v3 = Vector3d(_data->scale * (i_f + _data->x_offset), _data->scale * (j_f + _data->y_offset), 0.0);
+
+            auto x = _data->scale * (i_f + _data->x_offset);
+            auto y = _data->scale * (j_f + _data->y_offset);
+
+            //const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
+            const double z = y*tan(0.0523599);
+
+            auto v3 = Vector3d(x, y, z);
 
             _data->set_vertex_at_index(i, j, new VertexAttributes(v3));
         }
@@ -123,15 +135,17 @@ void Soil::pre_update() {
 
 void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt) {
     auto v3 = vertex->v3;
-    auto s_p = -v3.Z();
-    auto y_z = meshTri.centroid().Z();
+    auto v3_0 = vertex->v3_0;
+    double k_phi = vertex->k_phi;
 
-    auto k_phi = vertex->k_phi;
+    double y_h = meshTri.centroid().Z();
+    double y_r = v3_0.Z();
 
-    double s_y = -y_z;
+    double s_y = y_r - y_h;
+    double s_p = y_r - v3.Z();
 
-    auto sigma_t = k_phi*(s_y - s_p);
-    auto sigma_p = k_phi*(s_y);
+    double sigma_t = k_phi*(s_y - s_p);
+    double sigma_p = k_phi*(s_y);
 
     if(sigma_t > 0) { // Unilateral Contact
 
@@ -164,28 +178,15 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
         // Calculate force
         auto normal_dA = -normal_sum * w * w;
 
-        auto r = linkPtr->WorldCoGPose().Pos() - v3;
 
-        /* Friction */
-        auto link_linear_vel = linkPtr->RelativeLinearVel();
-        auto link_angular_vel = linkPtr->RelativeAngularVel();
-
-        auto vertex_tangent_vel = link_linear_vel + ((r.Length())*(link_angular_vel));
-        auto vtx_tangent = -(vertex_tangent_vel).Normalized()*w*w;
-        auto friction_v = 0.8*sigma_p*vtx_tangent;
-
-        /* Shear Effects, Normal Pressure, Friction */
+        /* Shear Effects, Normal Pressure */
         auto force_v = Vector3d((get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.X(),
                                 (get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.Y(),
-                                sigma_p * normal_dA.Z());// + friction_v;
+                                sigma_p * normal_dA.Z());
 
-
-        // Calculate torque
-        auto torque_v = r.Cross(force_v);
 
         // Apply f/t
         linkPtr->AddForceAtWorldPosition(force_v, v3);
-        //linkPtr->AddRelativeTorque(torque_v);
 
         /* --- Plastic Flow --- */
         auto plastic_flow = -(s_y - s_p)*dt;

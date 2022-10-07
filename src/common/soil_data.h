@@ -10,10 +10,12 @@ namespace gazebo {
 
     struct VertexAttributes {
         Vector3d v3;
+        Vector3d v3_0;
         double k_phi = 814000.0f; //814000.0f;
         double ds_p = 0;
 
         explicit VertexAttributes(Vector3d v3) {
+            this->v3_0 = v3;
             this->v3 = v3;
         }
 
@@ -25,7 +27,7 @@ namespace gazebo {
         /* Terrain parameters */
         uint32_t x_width = 5;
         uint32_t y_width = 5;
-        double scale = 1.0;
+        double scale = 2.0;
 
         /* Runtime */
         double x_offset = 0;
