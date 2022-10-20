@@ -43,7 +43,7 @@ void Soil::generate_soil_vertices() {
             auto y = _data->scale * (j_f + _data->y_offset);
 
             //const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
-            const double z = y*tan(0.0523599);
+            const double z = y*tan(0.1570796327);
 
             auto v3 = Vector3d(x, y, z);
 
@@ -76,7 +76,7 @@ void Soil::generate_indices() const {
     }
 }
 
-void Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt) {
+std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume) {
     double max_x, max_y, min_x, min_y;
     double scale;
     int iter_x, iter_y;
@@ -96,27 +96,30 @@ void Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, flo
 
     _data->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
-    //std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> penetrating_coords;
+    std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> penetrating_coords;
 
     for(uint32_t k = 0; k < iter_x*iter_y; k++) {
         uint32_t y = floor(k / iter_y);
         uint32_t x = k - (iter_x*y);
         auto v3 = _data->get_vertex_at_index(x + x_start, y + y_start);
         if(penetrates(meshTri, v3, scale)) {
-            //penetrating_coords.emplace_back(x + x_start,y + y_start,v3);
-            terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt);
+            penetrating_coords.emplace_back(x + x_start,y + y_start,v3);
+            //terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt);
         }
     }
 
-//    // TODO: CUDA this
-//    for(auto & penetrating_coord : penetrating_coords) {
-//        auto x = std::get<0>(penetrating_coord);
-//        auto y = std::get<1>(penetrating_coord);
-//        auto v3 = std::get<2>(penetrating_coord);
-//
-//        terramx_deform(link, meshTri, x, y, v3, scale, dt);
-//    }
+    // TODO: CUDA this
+    for(auto & penetrating_coord : penetrating_coords) {
+        auto x = std::get<0>(penetrating_coord);
+        auto y = std::get<1>(penetrating_coord);
+        auto v3 = std::get<2>(penetrating_coord);
 
+        float displaced_volume_vtx = 0.0f;
+
+        terramx_deform(link, meshTri, x, y, v3, scale, dt, displaced_volume_vtx);
+        displaced_volume += displaced_volume_vtx;
+    }
+    return penetrating_coords;
 }
 
 
@@ -130,13 +133,16 @@ bool Soil::intersects_projected(const Triangle& meshTri, const AABB& vertexRect)
 }
 
 void Soil::pre_update() {
-    get_data()->sigma_tot = 0;
+    //get_data()->sigma_tot = 0;
 }
 
-void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt) {
+void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt, float& displaced_volume) {
     auto v3 = vertex->v3;
     auto v3_0 = vertex->v3_0;
     double k_phi = vertex->k_phi;
+
+    double k_c = vertex->k_c;
+    double B = get_data()->B;
 
     double y_h = meshTri.centroid().Z();
     double y_r = v3_0.Z();
@@ -144,8 +150,9 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
     double s_y = y_r - y_h;
     double s_p = y_r - v3.Z();
 
-    double sigma_t = k_phi*(s_y - s_p);
-    double sigma_p = k_phi*(s_y);
+    auto coeff = /*(k_c/B)+*/k_phi;
+    double sigma_t = coeff*(s_y - s_p);
+    double sigma_p = coeff*(s_y);
 
     if(sigma_t > 0) { // Unilateral Contact
 
@@ -180,6 +187,7 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
 
 
         /* Shear Effects, Normal Pressure */
+
         auto force_v = Vector3d((get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.X(),
                                 (get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.Y(),
                                 sigma_p * normal_dA.Z());
@@ -192,6 +200,8 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
         auto plastic_flow = -(s_y - s_p)*dt;
         vertex->ds_p = plastic_flow;
         vertex->v3 = Vector3d(v3.X(), v3.Y(), v3.Z() + vertex->ds_p);
+
+        displaced_volume = -plastic_flow;
 
     } else {
         vertex->ds_p = 0;

@@ -12,13 +12,19 @@ namespace gazebo {
         Vector3d v3;
         Vector3d v3_0;
         double k_phi = 814000.0f; //814000.0f;
+        double k_c = 1370.0f;
+
         double ds_p = 0;
 
-        explicit VertexAttributes(Vector3d v3) {
+        explicit VertexAttributes(const Vector3d& v3) {
             this->v3_0 = v3;
             this->v3 = v3;
         }
 
+        void set_v3(const Vector3d& _v3) {
+            v3 = _v3;
+            //v3_0 = _v3;
+        }
 
 
         ~VertexAttributes() = default;
@@ -42,9 +48,9 @@ namespace gazebo {
         double phi = 0.55;
         double K = 0.036;
 
-        /* Frame physics data */
-        double tangential_vel_sum = 0;
-        double sigma_tot = 0;
+        // Dynamic
+        double B = 0;
+
 
         SoilData(int x_width, int y_width, double scale) {
             this->x_width = x_width;

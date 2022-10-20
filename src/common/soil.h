@@ -26,11 +26,11 @@ namespace gazebo {
         void generate_indices() const;
 
         void pre_update();
-        void try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt);
+        std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume);
         bool penetrates(const Triangle& meshTri, VertexAttributes* vertex, double w);
         static bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect);
 
-        void terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt);
+        void terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt, float& displaced_volume);
     };
 }
 

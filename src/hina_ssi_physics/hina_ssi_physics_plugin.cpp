@@ -53,7 +53,7 @@ namespace gazebo {
         }
 
         void OnEntityAdded(const std::string& str) {
-            //std::string links[6] = { "wheel_RR_link", "wheel_FR_link", "wheel_RL_link", "wheel_FL_link", "wheel_R_link", "wheel_L_link" };
+//            std::string links[6] = { "wheel_RR_link", "wheel_FR_link", "wheel_RL_link", "wheel_FL_link", "wheel_R_link", "wheel_L_link" };
             init_links(str);
         }
 
@@ -66,7 +66,7 @@ namespace gazebo {
 
         void init_links(std::string model_name) {
             std::string links[4] = { "FR_wheel_link","BR_wheel_link","FL_wheel_link","BL_wheel_link" };
-
+            //std::string links[1] = { "wheel" };
             auto model = world->EntityByName(model_name)->GetParentModel();
             auto link_v = model->GetLinks();
             for(const auto& link : link_v) {
@@ -132,8 +132,7 @@ namespace gazebo {
         void update_soil(Soil* soilPtr, float dt) {
             soilPtr->pre_update();
 
-            for(auto & iter : mesh_lookup)
-            {
+            for(auto & iter : mesh_lookup) {
                 auto link = iter.first;
                 auto mesh = iter.second;
 
@@ -149,9 +148,13 @@ namespace gazebo {
                     auto rot = pose.Rot();
                     auto pos = pose.Pos();
 
-                    #pragma omp parallel num_threads(7) default(none) /*shared()*/ firstprivate(submesh, soilPtr, crot, cpos, pos, rot, indices, dt, link)
+                    std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes *>> footprint;
+                    std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes *>> footprint_idx;
+                    float total_displaced_volume = 0.0f;
+
+                    #pragma omp parallel num_threads(7) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soilPtr, crot, cpos, pos, rot, indices, dt, link)
                     {
-                    #pragma omp for nowait schedule(guided)
+                    #pragma omp for nowait schedule(guided) reduction(+:total_displaced_volume)
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
                             auto idx = idx_unrolled * 3;
 
@@ -168,9 +171,105 @@ namespace gazebo {
                             auto c1v2 = rot.RotateVector(cv2) + pos;
 
                             auto meshTri = Triangle(c1v0, c1v1, c1v2);
-                            soilPtr->try_deform(meshTri, link, dt);
+
+                            float displaced_volume = 0.0f;
+                            footprint_idx = soilPtr->try_deform(meshTri, link, dt, displaced_volume);
+                            total_displaced_volume += displaced_volume;
+
+                            /*
+                            #pragma omp critical
+                            {
+                                footprint.insert(footprint.end(), footprint_idx.begin(), footprint_idx.end());
+                            }
+                             */
                         }
                     }
+
+
+                    // Footprint level computations
+                    /*
+                    uint32_t max_x = 0;
+                    uint32_t max_y = 0;
+                    uint32_t min_x = UINT32_MAX;
+                    uint32_t min_y = UINT32_MAX;
+
+                    double w = soilPtr->get_data()->scale;
+
+                    std::unordered_map<uint32_t, std::unordered_map<uint32_t, uint32_t>> footprint_c;
+
+                    std::vector<std::pair<uint32_t,uint32_t>> edge_nodes;
+
+                    for (auto &vtx: footprint) {
+                        auto x = std::get<0>(vtx);
+                        auto y = std::get<1>(vtx);
+
+                        max_x = std::max(max_x, x);
+                        max_y = std::max(max_y, y);
+                        min_x = std::min(min_x, x);
+                        min_y = std::min(min_y, y);
+
+                        footprint_c[x][y] = 1;
+                    }
+
+                    double A = 0.0;
+                    double L = 0.0;
+
+                    for (uint32_t x = min_x; x < max_x + 1; x++) {
+                        for (uint32_t y = min_y; y < max_y + 1; y++) {
+                            int n = 0;
+                            if (footprint_c[x][y] == 1) {
+                                if (footprint_c[x + 1][y] == 0) {
+                                    edge_nodes.emplace_back(x+1,y);
+                                    n++;
+                                }
+                                if (footprint_c[x - 1][y] == 0) {
+                                    edge_nodes.emplace_back(x-1,y);
+                                    n++;
+                                }
+                                if (footprint_c[x][y + 1] == 0) {
+                                    edge_nodes.emplace_back(x,y+1);
+                                    n++;
+                                }
+                                if (footprint_c[x][y - 1] == 0) {
+                                    edge_nodes.emplace_back(x,y-1);
+                                    n++;
+                                }
+                            }
+                            if (n == 0) {           // Inner node
+                                A += w * w;
+                            } else if ( n > 0 ){    // Contour node
+                                L += w;
+                            }
+                        }
+                    }
+
+
+                    float edge_nodes_len = edge_nodes.size();
+                    float edge_displacement = 0.5*total_displaced_volume/edge_nodes_len;
+
+
+                    for(auto& edge : edge_nodes) {
+
+                        auto& x = std::get<0>(edge);
+                        auto& y = std::get<1>(edge);
+                        auto v3 = soilPtr->get_data()->get_vertex_at_index(x, y)->v3;
+                        auto _v3 = Vector3d(v3.X(), v3.Y(), v3.Z() + edge_displacement);
+
+                        soilPtr->get_data()->get_vertex_at_index(x,y)->v3 = _v3;
+                        //soilPtr->get_data()->get_vertex_at_index(x,y)->v3_0 = _v3;
+                    }
+//
+//                    auto B = 0.05; //2*A/L;
+//                    if(!isnan(B) && !isinf(B)) {
+//                        std::cout << B << std::endl;
+//                        soilPtr->get_data()->B = B;
+//                    } else {
+//                        soilPtr->get_data()->B = 0;
+//                    }
+//                }
+
+                     */
+
                 }
             }
         }
