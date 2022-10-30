@@ -10,8 +10,8 @@
 namespace gazebo {
     class Soil {
     private:
+
         SoilData* _data;
-        double sigma_yield = 0;
 
     public:
 
@@ -31,6 +31,8 @@ namespace gazebo {
         static bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect);
 
         void terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt, float& displaced_volume);
+
+        Soil();
     };
 }
 

@@ -13,6 +13,9 @@ Soil::Soil(SoilData* soil_data) {
     }
 }
 
+Soil::Soil() : Soil(new SoilData(500,500, 0.005f)) {
+}
+
 Soil::~Soil()  {
     delete _data;
 }
@@ -43,7 +46,7 @@ void Soil::generate_soil_vertices() {
             auto y = _data->scale * (j_f + _data->y_offset);
 
             //const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
-            const double z = y*tan(0.1570796327);
+            const double z = y*tan(0);
 
             auto v3 = Vector3d(x, y, z);
 
@@ -141,6 +144,9 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
     auto v3_0 = vertex->v3_0;
     double k_phi = vertex->k_phi;
 
+    double c = vertex->c;
+    double phi = vertex->phi;
+
     double k_c = vertex->k_c;
     double B = get_data()->B;
 
@@ -178,33 +184,27 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
         auto tri6 = Triangle(vtx, vtx_d, vtx_l);
 
         auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() + tri6.normal()).Normalized();
+        auto normal_dA = -normal_sum * w * w;
         //auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area()) / 3;
+
+        /* --- Plastic Flow --- */
+        auto plastic_flow = -(s_y - s_p)*dt;
+        vertex->v3 = Vector3d(v3.X(), v3.Y(), v3.Z() + plastic_flow);
+
+        displaced_volume = -plastic_flow;
 
         /* --- Stress --- */
 
         // Calculate force
-        auto normal_dA = -normal_sum * w * w;
-
-
         /* Shear Effects, Normal Pressure */
 
-        auto force_v = Vector3d((get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.X(),
-                                (get_data()->c + (sigma_p * tan(get_data()->phi))) * normal_dA.Y(),
-                                sigma_p * normal_dA.Z());
+        auto force_v = Vector3d((c + (sigma_p * tan(phi))) * normal_dA.X(),
+                                (c + (sigma_p * tan(phi))) * normal_dA.Y(),
+                                sigma_p * normal_dA.Z() - (plastic_flow));
 
 
         // Apply f/t
         linkPtr->AddForceAtWorldPosition(force_v, v3);
-
-        /* --- Plastic Flow --- */
-        auto plastic_flow = -(s_y - s_p)*dt;
-        vertex->ds_p = plastic_flow;
-        vertex->v3 = Vector3d(v3.X(), v3.Y(), v3.Z() + vertex->ds_p);
-
-        displaced_volume = -plastic_flow;
-
-    } else {
-        vertex->ds_p = 0;
     }
 
 }

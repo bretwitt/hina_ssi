@@ -95,7 +95,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            soilPtr = new Soil(new SoilData (500,500,0.005f));
+            soilPtr = new Soil();
         }
 
         void init_transport() {
@@ -154,7 +154,7 @@ namespace gazebo {
 
                     #pragma omp parallel num_threads(7) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soilPtr, crot, cpos, pos, rot, indices, dt, link)
                     {
-                    #pragma omp for nowait schedule(guided) reduction(+:total_displaced_volume)
+                    #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
                             auto idx = idx_unrolled * 3;
 

@@ -9,23 +9,19 @@ using ignition::math::Vector2d;
 namespace gazebo {
 
     struct VertexAttributes {
-        Vector3d v3;
-        Vector3d v3_0;
+
         double k_phi = 814000.0f; //814000.0f;
         double k_c = 1370.0f;
+        double c = 800;
+        double phi = 0.55;
 
-        double ds_p = 0;
+        Vector3d v3;
+        Vector3d v3_0;
 
         explicit VertexAttributes(const Vector3d& v3) {
             this->v3_0 = v3;
             this->v3 = v3;
         }
-
-        void set_v3(const Vector3d& _v3) {
-            v3 = _v3;
-            //v3_0 = _v3;
-        }
-
 
         ~VertexAttributes() = default;
     };
@@ -43,12 +39,7 @@ namespace gazebo {
         uint32_t *indices{};
         std::unordered_map<uint32_t, std::unordered_map<uint32_t, VertexAttributes*>>* soil_hashmap{};
 
-        /* Physics Parameters */
-        double c = 800;
-        double phi = 0.55;
-        double K = 0.036;
-
-        // Dynamic
+        // Dynamic Footprint Parameter
         double B = 0;
 
 

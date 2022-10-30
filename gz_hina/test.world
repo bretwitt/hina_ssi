@@ -1,11 +1,7 @@
 <?xml version='1.0'?>
 <sdf version='1.7'>	
   <world name='empty'>
-    <plugin name='hina_physics' filename='src/hina_ssi_physics/libhina_ssi_plugin_physics.so'>
-        <width_x></width_x>
-        <width_y></width_y>
-        <scale></scale>
-        <paused>1</paused>
+    <plugin name='hina_physics' filename='libhina_ssi_plugin_physics.so'>
     </plugin>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
@@ -67,7 +63,7 @@
       <static>1</static>
       <link name='link'>
         <visual name='visual'>
-          <plugin name='hina' filename='src/hina_ssi_visual/libhina_ssi_plugin_visual.so'/>
+          <plugin name='hina' filename='libhina_ssi_plugin_visual.so'/>
           <cast_shadows>0</cast_shadows>
           <geometry>
             <plane>
