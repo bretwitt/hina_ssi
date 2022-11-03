@@ -16,6 +16,7 @@ namespace gazebo {
     public:
 
         explicit Soil(SoilData* soil_data);
+        explicit Soil(SoilConfig config);
 
         ~Soil();
 

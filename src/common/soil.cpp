@@ -13,7 +13,8 @@ Soil::Soil(SoilData* soil_data) {
     }
 }
 
-Soil::Soil() : Soil(new SoilData(500,500, 0.005f)) {
+Soil::Soil(SoilConfig config) : Soil(new SoilData(config)) {
+
 }
 
 Soil::~Soil()  {
@@ -46,7 +47,7 @@ void Soil::generate_soil_vertices() {
             auto y = _data->scale * (j_f + _data->y_offset);
 
             //const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
-            const double z = y*tan(0);
+            const double z = y*tan(_data->angle);
 
             auto v3 = Vector3d(x, y, z);
 
