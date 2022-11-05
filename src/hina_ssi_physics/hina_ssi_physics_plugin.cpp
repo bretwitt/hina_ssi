@@ -64,7 +64,26 @@ namespace gazebo {
         }
 
         void init_links(const std::string& model_name) {
-            std::string links[4] = { "FR_wheel_link","BR_wheel_link","FL_wheel_link","BL_wheel_link" };
+            //std::string links[4] = { "FR_wheel_link","BR_wheel_link","FL_wheel_link","BL_wheel_link" };
+
+            std::vector<std::string> links;
+            auto link_element_ptr = sdf->GetElement("links");
+            if(link_element_ptr != nullptr) {
+                link_element_ptr = link_element_ptr->GetFirstElement();
+                if(link_element_ptr != nullptr) {
+                    std::cout << link_element_ptr->Get<std::string>() << std::endl;
+                    links.push_back(link_element_ptr->Get<std::string>());
+                }
+                while (link_element_ptr != nullptr) {
+                    link_element_ptr = link_element_ptr->GetNextElement("link");
+                    if(link_element_ptr != nullptr) {
+                        links.push_back(link_element_ptr->Get<std::string>());
+                        std::cout << link_element_ptr->Get<std::string>() << std::endl;
+                    }
+                }
+            }
+
+
             //std::string links[1] = { "wheel" };
             auto model = world->EntityByName(model_name)->GetParentModel();
             auto link_v = model->GetLinks();
@@ -126,10 +145,12 @@ namespace gazebo {
 
             last_sec = sec;
 
+            /*
             if(dt_viz > (1./5.f)) {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
             }
+             */
 
         }
 

@@ -12,14 +12,15 @@ namespace gazebo {
     struct VertexAttributes {
 
         double k_phi = 814000.0f; //814000.0f;
+        double k_e = 7.8e7;
         double k_c = 20680.0f;
         double c = 3500;
         double phi = 0.55;
-        double k_e = 7.8e7;
 
         Vector3d v3;
         Vector3d v3_0;
 
+        // Frame physics data
         double plastic_flow;
         double sigma_yield;
         double s_p;

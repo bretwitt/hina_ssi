@@ -34,8 +34,8 @@ void Soil::generate_soil_vertices() {
     _data->x_offset = -(double) (_data->x_width - 1) / 2;
     _data->y_offset = -(double) (_data->y_width - 1) / 2;
 
-//    const siv::PerlinNoise::seed_type seed = 123456u;
-//    const siv::PerlinNoise perlin{ seed };
+    const siv::PerlinNoise::seed_type seed = 123456u;
+    const siv::PerlinNoise perlin{ seed };
 
 
     for (int i = 0; i < _data->x_width; i++) {
@@ -46,8 +46,8 @@ void Soil::generate_soil_vertices() {
             auto x = _data->scale * (i_f + _data->x_offset);
             auto y = _data->scale * (j_f + _data->y_offset);
 
-            //const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
-            const double z = y*tan(_data->angle);
+            const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
+            //const double z = y*tan(_data->angle);
 
             auto v3 = Vector3d(x, y, z);
 
@@ -162,38 +162,36 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
     auto s_sink = 0.0;
 
     if(sigma_t > 0) {                            // Unilateral Contact
+        /* Geometry Calculations */
+        auto vtx_ul = _data->get_vertex_at_index(x - 1, y + 1)->v3;
+        auto vtx_dl = _data->get_vertex_at_index(x - 1, y - 1)->v3;
+        auto vtx_ur = _data->get_vertex_at_index(x + 1, y + 1)->v3;
+        auto vtx_dr = _data->get_vertex_at_index(x + 1, y - 1)->v3;
 
-        {
-            /* Geometry Calculations */
-            auto vtx_ul = _data->get_vertex_at_index(x - 1, y + 1)->v3;
-            auto vtx_dl = _data->get_vertex_at_index(x - 1, y - 1)->v3;
-            auto vtx_ur = _data->get_vertex_at_index(x + 1, y + 1)->v3;
-            auto vtx_dr = _data->get_vertex_at_index(x + 1, y - 1)->v3;
+        auto vtx_u = _data->get_vertex_at_index(x, y + 1)->v3;
+        auto vtx_d = _data->get_vertex_at_index(x, y - 1)->v3;
+        auto vtx_l = _data->get_vertex_at_index(x - 1, y)->v3;
+        auto vtx_r = _data->get_vertex_at_index(x + 1, y)->v3;
+        const auto &vtx = v3;
 
-            auto vtx_u = _data->get_vertex_at_index(x, y + 1)->v3;
-            auto vtx_d = _data->get_vertex_at_index(x, y - 1)->v3;
-            auto vtx_l = _data->get_vertex_at_index(x - 1, y)->v3;
-            auto vtx_r = _data->get_vertex_at_index(x + 1, y)->v3;
-            const auto &vtx = v3;
+        auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
+        auto tri2 = Triangle(vtx, vtx_l, vtx_ul);
+        auto tri3 = Triangle(vtx, vtx_u, vtx_r);
 
-            auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
-            auto tri2 = Triangle(vtx, vtx_l, vtx_ul);
-            auto tri3 = Triangle(vtx, vtx_u, vtx_r);
+        auto tri4 = Triangle(vtx, vtx_r, vtx_d);
+        auto tri5 = Triangle(vtx, vtx_dr, vtx_d);
 
-            auto tri4 = Triangle(vtx, vtx_r, vtx_d);
-            auto tri5 = Triangle(vtx, vtx_dr, vtx_d);
+        auto tri6 = Triangle(vtx, vtx_d, vtx_l);
 
-            auto tri6 = Triangle(vtx, vtx_d, vtx_l);
+        auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() +
+                           tri6.normal()).Normalized();
+        //auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area()) / 3;
+        auto area = w * w;
 
-            auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() +
-                               tri6.normal()).Normalized();
-            //auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area()) / 3;
-            auto area = w * w;
+        normal_dA = -normal_sum * area;
 
-            normal_dA = -normal_sum * area;
+        vertex->normal_dA = normal_dA;
 
-            vertex->normal_dA = normal_dA;
-        }
 
         auto sigma_star = sigma_t;
         s_sink = s_y;
