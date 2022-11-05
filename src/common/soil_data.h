@@ -12,12 +12,20 @@ namespace gazebo {
     struct VertexAttributes {
 
         double k_phi = 814000.0f; //814000.0f;
-        double k_c = 1370.0f;
-        double c = 800;
+        double k_c = 20680.0f;
+        double c = 3500;
         double phi = 0.55;
+        double k_e = 7.8e7;
 
         Vector3d v3;
         Vector3d v3_0;
+
+        double plastic_flow;
+        double sigma_yield;
+        double s_p;
+        double s_e;
+        double sigma;
+        Vector3d normal_dA;
 
         explicit VertexAttributes(const Vector3d& v3) {
             this->v3_0 = v3;
@@ -25,6 +33,7 @@ namespace gazebo {
         }
 
         ~VertexAttributes() = default;
+
     };
 
     struct SoilData {
@@ -33,7 +42,7 @@ namespace gazebo {
         uint32_t x_width = 5;
         uint32_t y_width = 5;
         double scale = 2.0;
-        double angle;
+        double angle = 0;
 
         /* Runtime */
         double x_offset = 0;

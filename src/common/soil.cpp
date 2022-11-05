@@ -141,71 +141,90 @@ void Soil::pre_update() {
 }
 
 void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt, float& displaced_volume) {
+
     auto v3 = vertex->v3;
     auto v3_0 = vertex->v3_0;
+
     double k_phi = vertex->k_phi;
-
-    double c = vertex->c;
-    double phi = vertex->phi;
-
-    double k_c = vertex->k_c;
-    double B = get_data()->B;
+    double k_e = vertex->k_e;
 
     double y_h = meshTri.centroid().Z();
     double y_r = v3_0.Z();
 
     double s_y = y_r - y_h;
-    double s_p = y_r - v3.Z();
+    double s_p = vertex->s_p;
 
-    auto coeff = /*(k_c/B)+*/k_phi;
-    double sigma_t = coeff*(s_y - s_p);
-    double sigma_p = coeff*(s_y);
+    double sigma_t = k_e*(s_y - s_p);
+    double sigma_p = 0.0;
 
-    if(sigma_t > 0) { // Unilateral Contact
+    Vector3d normal_dA(0,0,0);
 
-        /* Geometry Calculations */
-        auto vtx_ul = _data->get_vertex_at_index(x - 1, y + 1)->v3;
-        auto vtx_dl = _data->get_vertex_at_index(x - 1, y - 1)->v3;
-        auto vtx_ur = _data->get_vertex_at_index(x + 1, y + 1)->v3;
-        auto vtx_dr = _data->get_vertex_at_index(x + 1, y - 1)->v3;
+    auto s_sink = 0.0;
 
-        auto vtx_u = _data->get_vertex_at_index(x, y + 1)->v3;
-        auto vtx_d = _data->get_vertex_at_index(x, y - 1)->v3;
-        auto vtx_l = _data->get_vertex_at_index(x - 1, y)->v3;
-        auto vtx_r = _data->get_vertex_at_index(x + 1, y)->v3;
-        const auto& vtx = v3;
+    if(sigma_t > 0) {                            // Unilateral Contact
 
-        auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
-        auto tri2 = Triangle(vtx, vtx_l, vtx_ul);
-        auto tri3 = Triangle(vtx, vtx_u, vtx_r);
+        {
+            /* Geometry Calculations */
+            auto vtx_ul = _data->get_vertex_at_index(x - 1, y + 1)->v3;
+            auto vtx_dl = _data->get_vertex_at_index(x - 1, y - 1)->v3;
+            auto vtx_ur = _data->get_vertex_at_index(x + 1, y + 1)->v3;
+            auto vtx_dr = _data->get_vertex_at_index(x + 1, y - 1)->v3;
 
-        auto tri4 = Triangle(vtx, vtx_r, vtx_d);
-        auto tri5 = Triangle(vtx, vtx_dr, vtx_d);
+            auto vtx_u = _data->get_vertex_at_index(x, y + 1)->v3;
+            auto vtx_d = _data->get_vertex_at_index(x, y - 1)->v3;
+            auto vtx_l = _data->get_vertex_at_index(x - 1, y)->v3;
+            auto vtx_r = _data->get_vertex_at_index(x + 1, y)->v3;
+            const auto &vtx = v3;
 
-        auto tri6 = Triangle(vtx, vtx_d, vtx_l);
+            auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
+            auto tri2 = Triangle(vtx, vtx_l, vtx_ul);
+            auto tri3 = Triangle(vtx, vtx_u, vtx_r);
 
-        auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() + tri6.normal()).Normalized();
-        auto normal_dA = -normal_sum * w * w;
-        //auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area()) / 3;
+            auto tri4 = Triangle(vtx, vtx_r, vtx_d);
+            auto tri5 = Triangle(vtx, vtx_dr, vtx_d);
 
-        /* --- Plastic Flow --- */
-        auto plastic_flow = -(s_y - s_p)*dt;
-        vertex->v3 = Vector3d(v3.X(), v3.Y(), v3.Z() + plastic_flow);
+            auto tri6 = Triangle(vtx, vtx_d, vtx_l);
 
-        displaced_volume = -plastic_flow;
+            auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() +
+                               tri6.normal()).Normalized();
+            //auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area()) / 3;
+            auto area = w * w;
 
-        /* --- Stress --- */
+            normal_dA = -normal_sum * area;
 
-        // Calculate force
-        /* Shear Effects, Normal Pressure */
+            vertex->normal_dA = normal_dA;
+        }
 
-        auto force_v = Vector3d((c + (sigma_p * tan(phi))) * normal_dA.X(),
-                                (c + (sigma_p * tan(phi))) * normal_dA.Y(),
-                                sigma_p * normal_dA.Z() - (plastic_flow));
+        auto sigma_star = sigma_t;
+        s_sink = s_y;
 
-
-        // Apply f/t
-        linkPtr->AddForceAtWorldPosition(force_v, v3);
+        if(sigma_star < vertex->sigma_yield) {
+            sigma_p = sigma_star;
+        } else {
+            sigma_p = (k_phi /* + (k_c/B)*/)*(s_y);
+            vertex->sigma_yield = sigma_p;
+            auto s_p_o = s_p;
+            vertex->s_p = s_sink - (sigma_p / k_e);
+            vertex->s_e = s_sink - s_p;
+            vertex->plastic_flow = -(s_p - s_p_o)*dt;
+        }
     }
+
+    auto defl = v3_0.Z() - s_p;
+    auto force_origin = v3_0.Z() - s_sink;
+
+    vertex->sigma = sigma_p;
+
+    vertex->v3 = Vector3d(v3.X(), v3.Y(), defl);
+
+
+    auto force_v = Vector3d(
+            (vertex->c + (vertex->sigma * tan(vertex->phi))) * vertex->normal_dA.X(),
+            (vertex->c + (vertex->sigma * tan(vertex->phi))) * vertex->normal_dA.Y(),
+            (vertex->sigma /*- (plastic_flow)*/) * vertex->normal_dA.Z()
+    );
+
+    // Apply f/t
+    linkPtr->AddForceAtWorldPosition(force_v, Vector3d(v3_0.X(), v3_0.Y(), force_origin));
 
 }
