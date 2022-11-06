@@ -18,10 +18,16 @@ chmod +x launch.sh
 
 .so files needed will be in the build folders, see ```gz_hina/test.world``` for example on how to use the .so files in your own world
 
+This plugin uses OGRE materials, append to  your ~/.bashrc the directory of the Hina/Soil material file, the gz_hina directory is optional as long as it points to a Hina/Soil material 
+```
+export GAZEBO_RESOURCE_PATH=$GAZEBO_RESOURCE_PATH:PATH/TO/REPO/gz_hina/media/materials:PATH/TO/REPO/gz_hina/media/texture
+```
+
 To use in your Gazebo world after building, it is recommended that you append to your ~/.bashrc
 ```        
 export GAZEBO_PLUGIN_PATH=$GAZEBO_PLUGIN_PATH:PATH/TO/REPO/build/src/hina_ssi_physics:PATH/TO/REPO/build/src/hina_ssi_visual
 ```
+
 
 
 CubeRover on Lunar Regolith
