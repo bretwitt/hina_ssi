@@ -1,0 +1,16 @@
+material Hina/Soil
+{
+	technique
+	{
+		pass
+		{
+			ambient vertexcolour
+			diffuse vertexcolour
+			emissive vertexcolour
+			lighting on
+			polygon_mode wireframe
+
+		}
+
+	}
+}
