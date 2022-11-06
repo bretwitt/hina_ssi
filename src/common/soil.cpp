@@ -34,20 +34,19 @@ void Soil::generate_soil_vertices() {
     _data->x_offset = -(double) (_data->x_width - 1) / 2;
     _data->y_offset = -(double) (_data->y_width - 1) / 2;
 
-    const siv::PerlinNoise::seed_type seed = 123456u;
-    const siv::PerlinNoise perlin{ seed };
+    //const siv::PerlinNoise::seed_type seed = 123456u;
+    //const siv::PerlinNoise perlin{ seed };
 
-
-    for (int i = 0; i < _data->x_width; i++) {
-        for (int j = 0; j < _data->y_width; j++) {
+    for (int j = 0; j < _data->y_width; j++) {
+        for (int i = 0; i < _data->x_width; i++) {
             auto i_f = (float) i;
             auto j_f = (float) j;
 
             auto x = _data->scale * (i_f + _data->x_offset);
             auto y = _data->scale * (j_f + _data->y_offset);
 
-            const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
-            //const double z = y*tan(_data->angle);
+            //const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
+            const double z = y*tan(_data->angle);
 
             auto v3 = Vector3d(x, y, z);
 
@@ -64,10 +63,11 @@ void Soil::generate_indices() const {
     uint32_t idx = 0;
     for (uint32_t y = 0; y < y_size - 1; y++) {
         for (uint32_t x = 0; x < x_size - 1; x++) {
-            uint32_t a = (x_size * x) + y;
-            uint32_t b = (x_size * (x + 1)) + y;
-            uint32_t c = (x_size * (x + 1)) + (y + 1);
-            uint32_t d = (x_size * x) + (y + 1);
+
+            uint32_t a = (x_size * y) + x;
+            uint32_t b = (x_size * (y + 1)) + x;
+            uint32_t c = (x_size * (y + 1)) + (x + 1);
+            uint32_t d = (x_size * y) + (x + 1);
 
             indices[idx++] = a;
             indices[idx++] = d;

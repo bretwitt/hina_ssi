@@ -20,7 +20,7 @@ namespace gazebo {
         Vector3d v3;
         Vector3d v3_0;
 
-        // Frame physics data
+        /* Frame physics states */
         double plastic_flow;
         double sigma_yield;
         double s_p;
@@ -86,14 +86,7 @@ namespace gazebo {
             return (*soil_hashmap)[x][y];
         }
 
-        void set_vertex_at_flattened_index(uint32_t idx, VertexAttributes* vtx) const {
-            uint32_t x;
-            uint32_t y;
-            unflatten_index(idx, x, y);
-            set_vertex_at_index(x, y, vtx);
-        }
-
-        void set_vertex_at_flattened_index(uint32_t idx, VertexAttributes vtx) const {
+        void set_vertex_at_flattened_index(uint32_t idx, const VertexAttributes& vtx) const {
             uint32_t x;
             uint32_t y;
             unflatten_index(idx, x, y);
