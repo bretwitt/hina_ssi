@@ -2,6 +2,13 @@
 <sdf version='1.6'>
   <world name='default'>
     <plugin name='hina_physics' filename='libhina_ssi_plugin_physics.so'>
+	<width_x>50</width_x>
+        <width_y>50</width_y>
+        <scale>0.005</scale>
+	<angle>0</angle>
+	<links>
+	    <link>wheel</link>	
+	</links>
     </plugin>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
@@ -27,6 +34,41 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
+    <model name="wheel">
+        <pose>0 0 0.125 0 0 0</pose>
+        <link name='wheel'>
+          <gravity>1</gravity>
+          <inertial>
+            <mass>1</mass>
+            <inertia>
+              <ixx>2.5</ixx>
+              <ixy>0.000</ixy>
+              <ixz>0.000</ixz>
+              <iyy>2.5</iyy>
+              <iyz>0.000</iyz>
+              <izz>2.5</izz>
+            </inertia>
+            <pose>0 0 0 0 0 0</pose>
+          </inertial>
+          <collision name="collision">
+              <geometry>
+                  <mesh><uri>file://astrowheel.dae</uri></mesh>
+              </geometry>
+          </collision>
+          <visual name='visual'>
+            <cast_shadows>1</cast_shadows>
+            <geometry>
+                <mesh><uri>file://astrowheel.dae</uri></mesh>
+            </geometry>
+            <material>
+              <script>
+                <uri>file://media/materials/scripts/gazebo.material</uri>
+                <name>Gazebo/Grey</name>
+              </script>
+            </material>
+          </visual>
+        </link>
+    </model>
     <model name='ground_plane'>
       <static>1</static>
       <link name='link'>
@@ -36,7 +78,7 @@
 	  <geometry>
             <plane>
               <normal>0 0 1</normal>
-              <size>1 1</size>
+              <size>0.0001 0.0001</size>
             </plane>
 	  </geometry>
           <material>
@@ -51,11 +93,14 @@
         <kinematic>0</kinematic>
       </link>
     </model>
-<state world_name='default'>
+    <state world_name='default'>
       <sim_time>13 792000000</sim_time>
       <real_time>13 841460144</real_time>
       <wall_time>1666228349 200518138</wall_time>
       <iterations>13792</iterations>
+      <light name='sun'>
+        <pose>2.80879 2.02825 10 0 -0 0</pose>
+      </light>
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
@@ -64,5 +109,18 @@
         <projection_type>perspective</projection_type>
       </camera>
     </gui>
+    <light name='sun' type='directional'>
+      <cast_shadows>1</cast_shadows>
+      <pose>2.80879 2.02825 10 0 -0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
   </world>
 </sdf>

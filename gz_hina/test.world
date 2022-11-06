@@ -2,6 +2,13 @@
 <sdf version='1.7'>	
   <world name='empty'>
     <plugin name='hina_physics' filename='libhina_ssi_plugin_physics.so'>
+	<width_x>250</width_x>
+        <width_y>50</width_y>
+        <scale>0.05</scale>
+	<angle>0</angle>
+	<links>
+	    <link>wheel</link>
+	</links>
     </plugin>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
