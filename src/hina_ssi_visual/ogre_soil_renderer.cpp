@@ -8,11 +8,12 @@
 #include <utility>
 #include <gazebo/rendering/ogre_gazebo.h>
 #include "../common/soil.h"
+#include "render_config.h"
 
 using ignition::math::Vector2d;
 
 namespace gazebo {
-    class MeshGenerator {
+    class OgreSoilRenderer {
     private:
         rendering::ScenePtr scenePtr = nullptr;
         Vector3d* field = nullptr;
@@ -22,13 +23,22 @@ namespace gazebo {
         void tri_update(Soil* soil, Ogre::ManualObject* manObj, uint32_t x_size, uint32_t y_size) {
             uint32_t nVerts = x_size*y_size;
 
-            //if(vertex_normals == nullptr) vertex_normals = new Ogre::Vector3[nVerts];
-            //calculate_vertex_normals(soil, x_size, y_size, vertex_normals);
+            bool do_calculate_normals = render_config::getInstance()->render_mode == render_config::SoilRenderMode::SOLID;
+
+            if(do_calculate_normals) {
+                if(vertex_normals == nullptr) vertex_normals = new Ogre::Vector3[nVerts];
+                calculate_vertex_normals(soil, x_size, y_size, vertex_normals);
+            }
 
             for(uint32_t i = 0; i < nVerts; i++) {
                 auto v3 = soil->get_data()->vertex_at_flattened_index(i)->v3;
                 manObj->position(v3.X(),v3.Y(),v3.Z());
-                //manObj->normal(vertex_normals[i]);
+
+                if(do_calculate_normals) {
+                    manObj->normal(vertex_normals[i]);
+                }
+
+                manObj->colour(0,0,255);
 
                 if(i == 0) manObj->textureCoord(0,0);
                 if(i == nVerts - 1) manObj->textureCoord(1,1);
@@ -91,7 +101,13 @@ namespace gazebo {
             manObj->end();
 
             Ogre::MaterialPtr CustomMaterial = Ogre::MaterialManager::getSingleton().create("Custom", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-            CustomMaterial->getTechnique(0)->getPass(0)->setPolygonMode(Ogre::PM_WIREFRAME);
+
+            auto mode = Ogre::PM_SOLID;
+            if(render_config::getInstance()->render_mode == render_config::SoilRenderMode::WIREFRAME) {
+                mode = Ogre::PM_WIREFRAME;
+            }
+
+            CustomMaterial->getTechnique(0)->getPass(0)->setPolygonMode(mode);
             manObj->setMaterialName(0, "Custom");
 
             sceneManager->getRootSceneNode()->createChildSceneNode()->attachObject(manObj);

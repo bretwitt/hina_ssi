@@ -4,7 +4,7 @@
 #include <gazebo/common/common.hh>
 #include <memory>
 #include <gazebo/rendering/rendering.hh>
-#include "mesh_generator.cpp"
+#include "ogre_soil_renderer.cpp"
 #include "Soil.pb.h"
 
 namespace gazebo {
@@ -12,9 +12,7 @@ namespace gazebo {
 
     private:
         Soil* soil = nullptr;
-        MeshGenerator* mesh_gen = nullptr;
-        common::Mesh* mesh = nullptr;
-        Vector3d* field{};
+        OgreSoilRenderer* p_ogre_soil_renderer = nullptr;
 
         event::ConnectionPtr connectionPtr = nullptr;
         rendering::VisualPtr visual = nullptr;
@@ -33,7 +31,7 @@ namespace gazebo {
 
         ~HinaSSIVisualPlugin() override {
             delete soil;
-            delete mesh_gen;
+            delete p_ogre_soil_renderer;
         }
 
         void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) override {
@@ -82,13 +80,13 @@ namespace gazebo {
         }
 
         void init_soil(Soil* soil) {
-            mesh_gen = new MeshGenerator();
-            mesh_gen->setScenePtr(visual->GetScene());
-            mesh_gen->create_ogre_mesh(soil);
+            p_ogre_soil_renderer = new OgreSoilRenderer();
+            p_ogre_soil_renderer->setScenePtr(visual->GetScene());
+            p_ogre_soil_renderer->create_ogre_mesh(soil);
         }
 
         void update_soil_mesh(Soil* soil) {
-            mesh_gen->update_ogre_mesh(soil);
+            p_ogre_soil_renderer->update_ogre_mesh(soil);
         }
     };
 
