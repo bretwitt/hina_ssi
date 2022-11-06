@@ -208,12 +208,12 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
         }
     }
 
-    auto defl = v3_0.Z() - s_p;
+    auto z = v3_0.Z() - s_p;
     auto force_origin = v3_0.Z() - s_sink;
 
     vertex->sigma = sigma_p;
 
-    vertex->v3 = Vector3d(v3.X(), v3.Y(), defl);
+    vertex->v3 = Vector3d(v3.X(), v3.Y(), z);
 
 
     auto force_v = Vector3d(
