@@ -7,8 +7,7 @@
 #include <ignition/math.hh>
 #include <utility>
 #include <gazebo/rendering/ogre_gazebo.h>
-#include "../common/soil.h"
-#include "render_config.h"
+#include "../common/soil/soil.h"
 
 using ignition::math::Vector2d;
 
@@ -16,8 +15,6 @@ namespace gazebo {
     class OgreSoilRenderer {
     private:
         rendering::ScenePtr scenePtr = nullptr;
-        Vector3d* field = nullptr;
-        Ogre::Vector3* vertex_normals;
         Ogre::ManualObject* manObj;
 
         void tri_update(Soil* soil, Ogre::ManualObject* manObj, uint32_t x_size, uint32_t y_size) {
@@ -31,25 +28,15 @@ namespace gazebo {
 //            }
 
             for(uint32_t i = 0; i < nVerts; i++) {
-
                 auto vertex = soil->get_data()->vertex_at_flattened_index(i);
-
                 auto v3 = vertex->v3;
 
-                auto pressure = vertex->sigma;
-
-                manObj->position(v3.X(),v3.Y(),v3.Z());
+                manObj->position(v3.X(), v3.Y(), v3.Z());
                 manObj->colour(120, 120, 120);
 
-//                if(do_calculate_normals) {
-//                    manObj->normal(vertex_normals[i]);
-//                }
-//
-//                if(i == 0) manObj->textureCoord(0,0);
-//                if(i == nVerts - 1) manObj->textureCoord(1,1);
             }
-
             auto indices = soil->get_data()->indices;
+
             for(uint32_t i = 0; i < (x_size - 1)*(y_size - 1)*3*2;) {
                 manObj->index(indices[i++]);
             }
@@ -105,15 +92,6 @@ namespace gazebo {
             manObj->begin("Hina/Soil", Ogre::RenderOperation::OT_TRIANGLE_LIST);
             tri_update(soil, manObj, x_size, y_size);
             manObj->end();
-//
-//            auto mode = Ogre::PM_SOLID;
-//            if(render_config::getInstance()->render_mode == render_config::SoilRenderMode::WIREFRAME) {
-//                mode = Ogre::PM_WIREFRAME;
-//            }
-
-//            Ogre::MaterialPtr CustomMaterial = Ogre::MaterialManager::getSingleton().create("Custom", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-//            CustomMaterial->getTechnique(0)->getPass(0)->setPolygonMode(mode);
-//            manObj->setMaterialName(0, "Custom");
 
             sceneManager->getRootSceneNode()->createChildSceneNode()->attachObject(manObj);
         }

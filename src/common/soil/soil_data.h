@@ -2,7 +2,7 @@
 #define HINA_SSI_PLUGIN_SOIL_DATA_H
 
 #include <gazebo/common/common.hh>
-#include "soil_config.h"
+#include "sandbox_config.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
@@ -17,6 +17,7 @@ namespace gazebo {
         double c = 3500;
         double phi = 0.55;
 
+        bool isAir = true;
         Vector3d v3;
         Vector3d v3_0;
 
@@ -43,7 +44,6 @@ namespace gazebo {
         uint32_t x_width = 5;
         uint32_t y_width = 5;
         double scale = 2.0;
-        double angle = 0;
 
         /* Runtime */
         double x_offset = 0;
@@ -55,11 +55,10 @@ namespace gazebo {
         double B = 0;
 
 
-        explicit SoilData(SoilConfig config) {
-            this->x_width = config.x_width;
-            this->y_width = config.y_width;
-            this->scale = config.scale;
-            this->angle = config.angle;
+        explicit SoilData (uint32_t x_width, uint32_t y_width, double scale) {
+            this->x_width = x_width;
+            this->y_width = y_width;
+            this->scale = scale;
         }
 
         ~SoilData() {
@@ -113,5 +112,6 @@ namespace gazebo {
         }
 
     };
+
 }
 #endif //HINA_SSI_PLUGIN_SOIL_DATA_H

@@ -1,20 +1,20 @@
 #include "soil.h"
 #include <cmath>
-#include <omp.h>
-#include "../../thirdparty/PerlinNoise.h"
+#include "../../../thirdparty/PerlinNoise.h"
 
 using namespace gazebo;
 
-Soil::Soil(SoilData* soil_data) {
-    this->_data = soil_data;
-    if (_data->soil_hashmap == nullptr) {
-        _data->init_field();
-        generate_geometry();
-    }
+
+Soil::Soil(SandboxConfig config) {
+    this->_data = new SoilData(config.x_width, config.y_width, config.scale);
+    _data->init_field();
+    generate_sandbox_geometry(config);
 }
 
-Soil::Soil(SoilConfig config) : Soil(new SoilData(config)) {
-
+Soil::Soil(DEM* dem) {
+    this->_data = new SoilData(dem->n, dem->m, dem->scale);
+    _data->init_field();
+    load_dem_geometry(dem);
 }
 
 Soil::~Soil()  {
@@ -25,17 +25,14 @@ SoilData* Soil::get_data() {
     return _data;
 }
 
-void Soil::generate_geometry() {
-    generate_soil_vertices();
+void Soil::generate_sandbox_geometry(SandboxConfig config) {
+    generate_sandbox_soil_vertices(config);
     generate_indices();
 }
 
-void Soil::generate_soil_vertices() {
+void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
     _data->x_offset = -(double) (_data->x_width - 1) / 2;
     _data->y_offset = -(double) (_data->y_width - 1) / 2;
-
-    //const siv::PerlinNoise::seed_type seed = 123456u;
-    //const siv::PerlinNoise perlin{ seed };
 
     for (int j = 0; j < _data->y_width; j++) {
         for (int i = 0; i < _data->x_width; i++) {
@@ -45,8 +42,7 @@ void Soil::generate_soil_vertices() {
             auto x = _data->scale * (i_f + _data->x_offset);
             auto y = _data->scale * (j_f + _data->y_offset);
 
-            //const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
-            const double z = y*tan(_data->angle);
+            const double z = y*tan(config.angle);
 
             auto v3 = Vector3d(x, y, z);
 
@@ -61,9 +57,8 @@ void Soil::generate_indices() const {
     auto indices = _data->indices;
 
     uint32_t idx = 0;
-    for (uint32_t y = 0; y < y_size - 1; y++) {
-        for (uint32_t x = 0; x < x_size - 1; x++) {
-
+    for (uint32_t x = 0; x < x_size - 1; x++) {
+        for (uint32_t y = 0; y < y_size - 1; y++) {
             uint32_t a = (x_size * y) + x;
             uint32_t b = (x_size * (y + 1)) + x;
             uint32_t c = (x_size * (y + 1)) + (x + 1);
@@ -78,6 +73,17 @@ void Soil::generate_indices() const {
             indices[idx++] = a;
         }
     }
+}
+
+void Soil::load_dem_geometry(DEM* dem) const {
+    for(int i = 0; i < dem->m; i++) {
+        for(int j = 0; j < dem->n; j++) {
+            Vector3d dem_v3 = dem->soil_vertices[i][j]->v3;
+            Vector3d v3 ( dem_v3.X(), dem_v3.Y(), dem_v3.Z());
+            _data->set_vertex_at_index(i, j, new VertexAttributes(v3));
+        }
+    }
+    generate_indices();
 }
 
 std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume) {
@@ -108,7 +114,8 @@ std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> Soil::try_deform(
         auto v3 = _data->get_vertex_at_index(x + x_start, y + y_start);
         if(penetrates(meshTri, v3, scale)) {
             penetrating_coords.emplace_back(x + x_start,y + y_start,v3);
-            //terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt);
+//            float dvvtx = 0.0f;
+//            terramx_deform(link, meshTri, x, y, v3, scale, dt, dvvtx);
         }
     }
 
@@ -136,9 +143,6 @@ bool Soil::intersects_projected(const Triangle& meshTri, const AABB& vertexRect)
     return Geometry::getInstance()->intersects_box_tri(meshTri, vertexRect) ;
 }
 
-void Soil::pre_update() {
-    //get_data()->sigma_tot = 0;
-}
 
 void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt, float& displaced_volume) {
 
@@ -226,3 +230,4 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
     linkPtr->AddForceAtWorldPosition(force_v, Vector3d(v3_0.X(), v3_0.Y(), force_origin));
 
 }
+
