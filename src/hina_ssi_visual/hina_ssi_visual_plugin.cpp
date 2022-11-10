@@ -4,6 +4,7 @@
 #include <gazebo/common/common.hh>
 #include <memory>
 #include <gazebo/rendering/rendering.hh>
+#include <utility>
 #include "ogre_soil_renderer.cpp"
 #include "Soil.pb.h"
 
@@ -11,8 +12,8 @@ namespace gazebo {
     class HinaSSIVisualPlugin : public VisualPlugin {
 
     private:
-        Soil* soil = nullptr;
-        OgreSoilRenderer* p_ogre_soil_renderer = nullptr;
+        std::shared_ptr<Soil> soil = nullptr;
+        std::shared_ptr<OgreSoilRenderer> p_ogre_soil_renderer = nullptr;
 
         event::ConnectionPtr connectionPtr = nullptr;
         rendering::VisualPtr visual = nullptr;
@@ -27,11 +28,6 @@ namespace gazebo {
 
     public:
         HinaSSIVisualPlugin() : VisualPlugin() {
-        }
-
-        ~HinaSSIVisualPlugin() override {
-            delete soil;
-            delete p_ogre_soil_renderer;
         }
 
         void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) override {
@@ -54,7 +50,7 @@ namespace gazebo {
             auto v = soil_update->flattened_field();
 
             if(soil == nullptr) {
-                soil = new Soil( { x_width, y_width });
+                soil = std::make_shared<Soil>(SandboxConfig {x_width, y_width, 1});
             }
 
             uint32_t i = 0;
@@ -79,14 +75,14 @@ namespace gazebo {
             }
         }
 
-        void init_soil(Soil* soil) {
-            p_ogre_soil_renderer = new OgreSoilRenderer();
+        void init_soil(std::shared_ptr<Soil> p_soil) {
+            p_ogre_soil_renderer = std::make_shared<OgreSoilRenderer>();
             p_ogre_soil_renderer->setScenePtr(visual->GetScene());
-            p_ogre_soil_renderer->create_ogre_mesh(soil);
+            p_ogre_soil_renderer->create_ogre_mesh(std::move(p_soil));
         }
 
-        void update_soil_mesh(Soil* soil) {
-            p_ogre_soil_renderer->update_ogre_mesh(soil);
+        void update_soil_mesh(std::shared_ptr<Soil> p_soil) {
+            p_ogre_soil_renderer->update_ogre_mesh(std::move(p_soil));
         }
     };
 
