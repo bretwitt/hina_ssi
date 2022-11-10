@@ -6,8 +6,9 @@
 #include <gazebo/rendering/rendering.hh>
 #include <gazebo/physics/physics.hh>
 #include <utility>
-#include "../common/soil.h"
+#include "../common/soil/soil.h"
 #include "Soil.pb.h"
+#include "../common/dem/dem_loader.h"
 
 namespace gazebo {
     class HinaSSIWorldPlugin : public WorldPlugin {
@@ -107,12 +108,29 @@ namespace gazebo {
         }
 
         void init_soil() {
+            if(sdf->HasElement("dem")) {
+                auto filename = sdf->GetElement("dem")->Get<std::string>();
+                init_dem(filename);
+            } else {
+                init_sandbox();
+            }
+        }
+
+        void init_sandbox() {
+
             int x_width = sdf->GetElement("width_x")->Get<int>();
             int y_width = sdf->GetElement("width_y")->Get<int>();
             auto scale = sdf->GetElement("scale")->Get<double>();
             auto angle = sdf->GetElement("angle")->Get<double>();
 
             soilPtr = new Soil(SoilConfig { x_width, y_width, scale, angle });
+        }
+
+        void init_dem(const std::string& filename) {
+            std::string file_name = gazebo::common::SystemPaths::Instance()->FindFile(filename);
+            auto dem = DEMLoader::load_dem(file_name);
+            soilPtr = new Soil(dem);
+            delete dem;
         }
 
         void init_transport() {
@@ -139,13 +157,10 @@ namespace gazebo {
 
             last_sec = sec;
 
-
             if(dt_viz > (1./5.f)) {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
             }
-
-
         }
 
         void update_soil(Soil* soilPtr, float dt) {

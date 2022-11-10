@@ -38,97 +38,12 @@ namespace gazebo {
 
     };
 
-    struct BedRockVertexAttributes {
-
-        double k_phi = 814000.0f; //814000.0f;
-        double k_e = 7.8e7;
-        double k_c = 20680.0f;
-        double c = 3500;
-        double phi = 0.55;
-
-        bool isAir = true;
-
-        Vector3d v3;
-        Vector3d v3_0;
-
-        /* Frame physics states */
-        double plastic_flow;
-        double sigma_yield;
-        double s_p;
-        double s_e;
-        double sigma;
-        Vector3d normal_dA;
-
-        explicit BedRockVertexAttributes(const Vector3d& v3) {
-            this->v3_0 = v3;
-            this->v3 = v3;
-        }
-
-        ~BedRockVertexAttributes() = default;
-
-    }; 
-
-    struct TerrainDEM {
-
-        //size of terrain
-        int n;
-        int m;
-        std::vector<std::vector<VertexAttributes>> SoilVertices;
-        std::vector<std::vector<BedRockVertexAttributes>> BedRockVertices;
-
-
-        TerrainDEM(int width, int length, const Vector3d& v3, std::vector<std::vector<int>> labels) {
-            n = width;
-            m = length; 
-
-        /* SoilVertices = std::vector <std::vector<SoilVertexAttributes>>(n);
-            BedRockVertices = std::vector <std::vector<BedRockVertexAttributes>>(n);*/
-
-            for (int i = 0; i < n; ++i)
-            {
-                /*SoilVertices[i] = std::vector<SoilVertexAttributes>(m);
-                BedRockVertices[i] = std::vector<BedRockVertexAttributes>(m);*/
-                std::vector<VertexAttributes> rowSoil;
-                std::vector<BedRockVertexAttributes> rowBRock;
-
-                for (int j = 0; j < m; ++j)
-                {
-                    struct VertexAttributes s(v3);
-
-                    struct BedRockVertexAttributes b(v3);
-
-                    if (labels[i][j] = 0) {
-                        w.z = 0;
-                        s.isAir = false;
-                    }
-                    else if (labels[i][j] = 1) {
-                        v.z = 0;
-                        b.isAir = false;
-                    }
-                    else {
-                        w.z = 0;
-                        s.isAir = false;
-                    }
-                    rowSoil.push_back(s);
-                    rowBRock.push_back(w);
-
-                }
-                SoilVertices.push_back(rowSoil);
-                BedRockVertices.push_back(rowBRock);
-
-            }
-        }
-    };
-
-
-
     struct SoilData {
 
         /* Terrain parameters */
         uint32_t x_width = 5;
         uint32_t y_width = 5;
         double scale = 2.0;
-        double angle = 0;
 
         /* Runtime */
         double x_offset = 0;
@@ -139,12 +54,19 @@ namespace gazebo {
         // Dynamic Footprint Parameter
         double B = 0;
 
+        SoilConfig config;
 
         explicit SoilData(SoilConfig config) {
             this->x_width = config.x_width;
             this->y_width = config.y_width;
             this->scale = config.scale;
-            this->angle = config.angle;
+            this->config = config;
+        }
+
+        explicit SoilData(uint32_t x_width, uint32_t y_width, double scale) {
+            this->x_width = x_width;
+            this->y_width = y_width;
+            this->scale = scale;
         }
 
         ~SoilData() {
@@ -198,5 +120,6 @@ namespace gazebo {
         }
 
     };
+
 }
 #endif //HINA_SSI_PLUGIN_SOIL_DATA_H

@@ -4,8 +4,9 @@
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
 
-#include "geometry.h"
+#include "../geometry.h"
 #include "soil_data.h"
+#include "../dem/dem.h"
 
 namespace gazebo {
     class Soil {
@@ -34,6 +35,10 @@ namespace gazebo {
         void terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt, float& displaced_volume);
 
         Soil();
+
+        Soil(DEM* dem);
+
+        void load_dem_geometry(DEM *dem) const;
     };
 }
 

@@ -1,7 +1,7 @@
 #include "soil.h"
 #include <cmath>
 #include <omp.h>
-#include "../../thirdparty/PerlinNoise.h"
+#include "../../../thirdparty/PerlinNoise.h"
 
 using namespace gazebo;
 
@@ -15,6 +15,15 @@ Soil::Soil(SoilData* soil_data) {
 
 Soil::Soil(SoilConfig config) : Soil(new SoilData(config)) {
 
+}
+
+Soil::Soil(DEM* dem) {
+    this->_data = new SoilData(dem->n, dem->m, dem->scale);
+
+    if(_data->soil_hashmap == nullptr) {
+        _data->init_field();
+        load_dem_geometry(dem);
+    }
 }
 
 Soil::~Soil()  {
@@ -46,7 +55,7 @@ void Soil::generate_soil_vertices() {
             auto y = _data->scale * (j_f + _data->y_offset);
 
             //const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
-            const double z = y*tan(_data->angle);
+            const double z = y*tan(_data->config.angle);
 
             auto v3 = Vector3d(x, y, z);
 
@@ -78,6 +87,17 @@ void Soil::generate_indices() const {
             indices[idx++] = a;
         }
     }
+}
+
+void Soil::load_dem_geometry(DEM* dem) const {
+    for(int i = 0; i < dem->m; i++) {
+        for(int j = 0; j < dem->n; j++) {
+            Vector3d dem_v3 = dem->soil_vertices[i][j]->v3;
+            Vector3d v3 ( dem_v3.X(), dem_v3.Y(), dem_v3.Z());
+            _data->set_vertex_at_index(i, j, new VertexAttributes(v3));
+        }
+    }
+    generate_indices();
 }
 
 std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume) {
@@ -226,3 +246,4 @@ void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshT
     linkPtr->AddForceAtWorldPosition(force_v, Vector3d(v3_0.X(), v3_0.Y(), force_origin));
 
 }
+
