@@ -56,14 +56,14 @@ namespace gazebo {
 
         SoilConfig config;
 
-        explicit SoilData(SoilConfig config) {
+        explicit SoilData (SoilConfig config) {
             this->x_width = config.x_width;
             this->y_width = config.y_width;
             this->scale = config.scale;
             this->config = config;
         }
 
-        explicit SoilData(uint32_t x_width, uint32_t y_width, double scale) {
+        explicit SoilData (uint32_t x_width, uint32_t y_width, double scale) {
             this->x_width = x_width;
             this->y_width = y_width;
             this->scale = scale;

@@ -1,6 +1,5 @@
 #include "soil.h"
 #include <cmath>
-#include <omp.h>
 #include "../../../thirdparty/PerlinNoise.h"
 
 using namespace gazebo;
@@ -70,9 +69,8 @@ void Soil::generate_indices() const {
     auto indices = _data->indices;
 
     uint32_t idx = 0;
-    for (uint32_t y = 0; y < y_size - 1; y++) {
-        for (uint32_t x = 0; x < x_size - 1; x++) {
-
+    for (uint32_t x = 0; x < x_size - 1; x++) {
+        for (uint32_t y = 0; y < y_size - 1; y++) {
             uint32_t a = (x_size * y) + x;
             uint32_t b = (x_size * (y + 1)) + x;
             uint32_t c = (x_size * (y + 1)) + (x + 1);
@@ -128,7 +126,8 @@ std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> Soil::try_deform(
         auto v3 = _data->get_vertex_at_index(x + x_start, y + y_start);
         if(penetrates(meshTri, v3, scale)) {
             penetrating_coords.emplace_back(x + x_start,y + y_start,v3);
-            //terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt);
+//            float dvvtx = 0.0f;
+//            terramx_deform(link, meshTri, x, y, v3, scale, dt, dvvtx);
         }
     }
 
