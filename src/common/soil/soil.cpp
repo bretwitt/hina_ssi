@@ -4,24 +4,21 @@
 
 using namespace gazebo;
 
-
-Soil::Soil(SandboxConfig config) {
-    this->_data = new SoilData(config.x_width, config.y_width, config.scale);
+Soil::Soil(uint32_t width, uint32_t height, double scale) {
+    this->_data = std::make_shared<SoilData>(width, height, scale);
     _data->init_field();
+}
+
+Soil::Soil(SandboxConfig config) : Soil(config.x_width, config.y_width, config.scale) {
     generate_sandbox_geometry(config);
 }
 
-Soil::Soil(DEM* dem) {
-    this->_data = new SoilData(dem->n, dem->m, dem->scale);
-    _data->init_field();
+Soil::Soil(std::shared_ptr<DEM> dem) : Soil(dem->n, dem->m, dem->scale) {
     load_dem_geometry(dem);
 }
 
-Soil::~Soil()  {
-    delete _data;
-}
 
-SoilData* Soil::get_data() {
+std::shared_ptr<SoilData> Soil::get_data() {
     return _data;
 }
 
@@ -46,7 +43,7 @@ void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
 
             auto v3 = Vector3d(x, y, z);
 
-            _data->set_vertex_at_index(i, j, new VertexAttributes(v3));
+            _data->set_vertex_at_index(i, j, std::make_shared<VertexAttributes>(v3));
         }
     }
 }
@@ -54,7 +51,7 @@ void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
 void Soil::generate_indices() const {
     uint32_t x_size = _data->x_width;
     uint32_t y_size = _data->y_width;
-    auto indices = _data->indices;
+    //auto indices = _data->indices;
 
     uint32_t idx = 0;
     for (uint32_t x = 0; x < x_size - 1; x++) {
@@ -64,29 +61,29 @@ void Soil::generate_indices() const {
             uint32_t c = (x_size * (y + 1)) + (x + 1);
             uint32_t d = (x_size * y) + (x + 1);
 
-            indices[idx++] = a;
-            indices[idx++] = d;
-            indices[idx++] = c;
+            _data->indices[idx++] = a;
+            _data->indices[idx++] = d;
+            _data->indices[idx++] = c;
 
-            indices[idx++] = c;
-            indices[idx++] = b;
-            indices[idx++] = a;
+            _data->indices[idx++] = c;
+            _data->indices[idx++] = b;
+            _data->indices[idx++] = a;
         }
     }
 }
 
-void Soil::load_dem_geometry(DEM* dem) const {
+void Soil::load_dem_geometry(const std::shared_ptr<DEM>& dem) const {
     for(int i = 0; i < dem->m; i++) {
         for(int j = 0; j < dem->n; j++) {
             Vector3d dem_v3 = dem->soil_vertices[i][j]->v3;
             Vector3d v3 ( dem_v3.X(), dem_v3.Y(), dem_v3.Z());
-            _data->set_vertex_at_index(i, j, new VertexAttributes(v3));
+            _data->set_vertex_at_index(i, j, std::make_shared<VertexAttributes>(v3));
         }
     }
     generate_indices();
 }
 
-std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume) {
+std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<VertexAttributes>>> Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume) {
     double max_x, max_y, min_x, min_y;
     double scale;
     int iter_x, iter_y;
@@ -106,7 +103,7 @@ std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> Soil::try_deform(
 
     _data->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
-    std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> penetrating_coords;
+    std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<VertexAttributes>>> penetrating_coords;
 
     for(uint32_t k = 0; k < iter_x*iter_y; k++) {
         uint32_t y = floor(k / iter_y);
@@ -114,8 +111,6 @@ std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> Soil::try_deform(
         auto v3 = _data->get_vertex_at_index(x + x_start, y + y_start);
         if(penetrates(meshTri, v3, scale)) {
             penetrating_coords.emplace_back(x + x_start,y + y_start,v3);
-//            float dvvtx = 0.0f;
-//            terramx_deform(link, meshTri, x, y, v3, scale, dt, dvvtx);
         }
     }
 
@@ -134,7 +129,7 @@ std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> Soil::try_deform(
 }
 
 
-bool Soil::penetrates(const Triangle& meshTri, VertexAttributes* vtx, double w) {
+bool Soil::penetrates(const Triangle& meshTri, const std::shared_ptr<VertexAttributes>& vtx, double w) {
     auto point = vtx->v3;
     return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
 }
@@ -144,7 +139,7 @@ bool Soil::intersects_projected(const Triangle& meshTri, const AABB& vertexRect)
 }
 
 
-void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt, float& displaced_volume) {
+void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, const std::shared_ptr<VertexAttributes>& vertex, double w, float dt, float& displaced_volume) {
 
     auto v3 = vertex->v3;
     auto v3_0 = vertex->v3_0;

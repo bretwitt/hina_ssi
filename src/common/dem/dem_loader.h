@@ -8,7 +8,7 @@ using namespace gazebo;
 class DEMLoader {
 
 public:
-    static DEM* load_dem(const std::string &file) {
+    static std::shared_ptr<DEM> load_dem(const std::string &file) {
 
         std::vector<std::vector<double>> height_map;
 
@@ -32,7 +32,7 @@ public:
         std::getline(f, line,',');
         scale = std::stod(line);
 
-        DEM* dem = new DEM(n, m, scale);
+        std::shared_ptr<DEM> dem = std::make_shared<DEM>(n, m, scale);
         int i = 0;
 
         while( std::getline(f, line,',') ) {

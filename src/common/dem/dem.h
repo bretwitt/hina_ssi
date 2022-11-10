@@ -13,7 +13,7 @@ public:
     uint32_t n;
     uint32_t m;
     double scale = 0.0;
-    std::vector<std::vector<VertexAttributes*>> soil_vertices;
+    std::vector<std::vector<std::shared_ptr<VertexAttributes>>> soil_vertices;
 
     DEM(uint32_t width, uint32_t length, double scale) {
         this->n = width;
@@ -27,16 +27,8 @@ public:
             for(int j = 0; j < m; j++) {
                 auto x = scale * (i + x_offset);
                 auto y = scale * (j + y_offset);
-                auto* vert_attr = new VertexAttributes(Vector3d(x,y,0));
+                auto vert_attr = std::make_shared<VertexAttributes>(VertexAttributes(Vector3d(x,y,0)));
                 soil_vertices[i].push_back(vert_attr);
-            }
-        }
-    }
-
-    ~DEM() {
-        for(const auto& vert_v : soil_vertices) {
-            for(auto vert : vert_v) {
-                delete vert;
             }
         }
     }

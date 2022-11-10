@@ -2,6 +2,8 @@
 #define HINA_SSI_PLUGIN_SOIL_DATA_H
 
 #include <gazebo/common/common.hh>
+#include <memory>
+#include <utility>
 #include "sandbox_config.h"
 
 using ignition::math::Vector3d;
@@ -22,11 +24,11 @@ namespace gazebo {
         Vector3d v3_0;
 
         /* Frame physics states */
-        double plastic_flow;
-        double sigma_yield;
-        double s_p;
-        double s_e;
-        double sigma;
+        double plastic_flow{};
+        double sigma_yield{};
+        double s_p{};
+        double s_e{};
+        double sigma{};
         Vector3d normal_dA;
 
         explicit VertexAttributes(const Vector3d& v3) {
@@ -38,6 +40,8 @@ namespace gazebo {
 
     };
 
+    typedef std::unordered_map<uint32_t, std::unordered_map<uint32_t, std::shared_ptr<VertexAttributes>>> soil_field;
+
     struct SoilData {
 
         /* Terrain parameters */
@@ -48,8 +52,8 @@ namespace gazebo {
         /* Runtime */
         double x_offset = 0;
         double y_offset = 0;
-        uint32_t *indices{};
-        std::unordered_map<uint32_t, std::unordered_map<uint32_t, VertexAttributes*>>* soil_hashmap{};
+        std::unique_ptr<uint32_t[]> indices{};
+        std::unique_ptr<soil_field> soil_hashmap{};
 
         // Dynamic Footprint Parameter
         double B = 0;
@@ -61,24 +65,13 @@ namespace gazebo {
             this->scale = scale;
         }
 
-        ~SoilData() {
-            delete[] indices;
-
-            for(uint32_t x = 0; x < x_width; x++) {
-                for(uint32_t y = 0; y < y_width; y++) {
-                    delete (*soil_hashmap)[x][y];
-                }
-            }
-            delete[] soil_hashmap;
-        };
-
 
         void init_field() {
-            soil_hashmap = new std::unordered_map<uint32_t, std::unordered_map<uint32_t, VertexAttributes*>>();
-            indices = new uint32_t[(x_width - 1) * (y_width - 1) * 3 * 2];
+            soil_hashmap = std::make_unique<soil_field>();
+            indices = std::make_unique<uint32_t[]>((x_width - 1) * (y_width - 1) * 3 * 2);
         }
 
-        VertexAttributes* vertex_at_flattened_index(uint32_t idx) const {
+        std::shared_ptr<VertexAttributes> vertex_at_flattened_index(uint32_t idx) const {
             uint32_t x;
             uint32_t y;
             unflatten_index(idx, x, y);
@@ -98,12 +91,12 @@ namespace gazebo {
             y = floor(idx / x_width);
         }
 
-        VertexAttributes* get_vertex_at_index(uint32_t x, uint32_t y) const {
+        std::shared_ptr<VertexAttributes> get_vertex_at_index(uint32_t x, uint32_t y) const {
             return (*soil_hashmap)[std::min(x, x_width - 1)][std::min(y, y_width - 1)];
         }
 
-        void set_vertex_at_index(uint32_t x, uint32_t y, VertexAttributes* vtx) const {
-            (*soil_hashmap)[x][y] = vtx;
+        void set_vertex_at_index(uint32_t x, uint32_t y, std::shared_ptr<VertexAttributes> vtx) const {
+            (*soil_hashmap)[x][y] = std::move(vtx);
         }
 
         void get_nearest_index(Vector2d vtx, uint32_t& x, uint32_t& y) const {

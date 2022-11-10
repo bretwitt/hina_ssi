@@ -17,7 +17,7 @@ namespace gazebo {
         rendering::ScenePtr scenePtr = nullptr;
         Ogre::ManualObject* manObj;
 
-        void tri_update(Soil* soil, Ogre::ManualObject* manObj, uint32_t x_size, uint32_t y_size) {
+        void tri_update(std::shared_ptr<Soil> soil, Ogre::ManualObject* manObj, uint32_t x_size, uint32_t y_size) {
             uint32_t nVerts = x_size*y_size;
 //
 //            bool do_calculate_normals = render_config::getInstance()->render_mode == render_config::SoilRenderMode::SOLID;
@@ -35,14 +35,14 @@ namespace gazebo {
                 manObj->colour(120, 120, 120);
 
             }
-            auto indices = soil->get_data()->indices;
+            //auto indices = std::move(soil->get_data()->indices);
 
             for(uint32_t i = 0; i < (x_size - 1)*(y_size - 1)*3*2;) {
-                manObj->index(indices[i++]);
+                manObj->index(soil->get_data()->indices[i++]);
             }
         }
 
-        void calculate_vertex_normals(Soil* soil, uint32_t x_size, uint32_t y_size, Ogre::Vector3* vertex_normals) {
+        void calculate_vertex_normals(std::shared_ptr<Soil> soil, uint32_t x_size, uint32_t y_size, Ogre::Vector3* vertex_normals) {
 
             std::fill_n(vertex_normals, x_size*y_size, Ogre::Vector3(0,0,0));
 
@@ -81,7 +81,7 @@ namespace gazebo {
             this->scenePtr = std::move(scenePtr);
         }
 
-        void create_ogre_mesh(Soil* soil) {
+        void create_ogre_mesh(std::shared_ptr<Soil> soil) {
             auto sceneManager = scenePtr->OgreSceneManager();
 
             manObj = sceneManager->createManualObject("terrain_mesh");
@@ -96,7 +96,7 @@ namespace gazebo {
             sceneManager->getRootSceneNode()->createChildSceneNode()->attachObject(manObj);
         }
 
-        void update_ogre_mesh(Soil* soil) {
+        void update_ogre_mesh(std::shared_ptr<Soil> soil) {
             uint32_t x_size = soil->get_data()->x_width;
             uint32_t y_size = soil->get_data()->y_width;
 
