@@ -2,7 +2,7 @@
 #define HINA_SSI_PLUGIN_SOIL_DATA_H
 
 #include <gazebo/common/common.hh>
-#include "soil_config.h"
+#include "sandbox_config.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
@@ -54,14 +54,6 @@ namespace gazebo {
         // Dynamic Footprint Parameter
         double B = 0;
 
-        SoilConfig config;
-
-        explicit SoilData (SoilConfig config) {
-            this->x_width = config.x_width;
-            this->y_width = config.y_width;
-            this->scale = config.scale;
-            this->config = config;
-        }
 
         explicit SoilData (uint32_t x_width, uint32_t y_width, double scale) {
             this->x_width = x_width;

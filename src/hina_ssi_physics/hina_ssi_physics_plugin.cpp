@@ -31,7 +31,6 @@ namespace gazebo {
         double sec{};
         double last_sec{};
         double last_sec_viz{};
-
         int col_threads = 3;
 
     public:
@@ -132,7 +131,7 @@ namespace gazebo {
             auto scale = sdf->GetElement("scale")->Get<double>();
             auto angle = sdf->GetElement("angle")->Get<double>();
 
-            soilPtr = new Soil(SoilConfig { x_width, y_width, scale, angle });
+            soilPtr = new Soil(SandboxConfig {x_width, y_width, scale, angle });
         }
 
         void init_dem(const std::string& filename) {
@@ -173,8 +172,6 @@ namespace gazebo {
         }
 
         void update_soil(Soil* soilPtr, float dt) {
-            soilPtr->pre_update();
-
             for(auto & iter : mesh_lookup) {
                 auto link = iter.first;
                 auto mesh = iter.second;

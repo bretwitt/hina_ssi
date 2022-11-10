@@ -54,7 +54,7 @@ namespace gazebo {
             auto v = soil_update->flattened_field();
 
             if(soil == nullptr) {
-                soil = new Soil(new SoilData({x_width,y_width, 0.005f, 0.0}));
+                soil = new Soil( { x_width, y_width });
             }
 
             uint32_t i = 0;

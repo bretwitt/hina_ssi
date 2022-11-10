@@ -4,25 +4,17 @@
 
 using namespace gazebo;
 
-Soil::Soil(SoilData* soil_data) {
-    this->_data = soil_data;
-    if (_data->soil_hashmap == nullptr) {
-        _data->init_field();
-        generate_geometry();
-    }
-}
 
-Soil::Soil(SoilConfig config) : Soil(new SoilData(config)) {
-
+Soil::Soil(SandboxConfig config) {
+    this->_data = new SoilData(config.x_width, config.y_width, config.scale);
+    _data->init_field();
+    generate_sandbox_geometry(config);
 }
 
 Soil::Soil(DEM* dem) {
     this->_data = new SoilData(dem->n, dem->m, dem->scale);
-
-    if(_data->soil_hashmap == nullptr) {
-        _data->init_field();
-        load_dem_geometry(dem);
-    }
+    _data->init_field();
+    load_dem_geometry(dem);
 }
 
 Soil::~Soil()  {
@@ -33,17 +25,14 @@ SoilData* Soil::get_data() {
     return _data;
 }
 
-void Soil::generate_geometry() {
-    generate_soil_vertices();
+void Soil::generate_sandbox_geometry(SandboxConfig config) {
+    generate_sandbox_soil_vertices(config);
     generate_indices();
 }
 
-void Soil::generate_soil_vertices() {
+void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
     _data->x_offset = -(double) (_data->x_width - 1) / 2;
     _data->y_offset = -(double) (_data->y_width - 1) / 2;
-
-    //const siv::PerlinNoise::seed_type seed = 123456u;
-    //const siv::PerlinNoise perlin{ seed };
 
     for (int j = 0; j < _data->y_width; j++) {
         for (int i = 0; i < _data->x_width; i++) {
@@ -53,8 +42,7 @@ void Soil::generate_soil_vertices() {
             auto x = _data->scale * (i_f + _data->x_offset);
             auto y = _data->scale * (j_f + _data->y_offset);
 
-            //const double z = (0.5*perlin.octave2D_01((x * 0.1), (y * 0.1), 4)) - 0.335;
-            const double z = y*tan(_data->config.angle);
+            const double z = y*tan(config.angle);
 
             auto v3 = Vector3d(x, y, z);
 
@@ -155,9 +143,6 @@ bool Soil::intersects_projected(const Triangle& meshTri, const AABB& vertexRect)
     return Geometry::getInstance()->intersects_box_tri(meshTri, vertexRect) ;
 }
 
-void Soil::pre_update() {
-    //get_data()->sigma_tot = 0;
-}
 
 void Soil::terramx_deform(const physics::LinkPtr& linkPtr, const Triangle& meshTri, uint32_t x, uint32_t y, VertexAttributes* vertex, double w, float dt, float& displaced_volume) {
 

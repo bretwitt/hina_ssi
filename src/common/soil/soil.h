@@ -16,18 +16,16 @@ namespace gazebo {
 
     public:
 
-        explicit Soil(SoilData* soil_data);
-        explicit Soil(SoilConfig config);
+        explicit Soil(SandboxConfig config);
 
         ~Soil();
 
         SoilData* get_data();
 
-        void generate_geometry();
-        void generate_soil_vertices();
+        void generate_sandbox_geometry(SandboxConfig config);
+        void generate_sandbox_soil_vertices(SandboxConfig config);
         void generate_indices() const;
 
-        void pre_update();
         std::vector<std::tuple<uint32_t, uint32_t, VertexAttributes*>> try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume);
         bool penetrates(const Triangle& meshTri, VertexAttributes* vertex, double w);
         static bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect);
