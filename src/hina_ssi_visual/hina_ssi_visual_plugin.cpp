@@ -8,7 +8,9 @@
 #include "ogre_soil_renderer.cpp"
 #include "Soil.pb.h"
 
-namespace gazebo {
+
+namespace hina {
+
     class HinaSSIVisualPlugin : public VisualPlugin {
 
     private:
@@ -78,14 +80,14 @@ namespace gazebo {
             }
         }
 
-        void init_soil(std::shared_ptr<Soil> p_soil) {
+        void init_soil(const std::shared_ptr<Soil>& p_soil) {
             p_ogre_soil_renderer = std::make_shared<OgreSoilRenderer>();
             p_ogre_soil_renderer->setScenePtr(visual->GetScene());
-            p_ogre_soil_renderer->create_ogre_mesh(std::move(p_soil));
+            p_ogre_soil_renderer->create_ogre_mesh(p_soil);
         }
 
-        void update_soil_mesh(std::shared_ptr<Soil> p_soil) {
-            p_ogre_soil_renderer->update_ogre_mesh(std::move(p_soil));
+        void update_soil_mesh(const std::shared_ptr<Soil>& p_soil) {
+            p_ogre_soil_renderer->update_ogre_mesh(p_soil);
         }
     };
 

@@ -1,6 +1,7 @@
 #include "soil.h"
 
 using namespace gazebo;
+using namespace hina;
 
 Soil::Soil(uint32_t width, uint32_t height, double scale) {
     this->field = std::make_shared<UniformField<SoilAttributes>>(width, height, scale);
@@ -21,16 +22,12 @@ void Soil::generate_sandbox_geometry(SandboxConfig config) {
 }
 
 void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
-    field->x_offset = -(double) (field->x_width - 1) / 2;
-    field->y_offset = -(double) (field->y_width - 1) / 2;
-
     for (int j = 0; j < field->y_width; j++) {
         for (int i = 0; i < field->x_width; i++) {
-            auto i_f = (float) i;
-            auto j_f = (float) j;
+            auto vertex = field->get_vertex_at_index(i,j);
 
-            auto x = field->scale * (i_f + field->x_offset);
-            auto y = field->scale * (j_f + field->y_offset);
+            auto x = vertex->v3.X();
+            auto y = vertex->v3.Y();
 
             const double z = y*tan(config.angle);
 
@@ -39,8 +36,6 @@ void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
             field->set_vertex_at_index(i, j, std::make_shared<FieldVertex<SoilAttributes>>(v3));
         }
     }
-
-    std::cout << field->scale << std::endl;
 }
 
 void Soil::generate_indices() const {

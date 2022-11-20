@@ -1,4 +1,10 @@
+#ifndef HINA_SSI_GEOMETRY_H
+#define HINA_SSI_GEOMETRY_H
+
 #include "geometry.h"
+
+using namespace gazebo;
+using namespace hina;
 
 Geometry* Geometry::INSTANCE = nullptr;
 
@@ -28,3 +34,5 @@ bool Geometry::intersects_box_tri(const Triangle& tri, const AABB& aabb) {
 
     return triBoxOverlap( box_center_bf, box_half_size_bf, tri_vert_bf);
 }
+
+#endif

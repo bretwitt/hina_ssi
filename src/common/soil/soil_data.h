@@ -10,32 +10,30 @@
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
 
-namespace gazebo {
+namespace hina {
+struct SoilAttributes {
 
-    struct SoilAttributes {
+    double k_phi = 814000.0f; //814000.0f;
+    double k_e = 7.8e7;
+    double k_c = 20680.0f;
+    double c = 3500;
+    double phi = 0.55;
 
-        double k_phi = 814000.0f; //814000.0f;
-        double k_e = 7.8e7;
-        double k_c = 20680.0f;
-        double c = 3500;
-        double phi = 0.55;
+    bool isAir = true;
 
-        bool isAir = true;
+    /* Frame physics states */
+    double plastic_flow{};
+    double sigma_yield{};
+    double s_p{};
+    double s_e{};
+    double sigma{};
+    Vector3d normal_dA;
 
-        /* Frame physics states */
-        double plastic_flow{};
-        double sigma_yield{};
-        double s_p{};
-        double s_e{};
-        double sigma{};
-        Vector3d normal_dA;
+    explicit SoilAttributes() {
+    }
 
-        explicit SoilAttributes()  {
-        }
+    ~SoilAttributes() = default;
 
-        ~SoilAttributes() = default;
-
-    };
-
+};
 }
 #endif //HINA_SSI_PLUGIN_SOIL_DATA_H

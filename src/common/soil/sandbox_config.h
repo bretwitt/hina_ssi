@@ -1,17 +1,15 @@
 #ifndef HINA_SSI_PLUGIN_SANDBOX_CONFIG_H
 #define HINA_SSI_PLUGIN_SANDBOX_CONFIG_H
+ namespace hina {
+    struct SandboxConfig {
 
-namespace gazebo {
+        int x_width;
+        int y_width;
+        double scale;
+        double angle;
 
-struct SandboxConfig {
-
-    int x_width;
-    int y_width;
-    double scale;
-    double angle;
-
-};
-
+    };
 }
+
 
 #endif //HINA_SSI_PLUGIN_SANDBOX_CONFIG_H

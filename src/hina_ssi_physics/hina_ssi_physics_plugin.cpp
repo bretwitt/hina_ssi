@@ -10,7 +10,9 @@
 #include "Soil.pb.h"
 #include "../common/dem/dem_loader.h"
 
-namespace gazebo {
+//using namespace hina;
+
+namespace hina {
     class HinaSSIWorldPlugin : public WorldPlugin {
 
     private:
@@ -25,7 +27,7 @@ namespace gazebo {
         sdf::ElementPtr sdf = nullptr;
 
         Vector3d v3;
-        std::map<physics::LinkPtr, const common::Mesh*> mesh_lookup {};
+        std::map<physics::LinkPtr, const common::Mesh *> mesh_lookup{};
 
         common::Time time;
         double sec{};
@@ -40,7 +42,8 @@ namespace gazebo {
 
         void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
             updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
-            onEntityAddedEventPtr = event::Events::ConnectAddEntity(boost::bind(&HinaSSIWorldPlugin::OnEntityAdded, this, _1));
+            onEntityAddedEventPtr = event::Events::ConnectAddEntity(
+                    boost::bind(&HinaSSIWorldPlugin::OnEntityAdded, this, _1));
             world = _world;
             sdf = _sdf;
             init_threading();
@@ -50,34 +53,34 @@ namespace gazebo {
         }
 
         void init_threading() {
-            if(sdf->HasElement("col_threads")) {
+            if (sdf->HasElement("col_threads")) {
                 col_threads = sdf->GetElement("col_threads")->Get<int>();
             }
         }
 
-        void OnEntityAdded(const std::string& str) {
+        void OnEntityAdded(const std::string &str) {
             init_links(str);
         }
 
         void init_models() {
             auto model_v = world->Models();
-            for(const auto& model : model_v) {
+            for (const auto &model: model_v) {
                 init_links(model->GetName());
             }
         }
 
-        void init_links(const std::string& model_name) {
+        void init_links(const std::string &model_name) {
 
             std::vector<std::string> links;
             auto link_element_ptr = sdf->GetElement("links");
-            if(link_element_ptr != nullptr) {
+            if (link_element_ptr != nullptr) {
                 link_element_ptr = link_element_ptr->GetFirstElement();
-                if(link_element_ptr != nullptr) {
+                if (link_element_ptr != nullptr) {
                     links.push_back(link_element_ptr->Get<std::string>());
                 }
                 while (link_element_ptr != nullptr) {
                     link_element_ptr = link_element_ptr->GetNextElement("link");
-                    if(link_element_ptr != nullptr) {
+                    if (link_element_ptr != nullptr) {
                         links.push_back(link_element_ptr->Get<std::string>());
                     }
                 }
@@ -86,9 +89,9 @@ namespace gazebo {
 
             auto model = world->EntityByName(model_name)->GetParentModel();
             auto link_v = model->GetLinks();
-            for(const auto& link : link_v) {
+            for (const auto &link: link_v) {
 
-                if(std::end(links) == std::find(std::begin(links), std::end(links), link->GetName())) continue;
+                if (std::end(links) == std::find(std::begin(links), std::end(links), link->GetName())) continue;
 
                 auto collElemPtr = link->GetSDF()->GetElement("collision");
                 if (collElemPtr != nullptr) {
@@ -112,7 +115,7 @@ namespace gazebo {
         }
 
         void init_soil() {
-            if(sdf->HasElement("dem")) {
+            if (sdf->HasElement("dem")) {
                 auto filename = sdf->GetElement("dem")->Get<std::string>();
                 init_dem(filename);
             } else {
@@ -127,10 +130,10 @@ namespace gazebo {
             auto scale = sdf->GetElement("scale")->Get<double>();
             auto angle = sdf->GetElement("angle")->Get<double>();
 
-            soilPtr = std::make_shared<Soil>(SandboxConfig {x_width, y_width, scale, angle });
+            soilPtr = std::make_shared<Soil>(SandboxConfig{x_width, y_width, scale, angle});
         }
 
-        void init_dem(const std::string& filename) {
+        void init_dem(const std::string &filename) {
             std::string file_name = gazebo::common::SystemPaths::Instance()->FindFile(filename);
             auto dem = DEMLoader::load_dem(file_name);
             soilPtr = std::make_shared<Soil>(dem);
@@ -144,9 +147,9 @@ namespace gazebo {
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
         }
 
-        void load_mesh(const physics::LinkPtr& link, const std::string& mesh_uri) {
+        void load_mesh(const physics::LinkPtr &link, const std::string &mesh_uri) {
             auto mesh = common::MeshManager::Instance()->Load(mesh_uri);
-            mesh_lookup.insert(std::pair<physics::LinkPtr, const common::Mesh*>(link, mesh));
+            mesh_lookup.insert(std::pair<physics::LinkPtr, const common::Mesh *>(link, mesh));
         }
 
         void update() {
@@ -160,14 +163,14 @@ namespace gazebo {
 
             last_sec = sec;
 
-            if(dt_viz > (1./5.f)) {
+            if (dt_viz > (1. / 5.f)) {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
             }
         }
 
         void update_soil(std::shared_ptr<Soil> soilPtr, float dt) {
-            for(auto & iter : mesh_lookup) {
+            for (auto &iter: mesh_lookup) {
                 auto link = iter.first;
                 auto mesh = iter.second;
 
@@ -183,13 +186,13 @@ namespace gazebo {
                     auto rot = pose.Rot();
                     auto pos = pose.Pos();
 
-                    std::vector<std::tuple<uint32_t, uint32_t,std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint;
+                    std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint;
                     std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint_idx;
                     float total_displaced_volume = 0.0f;
 
-                    #pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soilPtr, crot, cpos, pos, rot, indices, dt, link)
+#pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soilPtr, crot, cpos, pos, rot, indices, dt, link)
                     {
-                    #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
+#pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
                             auto idx = idx_unrolled * 3;
 
@@ -224,7 +227,7 @@ namespace gazebo {
             auto y_w = soilPtr->field->y_width;
 
             Vector3d vert;
-            for(int idx = 0; idx < x_w*y_w; idx++) {
+            for (int idx = 0; idx < x_w * y_w; idx++) {
                 vert = soilPtr->field->vertex_at_flattened_index(idx)->v3;
                 (soil_v)[idx] = msgs::Vector3d();
                 (soil_v)[idx].set_x(vert.X());
@@ -235,7 +238,7 @@ namespace gazebo {
             soilMsg.set_len_col(x_w);
             soilMsg.set_len_row(y_w);
 
-            for(uint32_t i = 0; i < x_w*y_w; i++) {
+            for (uint32_t i = 0; i < x_w * y_w; i++) {
                 auto v = soilMsg.add_flattened_field();
                 *v = soil_v[i];
             }
@@ -243,8 +246,6 @@ namespace gazebo {
         }
 
     };
-
     GZ_REGISTER_WORLD_PLUGIN(HinaSSIWorldPlugin)
 }
-
 #endif
