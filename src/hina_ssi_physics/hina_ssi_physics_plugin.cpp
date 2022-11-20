@@ -1,14 +1,15 @@
 #ifndef HINA_SSI_PHYSICS_PLUGIN_CPP
 #define HINA_SSI_PHYSICS_PLUGIN_CPP
 
+#include "../common/field/uniform_field.h"
 #include <gazebo/common/common.hh>
 #include <memory>
 #include <gazebo/rendering/rendering.hh>
 #include <gazebo/physics/physics.hh>
 #include <utility>
-#include "../common/soil/soil.h"
+#include "soil/soil.h"
 #include "Soil.pb.h"
-#include "../common/dem/dem_loader.h"
+#include "dem/dem_loader.h"
 
 //using namespace hina;
 

@@ -8,13 +8,13 @@
 #include "ogre_soil_renderer.cpp"
 #include "Soil.pb.h"
 
+using namespace gazebo;
 
 namespace hina {
 
     class HinaSSIVisualPlugin : public VisualPlugin {
 
     private:
-        std::shared_ptr<Soil> soil = nullptr;
         std::shared_ptr<OgreSoilRenderer> p_ogre_soil_renderer = nullptr;
 
         event::ConnectionPtr connectionPtr = nullptr;
@@ -24,6 +24,7 @@ namespace hina {
         transport::SubscriberPtr sub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
 
+        std::shared_ptr<UniformField<ColorAttributes>> field;
 
         bool soil_initialized = false;
         bool init_viz = false;
@@ -51,16 +52,15 @@ namespace hina {
 
             auto v = soil_update->flattened_field();
 
-            if(soil == nullptr) {
-                soil = std::make_shared<Soil>(SandboxConfig {x_width, y_width, 1});
+            if(field == nullptr) {
+                field = std::make_shared<UniformField<ColorAttributes>>(x_width, y_width, 1);
+                field->init_field();
             }
-
-            auto field = soil->field;
 
             uint32_t i = 0;
             for(const gazebo::msgs::Vector3d& v0 : v) {
-                auto vert = FieldVertex<SoilAttributes>(Vector3d(v0.x(), v0.y(), v0.z()));
-                soil->field->set_vertex_at_flattened_index(i++, vert);
+                auto vert = FieldVertex<ColorAttributes>(Vector3d(v0.x(), v0.y(), v0.z()));
+                field->set_vertex_at_flattened_index(i++, vert);
             }
 
             if(!soil_initialized) {
@@ -71,22 +71,22 @@ namespace hina {
 
         void update() {
             if(init_viz) {
-                init_soil(soil);
+                init_soil(field);
                 init_viz = false;
                 return;
             }
             if(soil_initialized) {
-                update_soil_mesh(soil);
+                update_soil_mesh(field);
             }
         }
 
-        void init_soil(const std::shared_ptr<Soil>& p_soil) {
+        void init_soil(const std::shared_ptr<UniformField<ColorAttributes>>& p_field) {
             p_ogre_soil_renderer = std::make_shared<OgreSoilRenderer>();
             p_ogre_soil_renderer->setScenePtr(visual->GetScene());
-            p_ogre_soil_renderer->create_ogre_mesh(p_soil);
+            p_ogre_soil_renderer->create_ogre_mesh(p_field);
         }
 
-        void update_soil_mesh(const std::shared_ptr<Soil>& p_soil) {
+        void update_soil_mesh(const std::shared_ptr<UniformField<ColorAttributes>>& p_soil) {
             p_ogre_soil_renderer->update_ogre_mesh(p_soil);
         }
     };

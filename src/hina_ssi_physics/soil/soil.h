@@ -4,12 +4,12 @@
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
 
-#include "../geometry.h"
+#include "../../common/geometry.h"
 #include "soil_data.h"
 #include "../dem/dem.h"
 #include <cmath>
 #include "../../../thirdparty/PerlinNoise.h"
-#include "../field/uniform_field.h"
+#include "../../common/field/uniform_field.h"
 
 namespace hina {
     class Soil {

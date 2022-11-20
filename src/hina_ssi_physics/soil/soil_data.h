@@ -5,7 +5,7 @@
 #include <memory>
 #include <utility>
 #include "sandbox_config.h"
-#include "../field/uniform_field.h"
+#include "../../common/field/uniform_field.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
@@ -29,8 +29,7 @@ struct SoilAttributes {
     double sigma{};
     Vector3d normal_dA;
 
-    explicit SoilAttributes() {
-    }
+    explicit SoilAttributes() = default;
 
     ~SoilAttributes() = default;
 
