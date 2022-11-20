@@ -53,9 +53,12 @@ namespace gazebo {
                 soil = std::make_shared<Soil>(SandboxConfig {x_width, y_width, 1});
             }
 
+            auto field = soil->field;
+
             uint32_t i = 0;
             for(const gazebo::msgs::Vector3d& v0 : v) {
-                soil->get_data()->set_vertex_at_flattened_index(i++, VertexAttributes(Vector3d(v0.x(), v0.y(), v0.z())));
+                auto vert = FieldVertex<SoilAttributes>(Vector3d(v0.x(), v0.y(), v0.z()));
+                soil->field->set_vertex_at_flattened_index(i++, vert);
             }
 
             if(!soil_initialized) {

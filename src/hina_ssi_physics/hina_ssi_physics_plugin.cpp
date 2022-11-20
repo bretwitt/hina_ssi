@@ -137,7 +137,7 @@ namespace gazebo {
         }
 
         void init_transport() {
-            auto df = soilPtr->get_data();
+            auto df = soilPtr->field;
             soil_v = std::make_unique<msgs::Vector3d[]>(df->x_width * df->y_width);
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
@@ -183,8 +183,8 @@ namespace gazebo {
                     auto rot = pose.Rot();
                     auto pos = pose.Pos();
 
-                    std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<VertexAttributes>>> footprint;
-                    std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<VertexAttributes>>> footprint_idx;
+                    std::vector<std::tuple<uint32_t, uint32_t,std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint;
+                    std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint_idx;
                     float total_displaced_volume = 0.0f;
 
                     #pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soilPtr, crot, cpos, pos, rot, indices, dt, link)
@@ -220,12 +220,12 @@ namespace gazebo {
 
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;
-            auto x_w = soilPtr->get_data()->x_width;
-            auto y_w = soilPtr->get_data()->y_width;
+            auto x_w = soilPtr->field->x_width;
+            auto y_w = soilPtr->field->y_width;
 
             Vector3d vert;
             for(int idx = 0; idx < x_w*y_w; idx++) {
-                vert = soilPtr->get_data()->vertex_at_flattened_index(idx)->v3;
+                vert = soilPtr->field->vertex_at_flattened_index(idx)->v3;
                 (soil_v)[idx] = msgs::Vector3d();
                 (soil_v)[idx].set_x(vert.X());
                 (soil_v)[idx].set_y(vert.Y());
