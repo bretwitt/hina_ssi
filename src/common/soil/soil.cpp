@@ -11,14 +11,9 @@ Soil::Soil(SandboxConfig config) : Soil(config.x_width, config.y_width, config.s
     generate_sandbox_geometry(config);
 }
 
-Soil::Soil(std::shared_ptr<DEM> dem) : Soil(dem->n, dem->m, dem->scale) {
+Soil::Soil(std::shared_ptr<DEM> dem) : Soil(dem->field->y_width, dem->field->x_width, dem->field->scale) {
     load_dem_geometry(dem);
 }
-
-
-//std::shared_ptr<SoilData> Soil::get_data() {
-//    return _data;
-//}
 
 void Soil::generate_sandbox_geometry(SandboxConfig config) {
     generate_sandbox_soil_vertices(config);
@@ -73,8 +68,8 @@ void Soil::generate_indices() const {
 }
 
 void Soil::load_dem_geometry(const std::shared_ptr<DEM>& dem) const {
-    for(int i = 0; i < dem->m; i++) {
-        for(int j = 0; j < dem->n; j++) {
+    for(int i = 0; i < dem->field->y_width; i++) {
+        for(int j = 0; j < dem->field->x_width; j++) {
             Vector3d dem_v3 = dem->field->get_vertex_at_index(i,j)->v3;
             Vector3d v3 ( dem_v3.X(), dem_v3.Y(), dem_v3.Z());
             field->set_vertex_at_index(i, j, std::make_shared<FieldVertex<SoilAttributes>>(v3));
