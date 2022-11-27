@@ -53,7 +53,8 @@ namespace hina {
             auto v = soil_update->flattened_field();
 
             if(field == nullptr) {
-                field = std::make_shared<UniformField<ColorAttributes>>(x_width, y_width, 1);
+                field = std::make_shared<UniformField<ColorAttributes>>();
+                field->load_vertex_dims(x_width, y_width, 1);
                 field->init_field();
             }
 

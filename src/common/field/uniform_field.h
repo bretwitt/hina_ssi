@@ -27,15 +27,25 @@ namespace hina {
         double x_offset = 0;
         double y_offset = 0;
 
-        explicit UniformField(uint32_t x_width, uint32_t y_width, double scale) {
-            this->x_width = x_width;
-            this->y_width = y_width;
-            this->scale = scale;
+        explicit UniformField(double width_x, double width_y, double resolution) {
+            uint32_t verts_x = floor(width_x / resolution) + 1;
+            uint32_t verts_y = floor(width_y / resolution) + 1;
+            load_vertex_dims(verts_x, verts_y, resolution);
+        }
 
+        explicit UniformField() {
+            this->x_width = 5;
+            this->y_width = 5;
+            this->scale = 0.5;
+        }
+
+        void load_vertex_dims(uint32_t verts_x, uint32_t verts_y, double scl) {
+            this->x_width = verts_x;
+            this->y_width = verts_y;
+            this->scale = scl;
             x_offset = -(double) (x_width - 1) / 2;
             y_offset = -(double) (y_width - 1) / 2;
         }
-
 
         void init_field() {
             vertices = std::make_unique<UniformFieldMap>();

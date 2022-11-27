@@ -8,8 +8,8 @@
 #include <gazebo/physics/physics.hh>
 #include <utility>
 #include "soil/soil.h"
-#include "Soil.pb.h"
 #include "dem/dem_loader.h"
+#include "Soil.pb.h"
 
 //using namespace hina;
 
@@ -125,7 +125,6 @@ namespace hina {
         }
 
         void init_sandbox() {
-
             int x_width = sdf->GetElement("width_x")->Get<int>();
             int y_width = sdf->GetElement("width_y")->Get<int>();
             auto scale = sdf->GetElement("scale")->Get<double>();
@@ -170,7 +169,7 @@ namespace hina {
             }
         }
 
-        void update_soil(std::shared_ptr<Soil> soilPtr, float dt) {
+        void update_soil(std::shared_ptr<Soil> soil, float dt) {
             for (auto &iter: mesh_lookup) {
                 auto link = iter.first;
                 auto mesh = iter.second;
@@ -191,7 +190,7 @@ namespace hina {
                     std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint_idx;
                     float total_displaced_volume = 0.0f;
 
-#pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soilPtr, crot, cpos, pos, rot, indices, dt, link)
+#pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                     {
 #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
@@ -212,7 +211,7 @@ namespace hina {
                             auto meshTri = Triangle(c1v0, c1v1, c1v2);
 
                             float displaced_volume = 0.0f;
-                            footprint_idx = soilPtr->try_deform(meshTri, link, dt, displaced_volume);
+                            footprint_idx = soil->try_deform(meshTri, link, dt, displaced_volume);
                             total_displaced_volume += displaced_volume;
                         }
                     }
