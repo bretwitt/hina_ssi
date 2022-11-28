@@ -27,7 +27,7 @@ namespace hina {
 
         void generate_sandbox_soil_vertices(SandboxConfig config);
 
-        void generate_indices() const;
+//        void generate_indices() const;
 
         void load_dem_geometry(const std::shared_ptr<DEM> &dem) const;
 
@@ -35,7 +35,6 @@ namespace hina {
         try_deform(const Triangle &meshTri, const physics::LinkPtr &link, float dt, float &displaced_volume);
 
         static bool intersects_projected(const Triangle &meshTri, const AABB &vertexRect);
-
 
         std::shared_ptr<UniformField<SoilAttributes>> field;
 

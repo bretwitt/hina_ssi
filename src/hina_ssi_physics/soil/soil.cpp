@@ -18,7 +18,6 @@ Soil::Soil(std::shared_ptr<DEM> dem) : Soil(dem->field->y_width, dem->field->x_w
 
 void Soil::generate_sandbox_geometry(SandboxConfig config) {
     generate_sandbox_soil_vertices(config);
-    generate_indices();
 }
 
 void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
@@ -38,30 +37,6 @@ void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
     }
 }
 
-void Soil::generate_indices() const {
-    uint32_t x_size = field->x_width;
-    uint32_t y_size = field->y_width;
-    //auto indices = _data->indices;
-
-    uint32_t idx = 0;
-    for (uint32_t x = 0; x < x_size - 1; x++) {
-        for (uint32_t y = 0; y < y_size - 1; y++) {
-            uint32_t a = (x_size * y) + x;
-            uint32_t b = (x_size * (y + 1)) + x;
-            uint32_t c = (x_size * (y + 1)) + (x + 1);
-            uint32_t d = (x_size * y) + (x + 1);
-
-            field->indices[idx++] = a;
-            field->indices[idx++] = d;
-            field->indices[idx++] = c;
-
-            field->indices[idx++] = c;
-            field->indices[idx++] = b;
-            field->indices[idx++] = a;
-        }
-    }
-}
-
 void Soil::load_dem_geometry(const std::shared_ptr<DEM>& dem) const {
     for(int i = 0; i < dem->field->y_width; i++) {
         for(int j = 0; j < dem->field->x_width; j++) {
@@ -70,7 +45,6 @@ void Soil::load_dem_geometry(const std::shared_ptr<DEM>& dem) const {
             field->set_vertex_at_index(i, j, std::make_shared<FieldVertex<SoilAttributes>>(v3));
         }
     }
-    generate_indices();
 }
 
 std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume) {
