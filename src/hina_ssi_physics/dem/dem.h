@@ -56,9 +56,6 @@ namespace hina {
             std::vector<double> field_y;
             std::vector<double> field_z;
 
-            std::cout << verts_x_p << " " << verts_x << std::endl;
-            std::cout << x_width << " " << new_field->x_width << std::endl;
-
             for(uint32_t x = 0; x < verts_x + 1; x++) {
                 for(uint32_t y = 0; y < verts_y + 1; y++) {
                     auto vertex = field->get_vertex_at_index(x,y);
@@ -69,10 +66,8 @@ namespace hina {
                     field_y.push_back(new_y);
                     field_z.push_back(vertex->v3.Z());
 
-                    std::cout << new_x << " " << new_y << std::endl;
                 }
             }
-//
             _2D::BicubicInterpolator<double> bicubicInterp;
             bicubicInterp.setData(field_x, field_y, field_z);
 
