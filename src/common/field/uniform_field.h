@@ -7,10 +7,25 @@
 #include <cmath>
 #include <gazebo/common/common.hh>
 #include "field_vertex.h"
+#include "vertex_dims.h"
 
 namespace hina {
     template<class V>
     class UniformField {
+
+    private:
+        void load_vertex_dims(uint32_t verts_x, uint32_t verts_y, double scl) {
+            this->x_vert_width = verts_x;
+            this->y_vert_width = verts_y;
+            this->scale = scl;
+            x_offset = -(double) (x_vert_width - 1) / 2;
+            y_offset = -(double) (y_vert_width - 1) / 2;
+        }
+
+        void recalculate_width() {
+            this->x_width = scale*(x_vert_width - 1);
+            this->y_width = scale*(y_vert_width - 1);
+        }
 
     public:
 
@@ -20,40 +35,46 @@ namespace hina {
         std::unique_ptr<uint32_t[]> indices{};
         std::unique_ptr<UniformFieldMap> vertices{};
 
+        uint32_t x_vert_width{};
+        uint32_t y_vert_width{};
+
         uint32_t x_width{};
         uint32_t y_width{};
+
         double scale{};
 
         double x_offset = 0;
         double y_offset = 0;
 
-        explicit UniformField(double width_x, double width_y, double resolution) {
-            uint32_t verts_x = floor(width_x / resolution) + 1;
-            uint32_t verts_y = floor(width_y / resolution) + 1;
+        explicit UniformField(FieldTrueDimensions dims, double resolution) {
+            this->x_width = dims.true_x;
+            this->y_width = dims.true_y;
+            uint32_t verts_x = floor(x_width / resolution) + 1;
+            uint32_t verts_y = floor(y_width / resolution) + 1;
             load_vertex_dims(verts_x, verts_y, resolution);
         }
 
-        explicit UniformField() {
-            this->x_width = 5;
-            this->y_width = 5;
-            this->scale = 0.5;
+        explicit UniformField(FieldVertexDimensions dims, double resolution) {
+            load_vertex_dims(dims.verts_x, dims.verts_y, resolution);
+            recalculate_width();
         }
 
-        void load_vertex_dims(uint32_t verts_x, uint32_t verts_y, double scl) {
-            this->x_width = verts_x;
-            this->y_width = verts_y;
-            this->scale = scl;
-            x_offset = -(double) (x_width - 1) / 2;
-            y_offset = -(double) (y_width - 1) / 2;
+        explicit UniformField() {
+            this->x_vert_width = 5;
+            this->y_vert_width = 5;
+            this->scale = 0.5;
+            recalculate_width();
         }
+
 
         void init_field() {
             vertices = std::make_unique<UniformFieldMap>();
-            indices = std::make_unique<uint32_t[]>((x_width - 1) * (y_width - 1) * 3 * 2);
+            indices = std::make_unique<uint32_t[]>((x_vert_width - 1) * (y_vert_width - 1) * 3 * 2);
 
             generate_vertices();
             generate_indices();
         }
+
 
         FieldVertexVPtr vertex_at_flattened_index(uint32_t idx) {
             uint32_t x;
@@ -71,7 +92,7 @@ namespace hina {
         }
 
         FieldVertexVPtr get_vertex_at_index(uint32_t x, uint32_t y) {
-            return (*vertices)[std::min(x, x_width - 1)][std::min(y, y_width - 1)];
+            return (*vertices)[std::min(x, x_vert_width - 1)][std::min(y, y_vert_width - 1)];
         }
 
         FieldVertexVPtr get_vertex_at_flattened_index(uint32_t idx) {
@@ -82,8 +103,8 @@ namespace hina {
         }
 
         void unflatten_index(uint32_t idx, uint32_t &x, uint32_t &y) {
-            x = idx % (x_width);
-            y = floor(idx / x_width);
+            x = idx % (x_vert_width);
+            y = floor(idx / x_vert_width);
         }
 
         void set_vertex_at_index(uint32_t x, uint32_t y, FieldVertexVPtr vtx) {
@@ -96,8 +117,8 @@ namespace hina {
         }
 
         void generate_vertices() {
-            for (int j = 0; j < y_width; j++) {
-                for (int i = 0; i < x_width; i++) {
+            for (int j = 0; j < y_vert_width; j++) {
+                for (int i = 0; i < x_vert_width; i++) {
                     auto i_f = (float) i;
                     auto j_f = (float) j;
 
@@ -112,8 +133,8 @@ namespace hina {
         }
 
         void generate_indices() const {
-            uint32_t x_size = x_width;
-            uint32_t y_size = y_width;
+            uint32_t x_size = x_vert_width;
+            uint32_t y_size = y_vert_width;
 
             uint32_t idx = 0;
             for (uint32_t x = 0; x < x_size - 1; x++) {

@@ -47,14 +47,13 @@ namespace hina {
 
         void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::Soil> &soil_update) {
 
-            int x_width = soil_update->len_col();
-            int y_width = soil_update->len_row();
+            int vert_x = soil_update->len_col();
+            int vert_y = soil_update->len_row();
 
             auto v = soil_update->flattened_field();
 
             if(field == nullptr) {
-                field = std::make_shared<UniformField<ColorAttributes>>();
-                field->load_vertex_dims(x_width, y_width, 1);
+                field = std::make_shared<UniformField<ColorAttributes>>(FieldVertexDimensions { static_cast<double>(vert_x), static_cast<double>(vert_y) }, 1);
                 field->init_field();
             }
 

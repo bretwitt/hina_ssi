@@ -92,8 +92,8 @@ namespace hina {
 
             manObj = sceneManager->createManualObject("terrain_mesh");
 
-            uint32_t x_size = field->x_width;
-            uint32_t y_size = field->y_width;
+            uint32_t x_size = field->x_vert_width;
+            uint32_t y_size = field->y_vert_width;
 
             manObj->begin("Hina/Soil", Ogre::RenderOperation::OT_TRIANGLE_LIST);
             tri_update(field, manObj, x_size, y_size);
@@ -103,8 +103,8 @@ namespace hina {
         }
 
         void update_ogre_mesh(const std::shared_ptr<UniformField<ColorAttributes>> &field) {
-            uint32_t x_size = field->x_width;
-            uint32_t y_size = field->y_width;
+            uint32_t x_size = field->x_vert_width;
+            uint32_t y_size = field->y_vert_width;
 
             manObj->beginUpdate(0);
             tri_update(field, manObj, x_size, y_size);

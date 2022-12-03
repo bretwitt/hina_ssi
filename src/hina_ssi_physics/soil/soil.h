@@ -14,20 +14,19 @@
 namespace hina {
     class Soil {
     private:
-        Soil(uint32_t width, uint32_t height, double scale);
+        Soil(FieldVertexDimensions dims, double scale);
+
+        Soil(FieldTrueDimensions dims, double scale);
 
     public:
 
         explicit Soil(SandboxConfig config);
 
-        Soil(std::shared_ptr<DEM> dem);
-
+        Soil(const std::shared_ptr<DEM>& dem);
 
         void generate_sandbox_geometry(SandboxConfig config);
 
         void generate_sandbox_soil_vertices(SandboxConfig config);
-
-//        void generate_indices() const;
 
         void load_dem_geometry(const std::shared_ptr<DEM> &dem) const;
 

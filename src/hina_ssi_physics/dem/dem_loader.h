@@ -22,18 +22,23 @@ namespace hina {
 
             std::stringstream ss;
             std::string line;
-            uint32_t n;
-            uint32_t m;
-            double scale;
+            double w_x;
+            double w_y;
+
+            double res;
+            double target_res;
 
             std::getline(f, line, ',');
-            n = std::stoi(line);
+            w_x = std::stod(line);              // true width
             std::getline(f, line, ',');
-            m = std::stoi(line);
+            w_y = std::stod(line);              // true width
             std::getline(f, line, ',');
-            scale = std::stod(line);
+            res = std::stod(line);
+            std::getline(f, line, ',');
+            target_res = std::stod(line);
 
-            std::shared_ptr<DEM> dem = std::make_shared<DEM>(n, m, scale);
+            std::shared_ptr<DEM> dem = std::make_shared<DEM>(FieldTrueDimensions { w_x, w_y },res);
+
             int i = 0;
 
             while (std::getline(f, line, ',')) {
@@ -42,11 +47,12 @@ namespace hina {
                 i++;
             }
 
-            if (i != n * m) {
-                std::cerr << "Error loading DEM, incorrect number of vertices" << std::endl;
-            }
-
             f.close();
+
+            dem->upsample(target_res);
+
+            std::cout << dem->field->get_vertex_at_index(2,3)->v3 << std::endl;
+
             return dem;
         }
     };

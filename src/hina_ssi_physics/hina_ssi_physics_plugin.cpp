@@ -141,7 +141,7 @@ namespace hina {
 
         void init_transport() {
             auto df = soilPtr->field;
-            soil_v = std::make_unique<msgs::Vector3d[]>(df->x_width * df->y_width);
+            soil_v = std::make_unique<msgs::Vector3d[]>(df->x_vert_width * df->y_vert_width);
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
@@ -223,8 +223,8 @@ namespace hina {
 
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;
-            auto x_w = soilPtr->field->x_width;
-            auto y_w = soilPtr->field->y_width;
+            auto x_w = soilPtr->field->x_vert_width;
+            auto y_w = soilPtr->field->y_vert_width;
 
             Vector3d vert;
             for (int idx = 0; idx < x_w * y_w; idx++) {

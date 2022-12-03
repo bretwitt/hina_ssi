@@ -3,16 +3,21 @@
 using namespace gazebo;
 using namespace hina;
 
-Soil::Soil(uint32_t width, uint32_t height, double scale) {
-    this->field = std::make_shared<UniformField<SoilAttributes>>(width, height, scale);
+Soil::Soil(FieldVertexDimensions dims, double scale) {
+    this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
     this->field->init_field();
 }
 
-Soil::Soil(SandboxConfig config) : Soil(config.x_width, config.y_width, config.scale) {
+Soil::Soil(FieldTrueDimensions dims, double scale) {
+    this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
+    this->field->init_field();
+}
+
+Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, config.y_width }, config.scale) {
     generate_sandbox_geometry(config);
 }
 
-Soil::Soil(std::shared_ptr<DEM> dem) : Soil(dem->field->y_width, dem->field->x_width, dem->field->scale) {
+Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldVertexDimensions { dem->field->y_vert_width, dem->field->x_vert_width }, dem->field->scale) {
     load_dem_geometry(dem);
 }
 
@@ -21,8 +26,8 @@ void Soil::generate_sandbox_geometry(SandboxConfig config) {
 }
 
 void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
-    for (int j = 0; j < field->y_width; j++) {
-        for (int i = 0; i < field->x_width; i++) {
+    for (int j = 0; j < field->y_vert_width; j++) {
+        for (int i = 0; i < field->x_vert_width; i++) {
             auto vertex = field->get_vertex_at_index(i,j);
 
             auto x = vertex->v3.X();
@@ -38,8 +43,8 @@ void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
 }
 
 void Soil::load_dem_geometry(const std::shared_ptr<DEM>& dem) const {
-    for(int i = 0; i < dem->field->y_width; i++) {
-        for(int j = 0; j < dem->field->x_width; j++) {
+    for(int i = 0; i < dem->field->y_vert_width; i++) {
+        for(int j = 0; j < dem->field->x_vert_width; j++) {
             Vector3d dem_v3 = dem->field->get_vertex_at_index(i,j)->v3;
             Vector3d v3 ( dem_v3.X(), dem_v3.Y(), dem_v3.Z());
             field->set_vertex_at_index(i, j, std::make_shared<FieldVertex<SoilAttributes>>(v3));
