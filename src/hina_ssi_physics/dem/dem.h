@@ -24,7 +24,7 @@ namespace hina {
             field->init_field();
         }
 
-        void load_vertex(int flattened_index, double z) {
+        void load_vertex(uint32_t flattened_index, double z) {
             auto vert = field->get_vertex_at_flattened_index(flattened_index);
             Vector3d v3(vert->v3.X(), vert->v3.Y(), z);
             vert->v3 = v3;

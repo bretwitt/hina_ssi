@@ -135,7 +135,7 @@ namespace hina {
 
         void init_dem(const std::string &filename) {
             std::string file_name = gazebo::common::SystemPaths::Instance()->FindFile(filename);
-            auto dem = DEMLoader::load_dem(file_name);
+            auto dem = DEMLoader::load_dem_from_geotiff(file_name);
             soilPtr = std::make_shared<Soil>(dem);
         }
 
