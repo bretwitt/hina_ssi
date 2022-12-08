@@ -2,6 +2,10 @@
 
 Plugins for Gazebo 11 to simulate soft soil interaction with rigidbodies.
 
+## Dependencies
+
+Requires [GDAL](https://gdal.org/) and [libInterpolate](https://github.com/CD3/libInterpolate)
+
 ## Build instructions
 
 Building (-s flag to skip CMake config)
