@@ -37,7 +37,7 @@ namespace hina {
 
             for(uint32_t y_line = 0; y_line < nYSize; y_line++) {
                 heightScanBuf = (float*)CPLMalloc(sizeof(float)*nXSize);
-                heightband->RasterIO(GF_Read, 0, 0, nXSize, 1, heightScanBuf, nXSize, 1, GDT_Byte, 0, 0);
+                heightband->RasterIO(GF_Read, 0, y_line, nXSize, 1, heightScanBuf, nXSize, 1, GDT_Float32, 0, 0);
                 for(uint32_t x = 0; x < nXSize; x++) {
                     double z = heightScanBuf[x];
                     dem->load_vertex(x+(y_line*nXSize), z);
