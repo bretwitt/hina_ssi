@@ -121,6 +121,22 @@ namespace hina {
             } else if(sdf->HasElement("sandbox")){
                 init_sandbox();
             }
+
+            auto params = sdf->GetElement("params");
+
+            auto k_phi = params->GetElement("k_phi")->Get<double>();
+            auto k_e = params->GetElement("k_e")->Get<double>();
+            auto c = params->GetElement("c")->Get<double>();
+            auto phi = params->GetElement("phi")->Get<double>();
+
+            auto f = soilPtr->field;
+            for(uint32_t i = 0; i < f->x_vert_width*f->y_vert_width; i++) {
+                auto vtx = f->get_vertex_at_flattened_index(i)->v;
+                vtx->k_phi = k_phi;
+                vtx->k_e = k_e;
+                vtx->c = c;
+                vtx->phi = phi;
+            }
         }
 
         void init_sandbox() {
@@ -131,6 +147,8 @@ namespace hina {
             auto angle = sandbox_elem->GetElement("angle")->Get<double>();
 
             soilPtr = std::make_shared<Soil>(SandboxConfig{x_width, y_width, scale, angle});
+
+
         }
 
         void init_dem() {

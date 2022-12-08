@@ -13,13 +13,14 @@ using ignition::math::Vector2d;
 namespace hina {
 struct SoilAttributes {
 
+    /* Static parameters */
     double k_phi = 814000.0f; //814000.0f;
     double k_e = 7.8e7;
     double k_c = 20680.0f;
     double c = 3500;
     double phi = 0.55;
 
-    bool isAir = true;
+    bool isAir = false;
 
     /* Frame physics states */
     double plastic_flow{};

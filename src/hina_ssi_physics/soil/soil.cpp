@@ -78,7 +78,7 @@ std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttri
         uint32_t y = floor(k / iter_y);
         uint32_t x = k - (iter_x*y);
         std::shared_ptr<FieldVertex<SoilAttributes>> v3 = field->get_vertex_at_index(x + x_start, y + y_start);
-        if(penetrates(meshTri, v3, scale)) {
+        if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
             penetrating_coords.emplace_back(x + x_start,y + y_start,v3);
         }
     }

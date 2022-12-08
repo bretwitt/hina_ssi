@@ -45,8 +45,23 @@ namespace hina {
             }
 
             CPLFree(heightScanBuf);
-            GDALClose(dataset);
 
+            if(dataset->GetRasterCount() > 1) {
+                GDALRasterBand* maskband = dataset->GetRasterBand(2);
+                bool* maskScanBuf;
+
+                for(uint32_t y_line = 0; y_line < nYSize; y_line++) {
+                    maskScanBuf = (bool*)CPLMalloc(sizeof(float)*nXSize);
+                    maskband->RasterIO(GF_Read, 0, y_line, nXSize, 1, maskScanBuf, nXSize, 1, GDT_Byte, 0, 0);
+                    for(uint32_t x = 0; x < nXSize; x++) {
+                        auto vtx = dem->field->get_vertex_at_index(x,y_line)->v;
+                        vtx->isAir = maskScanBuf[x];
+                    }
+                }
+                CPLFree(maskScanBuf);
+            }
+
+            GDALClose(dataset);
 
             return dem;
         }
