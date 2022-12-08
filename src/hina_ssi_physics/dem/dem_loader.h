@@ -47,6 +47,7 @@ namespace hina {
             CPLFree(heightScanBuf);
             GDALClose(dataset);
 
+
             return dem;
         }
 
