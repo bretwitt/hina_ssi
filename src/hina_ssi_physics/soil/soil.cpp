@@ -4,17 +4,15 @@ using namespace gazebo;
 using namespace hina;
 
 Soil::Soil(FieldVertexDimensions dims, double scale) {
-    this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
-    this->field->init_field();
+    this->sc.init_chunk(dims, scale);
 }
 
 Soil::Soil(FieldTrueDimensions dims, double scale) {
-    this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
-    this->field->init_field();
+    this->sc.init_chunk(dims, scale);
 }
 
 Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, config.y_width }, config.scale) {
-    generate_sandbox_geometry(config);
+    this->sc.generate_vertices();
 }
 
 Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldVertexDimensions { dem->field->y_vert_width, dem->field->x_vert_width }, dem->field->scale) {
@@ -22,7 +20,7 @@ Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldVertexDimensions { dem->
 }
 
 void Soil::generate_sandbox_geometry(SandboxConfig config) {
-    generate_sandbox_soil_vertices(config);
+    //generate_sandbox_soil_vertices(config);
 }
 
 void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
@@ -63,7 +61,7 @@ std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttri
     min_x = fmin(meshTri.v1.X(), fmin(meshTri.v2.X(), meshTri.v3.X()));
     min_y = fmin(meshTri.v1.Y(), fmin(meshTri.v2.Y(), meshTri.v3.Y()));
 
-    scale = field->scale;
+    scale = sc.field->scale;
     iter_x = ceil( ((max_x - min_x) / scale) ) + 1;
     iter_y = ceil( ((max_y - min_y) / scale) ) + 1;
 
@@ -77,7 +75,7 @@ std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttri
     for(uint32_t k = 0; k < iter_x*iter_y; k++) {
         uint32_t y = floor(k / iter_y);
         uint32_t x = k - (iter_x*y);
-        std::shared_ptr<FieldVertex<SoilAttributes>> v3 = field->get_vertex_at_index(x + x_start, y + y_start);
+        std::shared_ptr<FieldVertex<SoilAttributes>> v3 = sc.field->get_vertex_at_index(x + x_start, y + y_start);
         if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
             penetrating_coords.emplace_back(x + x_start,y + y_start,v3);
         }

@@ -6,6 +6,7 @@ add_library(${PROJECT_NAME}_physics SHARED
                     soil/soil.cpp soil/soil.h
                     soil/soil_data.h
                     soil/sandbox_config.h
+                    soil/soil_chunk.cpp soil/soil_chunk.h
         )
 target_link_libraries(${PROJECT_NAME}_physics PUBLIC ${GAZEBO_LIBRARIES} ${PROJECT_NAME}_msgs ${PROJECT_NAME}_common ${LIB_OPENMP} libInterpolate::Interpolate)
 add_dependencies(${PROJECT_NAME}_physics ${PROJECT_NAME}_msgs ${PROJECT_NAME}_common)

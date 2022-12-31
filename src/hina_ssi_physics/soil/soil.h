@@ -6,17 +6,19 @@
 
 #include "../../common/geometry.h"
 #include "soil_data.h"
-#include "../dem/dem.h"
 #include <cmath>
+#include "../dem/dem.h"
 #include "../../../thirdparty/PerlinNoise.h"
 #include "../../common/field/uniform_field.h"
+#include "soil_chunk.h"
 
 namespace hina {
     class Soil {
     private:
         Soil(FieldVertexDimensions dims, double scale);
-
         Soil(FieldTrueDimensions dims, double scale);
+
+        SoilChunk sc;
 
     public:
 
