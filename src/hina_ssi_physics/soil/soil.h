@@ -26,6 +26,8 @@ namespace hina {
 
         Soil(const std::shared_ptr<DEM>& dem);
 
+        SoilChunk get_chunk();
+
         void generate_sandbox_geometry(SandboxConfig config);
 
         void generate_sandbox_soil_vertices(SandboxConfig config);
@@ -35,15 +37,6 @@ namespace hina {
         std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>>
         try_deform(const Triangle &meshTri, const physics::LinkPtr &link, float dt, float &displaced_volume);
 
-        static bool intersects_projected(const Triangle &meshTri, const AABB &vertexRect);
-
-        std::shared_ptr<UniformField<SoilAttributes>> field;
-
-        bool penetrates(const Triangle &meshTri, const std::shared_ptr<FieldVertex<SoilAttributes>> &vtx, double w);
-
-        void terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &meshTri, uint32_t x, uint32_t y,
-                            const std::shared_ptr<FieldVertex<SoilAttributes>> &vertex, double w, float dt,
-                            float &displaced_volume);
     };
 }
 #endif

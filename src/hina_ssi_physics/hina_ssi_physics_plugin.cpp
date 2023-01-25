@@ -129,7 +129,7 @@ namespace hina {
             auto c = params->GetElement("c")->Get<double>();
             auto phi = params->GetElement("phi")->Get<double>();
 
-            auto f = soilPtr->field;
+            auto f = soilPtr->get_chunk().field;
             for(uint32_t i = 0; i < f->x_vert_width*f->y_vert_width; i++) {
                 auto vtx = f->get_vertex_at_flattened_index(i)->v;
                 vtx->k_phi = k_phi;
@@ -168,7 +168,7 @@ namespace hina {
         }
 
         void init_transport() {
-            auto df = soilPtr->field;
+            auto df = soilPtr->get_chunk().field;
             soil_v = std::make_unique<msgs::Vector3d[]>(df->x_vert_width * df->y_vert_width);
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
@@ -218,9 +218,9 @@ namespace hina {
                     std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint_idx;
                     float total_displaced_volume = 0.0f;
 
-#pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
+                    #pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                     {
-#pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
+                    #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
                             auto idx = idx_unrolled * 3;
 
@@ -251,12 +251,15 @@ namespace hina {
 
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;
-            auto x_w = soilPtr->field->x_vert_width;
-            auto y_w = soilPtr->field->y_vert_width;
+
+            auto field = soilPtr->get_chunk().field;
+
+            auto x_w = field->x_vert_width;
+            auto y_w = field->y_vert_width;
 
             Vector3d vert;
             for (int idx = 0; idx < x_w * y_w; idx++) {
-                vert = soilPtr->field->vertex_at_flattened_index(idx)->v3;
+                vert = field->vertex_at_flattened_index(idx)->v3;
                 (soil_v)[idx] = msgs::Vector3d();
                 (soil_v)[idx].set_x(vert.X());
                 (soil_v)[idx].set_y(vert.Y());
