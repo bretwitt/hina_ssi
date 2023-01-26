@@ -9,19 +9,25 @@
 #include "soil_data.h"
 
 using ignition::math::Vector3d;
-using namespace hina;
-using namespace gazebo;
+using ignition::math::Vector2d;
 
 namespace hina {
+
+    struct SoilChunkLocationMetadata {
+        uint32_t i;
+        uint32_t j;
+        Vector2d origin; // Vector2d of first vertex
+    };
+
     class SoilChunk {
     public:
-        uint32_t x = 0;
-        uint32_t y = 0;
-        Vector3d origin;
+
+        SoilChunkLocationMetadata location;
 
         double width = 0;
         double height = 0;
         double res = 0;
+
 
         std::shared_ptr <UniformField<SoilAttributes>> field = nullptr;
 
@@ -30,21 +36,18 @@ namespace hina {
         SoilChunk() {
         }
 
-        void init_chunk(FieldTrueDimensions dims, double scale, uint32_t x, uint32_t y) {
+        void init_chunk(FieldTrueDimensions dims, double scale, SoilChunkLocationMetadata location) {
             this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
+            this->field->set_origin({location.origin.X(), location.origin.Y()});
             this->field->init_field();
-            set_chunk_idx(x,y);
+            this->location = location;
         }
 
-        void init_chunk(FieldVertexDimensions dims, double scale, uint32_t x, uint32_t y) {
+        void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocationMetadata location) {
             this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
+            this->field->set_origin({location.origin.X(), location.origin.Y()});
             this->field->init_field();
-            set_chunk_idx(x,y);
-        }
-
-        void set_chunk_idx(uint32_t x, uint32_t y) {
-            this->x = x;
-            this->y = y;
+            this->location = location;
         }
 
         void generate_vertices(SandboxConfig config) {
@@ -64,36 +67,39 @@ namespace hina {
             }
         }
 
-        std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt) {
-            // Construct AABB of mesh triangle
+        typedef std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> FieldV;
+        FieldV try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt) {
             double max_x, max_y, min_x, min_y;
             double scale;
             int iter_x, iter_y;
             uint32_t x_start, y_start;
 
-            max_x = fmax(meshTri.v1.X(), fmax(meshTri.v2.X(), meshTri.v3.X()));
-            max_y = fmax(meshTri.v1.Y(), fmax(meshTri.v2.Y(), meshTri.v3.Y()));
-            min_x = fmin(meshTri.v1.X(), fmin(meshTri.v2.X(), meshTri.v3.X()));
-            min_y = fmin(meshTri.v1.Y(), fmin(meshTri.v2.Y(), meshTri.v3.Y()));
+            double chunk_x = location.origin.X();
+            double chunk_y = location.origin.Y();
 
-            // Construct bounds to search soil field
+            // AABB bounds under mesh triangle
+            max_x = fmax(meshTri.v1.X(), fmax(meshTri.v2.X(), meshTri.v3.X())) - chunk_x;
+            max_y = fmax(meshTri.v1.Y(), fmax(meshTri.v2.Y(), meshTri.v3.Y())) - chunk_y;
+            min_x = fmin(meshTri.v1.X(), fmin(meshTri.v2.X(), meshTri.v3.X())) - chunk_x;
+            min_y = fmin(meshTri.v1.Y(), fmin(meshTri.v2.Y(), meshTri.v3.Y())) - chunk_y;
 
+            // Start constructing bounds to search soil field
             scale = field->scale;
 
-            iter_x = ceil( ((max_x - min_x) / scale) ) + 1;
-            iter_y = ceil( ((max_y - min_y) / scale) ) + 1;
-
+            // Get first soil vertex coordinates (x_start, y_start)
             x_start = 0;
             y_start = 0;
-
-            // Get first soil vertex coordinates (x_start, y_start)
             field->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
+
+            // Calculate number of iterations required in each direction
+            iter_x = ceil( ((max_x - min_x) / scale) ) + 1;
+            iter_y = ceil( ((max_y - min_y) / scale) ) + 1;
 
             // Search soil field within bounds under AABB
             std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> penetrating_coords;
 
             for(uint32_t k = 0; k < iter_x*iter_y; k++) {
-                uint32_t y = floor(k / iter_y);
+                uint32_t y = floor(k / iter_y);             // Unpack for loop into (x,y) index
                 uint32_t x = k - (iter_x*y);
                 std::shared_ptr<FieldVertex<SoilAttributes>> v3 = field->get_vertex_at_index(x + x_start, y + y_start);
                 if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {

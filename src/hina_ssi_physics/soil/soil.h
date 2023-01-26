@@ -30,8 +30,6 @@ namespace hina {
 
         void generate_sandbox_geometry(SandboxConfig config);
 
-        void generate_sandbox_soil_vertices(SandboxConfig config);
-
         void load_dem_geometry(const std::shared_ptr<DEM> &dem) const;
 
         std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>>

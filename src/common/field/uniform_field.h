@@ -6,10 +6,20 @@
 #include <memory>
 #include <cmath>
 #include <gazebo/common/common.hh>
+
 #include "field_vertex.h"
 #include "vertex_dims.h"
 
+using namespace gazebo;
+
 namespace hina {
+
+    struct FieldVector2 {
+        double x;
+        double y;
+    };
+
+
     template<class V>
     class UniformField {
 
@@ -28,6 +38,7 @@ namespace hina {
         }
 
     public:
+        FieldVector2 origin;
 
         typedef std::shared_ptr<FieldVertex<V>> FieldVertexVPtr;
         typedef std::unordered_map<uint32_t, std::unordered_map<uint32_t, FieldVertexVPtr>> UniformFieldMap;
@@ -75,7 +86,6 @@ namespace hina {
             generate_indices();
         }
 
-
         FieldVertexVPtr vertex_at_flattened_index(uint32_t idx) {
             uint32_t x;
             uint32_t y;
@@ -89,6 +99,10 @@ namespace hina {
             unflatten_index(idx, x, y);
             auto _vtx = get_vertex_at_index(x, y);
             *_vtx = vtx;
+        }
+
+        void set_origin(FieldVector2 origin) {
+            this->origin = origin;
         }
 
         FieldVertexVPtr get_vertex_at_index(uint32_t x, uint32_t y) {
@@ -122,8 +136,8 @@ namespace hina {
                     auto i_f = (float) i;
                     auto j_f = (float) j;
 
-                    auto x = scale * (i_f + x_offset);
-                    auto y = scale * (j_f + y_offset);
+                    auto x = (scale * (i_f + x_offset)) + origin.x;
+                    auto y = (scale * (j_f + y_offset)) + origin.y;
 
                     auto v3 = Vector3d(x, y, 0);
 

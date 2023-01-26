@@ -4,11 +4,11 @@ using namespace gazebo;
 using namespace hina;
 
 Soil::Soil(FieldVertexDimensions dims, double scale) {
-    this->sc.init_chunk(dims, scale,0,0);
+    this->sc.init_chunk(dims, scale, {0,0, Vector2d(0,0)});
 }
 
 Soil::Soil(FieldTrueDimensions dims, double scale) {
-    this->sc.init_chunk(dims, scale,0,0);
+    this->sc.init_chunk(dims, scale, {0,0, Vector2d(0,0)});
 }
 
 Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, config.y_width }, config.scale) {
@@ -20,26 +20,6 @@ Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldVertexDimensions { dem->
 
 void Soil::generate_sandbox_geometry(SandboxConfig config) {
     this->sc.generate_vertices(config);
-}
-
-void Soil::generate_sandbox_soil_vertices(SandboxConfig config) {
-
-    auto field = sc.field;
-
-    for (int j = 0; j < field->y_vert_width; j++) {
-        for (int i = 0; i < field->x_vert_width; i++) {
-            auto vertex = field->get_vertex_at_index(i,j);
-
-            auto x = vertex->v3.X();
-            auto y = vertex->v3.Y();
-
-            const double z = y*tan(config.angle);
-
-            auto v3 = Vector3d(x, y, z);
-
-            field->set_vertex_at_index(i, j, std::make_shared<FieldVertex<SoilAttributes>>(v3));
-        }
-    }
 }
 
 void Soil::load_dem_geometry(const std::shared_ptr<DEM>& dem) const {
