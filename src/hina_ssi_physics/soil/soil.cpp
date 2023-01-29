@@ -66,6 +66,27 @@ void Soil::query_chunk(Vector3d pos) {
 
     if(sc == nullptr) {
         load_chunk(i,j);
+    } else {
+        sc->mark_unload(false);
+    }
+}
+
+void Soil::start_chunk_poll() {
+    for(auto c : active_chunks) {
+        c->mark_unload(true);
+    }
+}
+
+void Soil::unload_dead_chunks() {
+    for(int k = 0; k < active_chunks.size(); k++) {
+        if(active_chunks[k]->unload_flag) {
+            auto id = active_chunks[k]->location;
+            int i = id.i;
+            int j = id.j;
+            chunk_map[i][j] = nullptr;
+            active_chunks.erase(active_chunks.begin()+(k));
+            std::cout << "Unloaded chunk @ CHUNK_ID:" << i << " " << j << std::endl;
+        }
     }
 }
 
@@ -73,6 +94,7 @@ void Soil::load_chunk(int i, int j) {
     auto soil_chunk = std::make_shared<SoilChunk>();
     soil_chunk->init_chunk(vtx_dims, scale, {i,j,chunk_idx_to_worldpos(i,j) });
     chunk_map[i][j] = soil_chunk;
+    active_chunks.push_back(soil_chunk);
     std::cout << "Loading chunk @ CHUNK_ID: " << i << " " << j << " WORLDPOS " << chunk_idx_to_worldpos(i,j) << std::endl;
 }
 

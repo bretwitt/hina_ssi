@@ -195,6 +195,9 @@ namespace hina {
         }
 
         void update_soil(std::shared_ptr<Soil> soil, float dt) {
+
+            soil->start_chunk_poll();
+
             for (auto &iter: mesh_lookup) {
                 auto link = iter.first;
                 auto mesh = iter.second;
@@ -249,6 +252,9 @@ namespace hina {
                     }
                 }
             }
+
+            soil->unload_dead_chunks();
+
         }
 
 

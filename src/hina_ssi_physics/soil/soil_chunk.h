@@ -28,6 +28,7 @@ namespace hina {
         double height = 0;
         double res = 0;
 
+        bool unload_flag;
 
         std::shared_ptr <UniformField<SoilAttributes>> field = nullptr;
 
@@ -221,6 +222,10 @@ namespace hina {
             auto point = vtx->v3;
             return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
         };
+
+        void mark_unload(bool b) {
+            this->unload_flag = b;
+        }
 //
 //        void generate_vertices(DEM dem) {
 //

@@ -25,6 +25,7 @@ namespace hina {
 
 //        std::shared_ptr<SoilChunk> sc;
 
+        std::vector<std::shared_ptr<SoilChunk>> active_chunks;
         std::unordered_map<uint32_t,std::unordered_map<uint32_t,std::shared_ptr<SoilChunk>>> chunk_map;
 
     public:
@@ -46,6 +47,9 @@ namespace hina {
         void query_chunk(Vector3d pos);
 
         void unload_chunk(uint32_t i, uint32_t j);
+
+        void start_chunk_poll();
+        void unload_dead_chunks();
 
         Vector2d worldpos_to_chunk_idx(Vector3d pos);
         Vector2d chunk_idx_to_worldpos(int i, int j);
