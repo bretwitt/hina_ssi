@@ -14,8 +14,8 @@ using ignition::math::Vector2d;
 namespace hina {
 
     struct SoilChunkLocationMetadata {
-        uint32_t i;
-        uint32_t j;
+        int i;
+        int j;
         Vector2d origin; // Vector2d of first vertex
     };
 

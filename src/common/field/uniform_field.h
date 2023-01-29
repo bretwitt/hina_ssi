@@ -19,7 +19,6 @@ namespace hina {
         double y;
     };
 
-
     template<class V>
     class UniformField {
 
@@ -77,6 +76,11 @@ namespace hina {
             recalculate_width();
         }
 
+        static FieldVertexDimensions as_vtx_dims(FieldTrueDimensions true_dims, double resolution) {
+            uint32_t verts_x = floor(true_dims.true_x / resolution) + 1;
+            uint32_t verts_y = floor(true_dims.true_y / resolution) + 1;
+            return FieldVertexDimensions { verts_x, verts_y };
+        }
 
         void init_field() {
             vertices = std::make_unique<UniformFieldMap>();
@@ -126,8 +130,8 @@ namespace hina {
         }
 
         void get_nearest_index(ignition::math::Vector2d vtx, uint32_t &x, uint32_t &y) const {
-            x = (int) ((vtx.X() / scale) - x_offset);
-            y = (int) ((vtx.Y() / scale) - y_offset);
+            x = (int) ((vtx.X() / scale) /*- x_offset*/);
+            y = (int) ((vtx.Y() / scale) /*- y_offset*/);
         }
 
         void generate_vertices() {
@@ -136,8 +140,8 @@ namespace hina {
                     auto i_f = (float) i;
                     auto j_f = (float) j;
 
-                    auto x = (scale * (i_f + x_offset)) + origin.x;
-                    auto y = (scale * (j_f + y_offset)) + origin.y;
+                    auto x = (scale * (i_f /*+ x_offset*/)) + origin.x;
+                    auto y = (scale * (j_f /*+ y_offset*/)) + origin.y;
 
                     auto v3 = Vector3d(x, y, 0);
 

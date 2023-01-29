@@ -129,15 +129,15 @@ namespace hina {
             auto c = params->GetElement("c")->Get<double>();
             auto phi = params->GetElement("phi")->Get<double>();
 
-            auto f = soilPtr->get_chunk().field;
-
-            for(uint32_t i = 0; i < f->x_vert_width*f->y_vert_width; i++) {
-                auto vtx = f->get_vertex_at_flattened_index(i)->v;
-                vtx->k_phi = k_phi;
-                vtx->k_e = k_e;
-                vtx->c = c;
-                vtx->phi = phi;
-            }
+//            auto f = soilPtr->get_chunk()->field;
+//
+//            for(uint32_t i = 0; i < f->x_vert_width*f->y_vert_width; i++) {
+//                auto vtx = f->get_vertex_at_flattened_index(i)->v;
+//                vtx->k_phi = k_phi;
+//                vtx->k_e = k_e;
+//                vtx->c = c;
+//                vtx->phi = phi;
+//            }
         }
 
         void init_sandbox() {
@@ -161,14 +161,12 @@ namespace hina {
                 auto upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
                 dem->upsample(upscale_res);
             }
-
             soilPtr = std::make_shared<Soil>(dem);
-
         }
 
         void init_transport() {
-            auto df = soilPtr->get_chunk().field;
-            soil_v = std::make_unique<msgs::Vector3d[]>(df->x_vert_width * df->y_vert_width);
+            //auto df = soilPtr->get_chunk()->field;
+            //soil_v = std::make_unique<msgs::Vector3d[]>(df->x_vert_width * df->y_vert_width);
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
@@ -187,13 +185,13 @@ namespace hina {
             double dt_viz = sec - last_sec_viz;
 
             update_soil(soilPtr, dt);
-
-            last_sec = sec;
-
-            if (dt_viz > (1. / 5.f)) {
-                broadcast_soil(soilPtr);
-                last_sec_viz = sec;
-            }
+//
+//            last_sec = sec;
+//
+//            if (dt_viz > (1. / 5.f)) {
+//                broadcast_soil(soilPtr);
+//                last_sec_viz = sec;
+//            }
         }
 
         void update_soil(std::shared_ptr<Soil> soil, float dt) {
@@ -212,6 +210,8 @@ namespace hina {
                     auto pose = link->WorldPose();
                     auto rot = pose.Rot();
                     auto pos = pose.Pos();
+
+                    soil->query_chunk(pos);     // TODO: Loading radius
 
                     std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint;
                     std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint_idx;
@@ -242,7 +242,6 @@ namespace hina {
                             total_displaced_volume += displaced_volume;
                         }
                     }
-
                 }
             }
         }
@@ -251,7 +250,16 @@ namespace hina {
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;
 
-            auto field = soilPtr->get_chunk().field;
+            auto chunk = soilPtr->get_chunk(0,0);
+
+            if(chunk == nullptr) {
+                return;
+            }
+
+            auto field = chunk->field;
+            if (soil_v == nullptr){
+                soil_v = std::make_unique<msgs::Vector3d[]>(field->x_vert_width * field->y_vert_width);
+            }
 
             auto x_w = field->x_vert_width;
             auto y_w = field->y_vert_width;

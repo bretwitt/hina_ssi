@@ -14,11 +14,18 @@
 
 namespace hina {
     class Soil {
+
     private:
         Soil(FieldVertexDimensions dims, double scale);
         Soil(FieldTrueDimensions dims, double scale);
 
-        SoilChunk sc;
+        FieldVertexDimensions vtx_dims;
+
+        double scale = 0;
+
+//        std::shared_ptr<SoilChunk> sc;
+
+        std::unordered_map<uint32_t,std::unordered_map<uint32_t,std::shared_ptr<SoilChunk>>> chunk_map;
 
     public:
 
@@ -26,11 +33,22 @@ namespace hina {
 
         Soil(const std::shared_ptr<DEM>& dem);
 
-        SoilChunk get_chunk();
-
         void generate_sandbox_geometry(SandboxConfig config);
 
         void load_dem_geometry(const std::shared_ptr<DEM> &dem) const;
+
+//        std::shared_ptr<SoilChunk> get_chunk();
+
+        std::shared_ptr<SoilChunk> get_chunk(uint32_t i, uint32_t j);
+
+        void load_chunk(int i, int j);
+
+        void query_chunk(Vector3d pos);
+
+        void unload_chunk(uint32_t i, uint32_t j);
+
+        Vector2d worldpos_to_chunk_idx(Vector3d pos);
+        Vector2d chunk_idx_to_worldpos(int i, int j);
 
         std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>>
         try_deform(const Triangle &meshTri, const physics::LinkPtr &link, float dt, float &displaced_volume);
