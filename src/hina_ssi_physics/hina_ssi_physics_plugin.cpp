@@ -211,7 +211,12 @@ namespace hina {
                     auto rot = pose.Rot();
                     auto pos = pose.Pos();
 
-                    soil->query_chunk(pos);     // TODO: Loading radius
+                    auto aabb = link->GetCollision(0.)->BoundingBox();
+                    auto max = aabb.Max();
+                    auto min = aabb.Min();
+
+                    soil->query_chunk(max);
+                    soil->query_chunk(min);         // TODO: Loading radius
 
                     std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint;
                     std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint_idx;
