@@ -28,8 +28,6 @@ namespace hina {
         double height = 0;
         double res = 0;
 
-        bool unload_flag;
-
         std::shared_ptr <UniformField<SoilAttributes>> field = nullptr;
 
         SandboxConfig config;
@@ -38,10 +36,7 @@ namespace hina {
         }
 
         void init_chunk(FieldTrueDimensions dims, double scale, SoilChunkLocationMetadata location) {
-            this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
-            this->field->set_origin({location.origin.X(), location.origin.Y()});
-            this->field->init_field();
-            this->location = location;
+              init_chunk(UniformField<SoilAttributes>::as_vtx_dims(dims,scale),scale,location);
         }
 
         void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocationMetadata location) {
@@ -50,6 +45,8 @@ namespace hina {
             this->field->init_field();
             this->location = location;
         }
+
+
 
         void generate_vertices(SandboxConfig config) {
             for (int j = 0; j < field->y_vert_width; j++) {
@@ -222,10 +219,6 @@ namespace hina {
             auto point = vtx->v3;
             return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
         };
-
-        void mark_unload(bool b) {
-            this->unload_flag = b;
-        }
 
 //
 //        void generate_vertices(DEM dem) {

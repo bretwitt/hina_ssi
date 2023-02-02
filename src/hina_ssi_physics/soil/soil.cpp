@@ -58,8 +58,8 @@ Vector2d Soil::worldpos_to_chunk_idx(Vector3d pos) {
 
 void Soil::query_chunk(Vector3d pos) {
     auto v2 = worldpos_to_chunk_idx(pos);
-    auto i = v2.X();
-    auto j = v2.Y();
+    auto i = static_cast<int>(v2.X());
+    auto j = static_cast<int>(v2.Y());
 
     // TODO: RADIUS
     chunks.poll_chunk({i,j});
@@ -69,7 +69,7 @@ void Soil::query_chunk(Vector3d pos) {
     chunks.poll_chunk({i,j - 1});
 }
 
-void Soil::start_chunk_poll() {
+void Soil::pre_update() {
     chunks.pre_update();
 }
 
@@ -79,6 +79,6 @@ std::shared_ptr<SoilChunk> Soil::OnChunkCreation(int i, int j) {
     return sc;
 }
 
-void Soil::unload_dead_chunks() {
+void Soil::post_update() {
     chunks.post_update();
 }

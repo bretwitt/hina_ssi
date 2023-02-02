@@ -2,6 +2,9 @@
 #define HINA_SSI_PLUGIN_CHUNK_FIELD_H
 
 #include "uniform_field.h"
+#include <gazebo/common/common.hh>
+
+using ignition::math::Vector2d;
 
 template<class T>
 class ChunkedField {
@@ -9,6 +12,7 @@ class ChunkedField {
     struct ChunkedFieldLocation {
         int i;
         int j;
+        Vector2d origin;
     };
 
     struct Chunk {
@@ -24,6 +28,31 @@ class ChunkedField {
 private:
     std::unordered_map<int,std::unordered_map<int,std::shared_ptr<Chunk>>> chunks;
     std::vector<std::shared_ptr<Chunk>> active_chunks;
+
+    void load_chunk(ChunkedFieldLocation loc) {
+        T container = chunk_create_callback(loc.i,loc.j);
+        auto chunk = std::make_shared<Chunk>(container, loc);
+        chunks[loc.i][loc.j] = chunk;
+        active_chunks.push_back(chunk);
+    }
+
+    void unload_chunk(ChunkedFieldLocation loc) {
+        chunks[loc.i][loc.j] = nullptr;
+    }
+
+    void cull_dead_chunks() {
+        for(uint32_t i = 0; i < active_chunks.size(); i++) {
+            if(!active_chunks[i]->keep_loaded_flag) {
+                auto loc = active_chunks[i]->location;
+                chunks[loc.i][loc.j] = nullptr;
+                active_chunks.erase(active_chunks.begin()+i);
+            }
+        }
+    }
+
+    void world_pos_to_idx() {
+
+    }
 
 public:
     std::function<T(int,int)> chunk_create_callback;
@@ -42,17 +71,6 @@ public:
         } else {
             update_chunk(loc);
         }
-    }
-
-    void load_chunk(ChunkedFieldLocation loc) {
-        T container = chunk_create_callback(loc.i,loc.j);
-        auto chunk = std::make_shared<Chunk>(container, loc);
-        chunks[loc.i][loc.j] = chunk;
-        active_chunks.push_back(chunk);
-    }
-
-    void unload_chunk(ChunkedFieldLocation loc) {
-        chunks[loc.i][loc.j] = nullptr;
     }
 
     void update_chunk(ChunkedFieldLocation loc) {
@@ -75,16 +93,6 @@ public:
 
     void post_update() {
         cull_dead_chunks();
-    }
-
-    void cull_dead_chunks() {
-        for(uint32_t i = 0; i < active_chunks.size(); i++) {
-            if(!active_chunks[i]->keep_loaded_flag) {
-                auto loc = active_chunks[i]->location;
-                chunks[loc.i][loc.j] = nullptr;
-                active_chunks.erase(active_chunks.begin()+i);
-            }
-        }
     }
 
 };

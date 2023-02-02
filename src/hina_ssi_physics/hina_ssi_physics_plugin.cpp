@@ -167,8 +167,6 @@ namespace hina {
         }
 
         void init_transport() {
-            //auto df = soilPtr->get_chunk()->field;
-            //soil_v = std::make_unique<msgs::Vector3d[]>(df->x_vert_width * df->y_vert_width);
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
             soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
@@ -198,7 +196,7 @@ namespace hina {
 
         void update_soil(std::shared_ptr<Soil> soil, float dt) {
 
-            soil->start_chunk_poll();
+            soil->pre_update();
 
             for (auto &iter: mesh_lookup) {
                 auto link = iter.first;
@@ -255,7 +253,7 @@ namespace hina {
                 }
             }
 
-            soil->unload_dead_chunks();
+            soil->post_update();
 
         }
 

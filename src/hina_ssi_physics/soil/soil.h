@@ -41,8 +41,8 @@ namespace hina {
         void load_dem_geometry(const std::shared_ptr<DEM> &dem) const;
 
         void query_chunk(Vector3d pos);
-        void start_chunk_poll();
-        void unload_dead_chunks();
+        void pre_update();
+        void post_update();
 
         std::shared_ptr<SoilChunk> OnChunkCreation(int i, int j);
 
