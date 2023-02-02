@@ -7,22 +7,22 @@
 #include "../../common/geometry.h"
 #include "../../common/field/uniform_field.h"
 #include "soil_data.h"
+#include "soil_chunk_location_metadata.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
 
 namespace hina {
 
-    struct SoilChunkLocationMetadata {
-        int i;
-        int j;
-        Vector2d origin; // Vector2d of first vertex
-    };
 
     class SoilChunk {
+
     public:
 
         SoilChunkLocationMetadata location;
+
+        Vector2d max;
+        Vector2d min;
 
         double width = 0;
         double height = 0;
@@ -226,6 +226,7 @@ namespace hina {
         void mark_unload(bool b) {
             this->unload_flag = b;
         }
+
 //
 //        void generate_vertices(DEM dem) {
 //

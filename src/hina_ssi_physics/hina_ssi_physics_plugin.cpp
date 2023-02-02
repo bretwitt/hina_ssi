@@ -10,6 +10,7 @@
 #include "soil/soil.h"
 #include "dem/dem_loader.h"
 #include "Soil.pb.h"
+#include "soil/soil_chunk_location_metadata.h"
 
 //using namespace hina;
 
@@ -19,6 +20,7 @@ namespace hina {
     private:
         std::shared_ptr<Soil> soilPtr = nullptr;
         std::unique_ptr<msgs::Vector3d[]> soil_v = nullptr;
+        std::unique_ptr<msgs::Vector2d[]> soil_id_v = nullptr;
 
         transport::NodePtr node = nullptr;
         transport::PublisherPtr soilPub = nullptr;
@@ -185,10 +187,10 @@ namespace hina {
             double dt_viz = sec - last_sec_viz;
 
             update_soil(soilPtr, dt);
+
+            last_sec = sec;
 //
-//            last_sec = sec;
-//
-//            if (dt_viz > (1. / 5.f)) {
+//            if (dt_viz > (1. / 4.f)) {
 //                broadcast_soil(soilPtr);
 //                last_sec_viz = sec;
 //            }
@@ -261,35 +263,48 @@ namespace hina {
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;
 
-            auto chunk = soilPtr->get_chunk(0,0);
+            auto chunk = soilPtr->active_chunks;
 
-            if(chunk == nullptr) {
+            if(chunk.size() <= 0) {
                 return;
             }
 
-            auto field = chunk->field;
+            auto field = chunk[0]->field;
             if (soil_v == nullptr){
-                soil_v = std::make_unique<msgs::Vector3d[]>(field->x_vert_width * field->y_vert_width);
+                soil_v = std::make_unique<msgs::Vector3d[]>(chunk.size()*field->x_vert_width * field->y_vert_width);
+                soil_id_v = std::make_unique<msgs::Vector2d[]>(chunk.size());
             }
 
             auto x_w = field->x_vert_width;
             auto y_w = field->y_vert_width;
 
-            Vector3d vert;
-            for (int idx = 0; idx < x_w * y_w; idx++) {
-                vert = field->vertex_at_flattened_index(idx)->v3;
-                (soil_v)[idx] = msgs::Vector3d();
-                (soil_v)[idx].set_x(vert.X());
-                (soil_v)[idx].set_y(vert.Y());
-                (soil_v)[idx].set_z(vert.Z());
+            uint32_t counter = 0;
+            for(auto& c : chunk) {
+                Vector3d vert;
+                Vector2d id;
+                soil_id_v[counter] = msgs::Vector2d();
+                SoilChunkLocationMetadata sc = c->location;
+                soil_id_v[counter].set_x(sc.i);
+                soil_id_v[counter].set_y(sc.j);
+                for (int idx = 0; idx < x_w * y_w; idx++) {
+                    vert = c->field->vertex_at_flattened_index(idx)->v3;
+                    (soil_v)[idx+(counter*x_w*y_w)] = msgs::Vector3d();
+                    (soil_v)[idx+(counter*x_w*y_w)].set_x(vert.X());
+                    (soil_v)[idx+(counter*x_w*y_w)].set_y(vert.Y());
+                    (soil_v)[idx+(counter*x_w*y_w)].set_z(vert.Z());
+                }
+                counter++;
             }
-
             soilMsg.set_len_col(x_w);
             soilMsg.set_len_row(y_w);
 
-            for (uint32_t i = 0; i < x_w * y_w; i++) {
-                auto v = soilMsg.add_flattened_field();
+            for (uint32_t i = 0; i < chunk.size()*x_w * y_w; i++) {
+                auto v = soilMsg.add_chunk_field();
                 *v = soil_v[i];
+            }
+            for (uint32_t i = 0; i < chunk.size(); i++) {
+                auto v = soilMsg.add_id_field();
+                *v = soil_id_v[i];
             }
             soilPub->Publish(soilMsg);
         }

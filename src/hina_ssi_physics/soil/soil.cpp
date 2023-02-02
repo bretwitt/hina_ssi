@@ -5,18 +5,18 @@ using namespace hina;
 
 using ignition::math::Vector3d;
 
-Soil::Soil(FieldVertexDimensions dims, double scale) {
+Soil::Soil(FieldVertexDimensions dims, double scale) : Soil() {
     this->scale = scale;
-//    this->sc = std::make_shared<SoilChunk>();
-//    this->sc->init_chunk(dims, scale, {0,0, Vector2d(0,0)});
     vtx_dims = dims;
 }
 
-Soil::Soil(FieldTrueDimensions dims, double scale) {
+Soil::Soil(FieldTrueDimensions dims, double scale) : Soil() {
     this->scale = scale;
-//    this->sc = std::make_shared<SoilChunk>();
-//    this->sc->init_chunk(dims, scale, {0,0, Vector2d(0,0)});
     vtx_dims = UniformField<SoilAttributes>::as_vtx_dims(dims,scale);
+}
+
+Soil::Soil() {
+    chunks.register_chunk_create_callback(boost::bind(&Soil::OnChunkCreation, this, _1, _2));
 }
 
 Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, config.y_width }, config.scale) {
@@ -27,7 +27,6 @@ Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldVertexDimensions { dem->
 }
 
 void Soil::generate_sandbox_geometry(SandboxConfig config) {
-    //this->sc->generate_vertices(config);
 }
 
 void Soil::load_dem_geometry(const std::shared_ptr<DEM>& dem) const {
@@ -43,7 +42,7 @@ void Soil::load_dem_geometry(const std::shared_ptr<DEM>& dem) const {
 
 std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume) {
     auto idx = worldpos_to_chunk_idx(meshTri.centroid());
-    auto chunk = chunk_map[idx.X()][idx.Y()];
+    auto chunk = chunks.get_chunk_cont({idx.X(),idx.Y()});
     if (chunk != nullptr) {
         return chunk->try_deform(meshTri, link, dt);
     }
@@ -62,46 +61,24 @@ void Soil::query_chunk(Vector3d pos) {
     auto i = v2.X();
     auto j = v2.Y();
 
-    auto sc = chunk_map[i][j];
-
-    if(sc == nullptr) {
-        load_chunk(i,j);
-    } else {
-        sc->mark_unload(false);
-    }
+    // TODO: RADIUS
+    chunks.poll_chunk({i,j});
+    chunks.poll_chunk({i + 1,j});
+    chunks.poll_chunk({i - 1,j});
+    chunks.poll_chunk({i,j + 1});
+    chunks.poll_chunk({i,j - 1});
 }
 
 void Soil::start_chunk_poll() {
-    for(auto c : active_chunks) {
-        c->mark_unload(true);
-    }
+    chunks.pre_update();
+}
+
+std::shared_ptr<SoilChunk> Soil::OnChunkCreation(int i, int j) {
+    auto sc = std::make_shared<SoilChunk>();
+    sc->init_chunk(vtx_dims, scale, { i,j, chunk_idx_to_worldpos(i,j)});
+    return sc;
 }
 
 void Soil::unload_dead_chunks() {
-    for(int k = 0; k < active_chunks.size(); k++) {
-        if(active_chunks[k]->unload_flag) {
-            auto id = active_chunks[k]->location;
-            int i = id.i;
-            int j = id.j;
-            chunk_map[i][j] = nullptr;
-            active_chunks.erase(active_chunks.begin()+(k));
-            std::cout << "Unloaded chunk @ CHUNK_ID:" << i << " " << j << std::endl;
-        }
-    }
-}
-
-void Soil::load_chunk(int i, int j) {
-    auto soil_chunk = std::make_shared<SoilChunk>();
-    soil_chunk->init_chunk(vtx_dims, scale, {i,j,chunk_idx_to_worldpos(i,j) });
-    chunk_map[i][j] = soil_chunk;
-    active_chunks.push_back(soil_chunk);
-    std::cout << "Loading chunk @ CHUNK_ID: " << i << " " << j << " WORLDPOS " << chunk_idx_to_worldpos(i,j) << std::endl;
-}
-
-void Soil::unload_chunk(uint32_t i, uint32_t j) {
-    chunk_map[i][j] = nullptr;
-}
-
-std::shared_ptr<SoilChunk> Soil::get_chunk(uint32_t i, uint32_t j) {
-    return chunk_map[i][j];
+    chunks.post_update();
 }

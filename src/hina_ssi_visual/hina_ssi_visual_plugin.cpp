@@ -7,6 +7,7 @@
 #include <utility>
 #include "ogre_soil_renderer.cpp"
 #include "Soil.pb.h"
+#include "../hina_ssi_physics/soil/soil_chunk_location_metadata.h"
 
 using namespace gazebo;
 
@@ -28,6 +29,11 @@ namespace hina {
 
         bool soil_initialized = false;
         bool init_viz = false;
+        std::unordered_map<int,std::unordered_map<int,
+            std::shared_ptr<UniformField<ColorAttributes>>>> map;
+
+        std::vector<std::shared_ptr<UniformField<ColorAttributes>>> active_chunks;
+
 
     public:
         HinaSSIVisualPlugin() : VisualPlugin() {
@@ -50,23 +56,30 @@ namespace hina {
             int vert_x = soil_update->len_col();
             int vert_y = soil_update->len_row();
 
-            auto v = soil_update->flattened_field();
+            auto v = soil_update->chunk_field();
+            auto id = soil_update->id_field();
 
-            if(field == nullptr) {
-                field = std::make_shared<UniformField<ColorAttributes>>(FieldVertexDimensions { static_cast<double>(vert_x), static_cast<double>(vert_y) }, 1);
-                field->init_field();
+            for(const gazebo::msgs::Vector2d& id0 : id) {
+                auto id_vec = Vector2d( id0.x(), id0.y() );
+                if(map[id0.x()][id0.y()] == nullptr) {
+                    map[id0.x()][id0.y()] = std::make_shared<UniformField<ColorAttributes>>(FieldVertexDimensions { static_cast<double>(vert_x), static_cast<double>(vert_y) }, 1);
+                    map[id0.x()][id0.y()]->init_field();
+                    active_chunks.push_back(map[id0.x()][id0.y()]);
+                }
             }
-
-            uint32_t i = 0;
-            for(const gazebo::msgs::Vector3d& v0 : v) {
-                auto vert = FieldVertex<ColorAttributes>(Vector3d(v0.x(), v0.y(), v0.z()));
-                field->set_vertex_at_flattened_index(i++, vert);
-            }
-
-            if(!soil_initialized) {
-                init_viz = true;
-                soil_initialized = true;
-            }
+//
+//            uint32_t i = 0;
+//            for(const gazebo::msgs::Vector3d& v0 : v) {
+//                auto vert = FieldVertex<ColorAttributes>(Vector3d(v0.x(), v0.y(), v0.z()));
+//                auto vtx_idx = i / (vert_x*vert_y);
+//                ->set_vertex_at_flattened_index(vtx_idx, vert);
+//                i++;
+//            }
+//
+//            if(!soil_initialized) {
+//                init_viz = true;
+//                soil_initialized = true;
+//            }
         }
 
         void update() {
