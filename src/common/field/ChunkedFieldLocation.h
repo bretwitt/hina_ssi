@@ -1,0 +1,9 @@
+#ifndef HINA_SSI_PLUGIN_CHUNKEDFIELDLOCATION_H
+#define HINA_SSI_PLUGIN_CHUNKEDFIELDLOCATION_H
+
+struct ChunkedFieldLocation {
+    int i;
+    int j;
+};
+
+#endif //HINA_SSI_PLUGIN_CHUNKEDFIELDLOCATION_H

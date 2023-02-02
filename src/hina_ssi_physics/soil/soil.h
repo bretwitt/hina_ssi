@@ -24,11 +24,9 @@ namespace hina {
 
         double scale = 0;
 
-//        std::unordered_map<uint32_t,std::unordered_map<uint32_t,std::shared_ptr<SoilChunk>>> chunk_map;
-        ChunkedField<std::shared_ptr<SoilChunk>> chunks;
 
     public:
-        std::vector<std::shared_ptr<SoilChunk>> active_chunks;
+        ChunkedField<std::shared_ptr<SoilChunk>> chunks;
 
         Soil(SandboxConfig config);
 

@@ -204,7 +204,7 @@ namespace hina {
             auto force_v = Vector3d(
                     (vert_attr->c + (vert_attr->sigma * tan(vert_attr->phi))) * vert_attr->normal_dA.X(),
                     (vert_attr->c + (vert_attr->sigma * tan(vert_attr->phi))) * vert_attr->normal_dA.Y(),
-                    (vert_attr->sigma /*- (plastic_flow)*/) * vert_attr->normal_dA.Z()
+                    (vert_attr->sigma) * vert_attr->normal_dA.Z()
             );
 
             // Apply f/t

@@ -18,10 +18,11 @@ namespace hina {
     class OgreSoilRenderer {
     private:
         rendering::ScenePtr scenePtr = nullptr;
-        Ogre::ManualObject *manObj;
+        Ogre::ManualObject *manObj = nullptr;
 
         void
         tri_update(const std::shared_ptr<UniformField<ColorAttributes>> &field, Ogre::ManualObject *manObj, uint32_t x_size, uint32_t y_size) {
+
             uint32_t nVerts = x_size * y_size;
 
             for (uint32_t i = 0; i < nVerts; i++) {
@@ -30,7 +31,6 @@ namespace hina {
 
                 manObj->position(v3.X(), v3.Y(), v3.Z());
                 manObj->colour(120, 120, 120);
-
             }
 
             for (uint32_t i = 0; i < (x_size - 1) * (y_size - 1) * 3 * 2;) {
@@ -43,10 +43,11 @@ namespace hina {
             this->scenePtr = std::move(scenePtr);
         }
 
-        void create_ogre_mesh(const std::shared_ptr<UniformField<ColorAttributes>> &field) {
+        void create_ogre_mesh(const std::shared_ptr<UniformField<ColorAttributes>> &field, int id) {
+
             auto sceneManager = scenePtr->OgreSceneManager();
 
-            manObj = sceneManager->createManualObject("terrain_mesh");
+            manObj = sceneManager->createManualObject("terrain_mesh"+ std::to_string(id));
 
             uint32_t x_size = field->x_vert_width;
             uint32_t y_size = field->y_vert_width;

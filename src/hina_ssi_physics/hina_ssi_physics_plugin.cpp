@@ -42,7 +42,6 @@ namespace hina {
         HinaSSIWorldPlugin() : WorldPlugin() {
         }
 
-
         void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
             updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
             onEntityAddedEventPtr = event::Events::ConnectAddEntity(
@@ -187,11 +186,11 @@ namespace hina {
             update_soil(soilPtr, dt);
 
             last_sec = sec;
-//
-//            if (dt_viz > (1. / 4.f)) {
-//                broadcast_soil(soilPtr);
-//                last_sec_viz = sec;
-//            }
+
+            if (dt_viz > (1. / 4.f)) {
+                broadcast_soil(soilPtr);
+                last_sec_viz = sec;
+            }
         }
 
         void update_soil(std::shared_ptr<Soil> soil, float dt) {
@@ -261,13 +260,13 @@ namespace hina {
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;
 
-            auto chunk = soilPtr->active_chunks;
+            auto chunk = soilPtr->chunks.get_active_chunks();
 
             if(chunk.size() <= 0) {
                 return;
             }
 
-            auto field = chunk[0]->field;
+            auto field = chunk[0]->container->field;
             if (soil_v == nullptr){
                 soil_v = std::make_unique<msgs::Vector3d[]>(chunk.size()*field->x_vert_width * field->y_vert_width);
                 soil_id_v = std::make_unique<msgs::Vector2d[]>(chunk.size());
@@ -281,11 +280,11 @@ namespace hina {
                 Vector3d vert;
                 Vector2d id;
                 soil_id_v[counter] = msgs::Vector2d();
-                SoilChunkLocationMetadata sc = c->location;
+                auto sc = c->location;
                 soil_id_v[counter].set_x(sc.i);
                 soil_id_v[counter].set_y(sc.j);
                 for (int idx = 0; idx < x_w * y_w; idx++) {
-                    vert = c->field->vertex_at_flattened_index(idx)->v3;
+                    vert = c->container->field->vertex_at_flattened_index(idx)->v3;
                     (soil_v)[idx+(counter*x_w*y_w)] = msgs::Vector3d();
                     (soil_v)[idx+(counter*x_w*y_w)].set_x(vert.X());
                     (soil_v)[idx+(counter*x_w*y_w)].set_y(vert.Y());
@@ -304,6 +303,7 @@ namespace hina {
                 auto v = soilMsg.add_id_field();
                 *v = soil_id_v[i];
             }
+
             soilPub->Publish(soilMsg);
         }
 
