@@ -13,15 +13,9 @@ if(OpenMP_CXX_FOUND)
     list(APPEND LIB_OPENMP OpenMP::OpenMP_CXX)
 endif()
 
-SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "~/Desktop/boost_1_81_0/stage")
-SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "~/Desktop/boost_1_81_0/stage/lib")
-
-#set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(gazebo REQUIRED)
-
-
 
 include_directories(include ${GAZEBO_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/src/msgs)
 link_directories(${GAZEBO_LIBRARY_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/src/msgs)

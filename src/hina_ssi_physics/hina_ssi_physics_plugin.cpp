@@ -12,8 +12,6 @@
 #include "Soil.pb.h"
 #include "soil/soil_chunk_location_metadata.h"
 
-//using namespace hina;
-
 namespace hina {
     class HinaSSIWorldPlugin : public WorldPlugin {
 
@@ -39,10 +37,8 @@ namespace hina {
         int col_threads = 3;
 
     public:
-        HinaSSIWorldPlugin() : WorldPlugin() {
-        }
 
-        void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
+        void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) {
             updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
             onEntityAddedEventPtr = event::Events::ConnectAddEntity(
                     boost::bind(&HinaSSIWorldPlugin::OnEntityAdded, this, _1));
@@ -251,11 +247,8 @@ namespace hina {
                     }
                 }
             }
-
             soil->post_update();
-
         }
-
 
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
             hina_ssi_msgs::msgs::Soil soilMsg;
@@ -303,10 +296,8 @@ namespace hina {
                 auto v = soilMsg.add_id_field();
                 *v = soil_id_v[i];
             }
-
             soilPub->Publish(soilMsg);
         }
-
     };
     GZ_REGISTER_WORLD_PLUGIN(HinaSSIWorldPlugin)
 }

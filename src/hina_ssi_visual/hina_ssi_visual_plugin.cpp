@@ -14,7 +14,6 @@
 using namespace gazebo;
 
 namespace hina {
-
     class HinaSSIVisualPlugin : public VisualPlugin {
 
     private:
@@ -37,15 +36,12 @@ namespace hina {
         uint32_t verts_y;
 
     public:
-        HinaSSIVisualPlugin() : VisualPlugin() {
-        }
 
-        void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) override {
+        void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) {
             connectionPtr = event::Events::ConnectRender(boost::bind(&HinaSSIVisualPlugin::update, this));
             init_transport();
             init_chunk_field();
             visual = _visual;
-
         }
 
         void init_transport() {
@@ -101,6 +97,7 @@ namespace hina {
         }
 
         void update() {
+            std::cout << "Yoink" << std::endl;
             if(soil_initialized) {
                 for(auto chunk : chunks.get_active_chunks()) {
                     chunk->container->update();
@@ -108,9 +105,6 @@ namespace hina {
             }
         }
     };
-
     GZ_REGISTER_VISUAL_PLUGIN(HinaSSIVisualPlugin)
-
 }
-
 #endif
