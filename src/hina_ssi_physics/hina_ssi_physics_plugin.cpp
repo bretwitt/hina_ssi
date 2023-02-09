@@ -259,44 +259,67 @@ namespace hina {
                 return;
             }
 
-            auto field = chunk[0]->container->field;
-            if (soil_v == nullptr){
-                soil_v = std::make_unique<msgs::Vector3d[]>(chunk.size()*field->x_vert_width * field->y_vert_width);
-                soil_id_v = std::make_unique<msgs::Vector2d[]>(chunk.size());
-            }
+            soilMsg.set_len_col(2);
+            soilMsg.set_len_col(2);
+            soil_v = std::make_unique<msgs::Vector3d[]>(4);
 
-            auto x_w = field->x_vert_width;
-            auto y_w = field->y_vert_width;
-
-            uint32_t counter = 0;
-            for(auto& c : chunk) {
-                Vector3d vert;
-                Vector2d id;
-                soil_id_v[counter] = msgs::Vector2d();
-                auto sc = c->location;
-                soil_id_v[counter].set_x(sc.i);
-                soil_id_v[counter].set_y(sc.j);
-                for (int idx = 0; idx < x_w * y_w; idx++) {
-                    vert = c->container->field->vertex_at_flattened_index(idx)->v3;
-                    (soil_v)[idx+(counter*x_w*y_w)] = msgs::Vector3d();
-                    (soil_v)[idx+(counter*x_w*y_w)].set_x(vert.X());
-                    (soil_v)[idx+(counter*x_w*y_w)].set_y(vert.Y());
-                    (soil_v)[idx+(counter*x_w*y_w)].set_z(vert.Z());
+            auto v = soilMsg.add_chunk_field();
+            for(uint32_t i = 0; i < 2; i++) {
+                for(uint32_t j = 0; j < 2; j++) {
+                    soil_v[i*j] = msgs::Vector3d();
+                    soil_v[i*j].set_x(0);
+                    soil_v[i*j].set_y(0);
+                    soil_v[i*j].set_z(0);
+                    *v = soil_v[i];
                 }
-                counter++;
             }
-            soilMsg.set_len_col(x_w);
-            soilMsg.set_len_row(y_w);
 
-            for (uint32_t i = 0; i < chunk.size()*x_w * y_w; i++) {
-                auto v = soilMsg.add_chunk_field();
-                *v = soil_v[i];
-            }
-            for (uint32_t i = 0; i < chunk.size(); i++) {
-                auto v = soilMsg.add_id_field();
-                *v = soil_id_v[i];
-            }
+            auto id_v = std::make_unique<msgs::Vector2d[]>(1);
+            auto v1 = soilMsg.add_id_field();
+            id_v[0] = msgs::Vector2d();
+            id_v[0].set_x(0);
+            id_v[0].set_y(0);
+            *v1 = id_v[0];
             soilPub->Publish(soilMsg);
+
+//            if (soil_v == nullptr){
+//                soil_v = std::make_unique<msgs::Vector3d[]>(chunk.size()*field->x_vert_width * field->y_vert_width);
+//                soil_id_v = std::make_unique<msgs::Vector2d[]>(chunk.size());
+//            }
+
+//            auto x_w = field->x_vert_width;
+//            auto y_w = field->y_vert_width;
+//
+//            uint32_t counter = 0;
+//            for(auto& c : chunk) {
+//                Vector3d vert;
+//                Vector2d id;
+//                soil_id_v[counter] = msgs::Vector2d();
+//                auto sc = c->location;
+//                soil_id_v[counter].set_x(sc.i);
+//                soil_id_v[counter].set_y(sc.j);
+//                for (int idx = 0; idx < x_w * y_w; idx++) {
+//                    vert = c->container->field->vertex_at_flattened_index(idx)->v3;
+//                    (soil_v)[idx+(counter*x_w*y_w)] = msgs::Vector3d();
+//                    (soil_v)[idx+(counter*x_w*y_w)].set_x(vert.X());
+//                    (soil_v)[idx+(counter*x_w*y_w)].set_y(vert.Y());
+//                    (soil_v)[idx+(counter*x_w*y_w)].set_z(vert.Z());
+//                }
+//                counter++;
+//            }
+//            soilMsg.set_len_col(x_w);
+//            soilMsg.set_len_row(y_w);
+//
+//            for (uint32_t i = 0; i < chunk.size()*x_w * y_w; i++) {
+//                auto v = soilMsg.add_chunk_field();
+//                *v = soil_v[i];
+//            }
+//            for (uint32_t i = 0; i < chunk.size(); i++) {
+//                auto v = soilMsg.add_id_field();
+//                *v = soil_id_v[i];
+//            }
+
+            //soilPub->Publish(soilMsg);
         }
     };
     GZ_REGISTER_WORLD_PLUGIN(HinaSSIWorldPlugin)

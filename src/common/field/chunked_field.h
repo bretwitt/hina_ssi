@@ -4,7 +4,7 @@
 #include "uniform_field.h"
 #include <gazebo/common/common.hh>
 #include "chunk.h"
-#include "ChunkedFieldLocation.h"
+#include "chunked_field_location.h"
 #include <vector>
 
 using ignition::math::Vector2d;

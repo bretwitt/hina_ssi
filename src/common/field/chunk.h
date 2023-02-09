@@ -1,7 +1,7 @@
 #ifndef HINA_SSI_PLUGIN_CHUNK_H
 #define HINA_SSI_PLUGIN_CHUNK_H
 
-#include "ChunkedFieldLocation.h"
+#include "chunked_field_location.h"
 
 template<class T>
 struct Chunk {

@@ -55,6 +55,7 @@ namespace hina {
         }
 
         void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::Soil> &soil_update) {
+
             int vert_x = soil_update->len_col();
             int vert_y = soil_update->len_row();
 
@@ -97,7 +98,6 @@ namespace hina {
         }
 
         void update() {
-            std::cout << "Yoink" << std::endl;
             if(soil_initialized) {
                 for(auto chunk : chunks.get_active_chunks()) {
                     chunk->container->update();
