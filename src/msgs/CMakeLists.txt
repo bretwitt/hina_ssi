@@ -7,7 +7,7 @@ foreach(ITR ${GAZEBO_INCLUDE_DIRS})
 endforeach()
 
 set (msgs
-        Soil.proto
+        SoilChunk.proto
         ${PROTOBUF_IMPORT_DIRS}/vector3d.proto
         ${PROTOBUF_IMPORT_DIRS}/vector2d.proto
         ${PROTOBUF_IMPORT_DIRS}/header.proto

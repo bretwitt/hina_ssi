@@ -9,7 +9,7 @@
 #include <utility>
 #include "soil/soil.h"
 #include "dem/dem_loader.h"
-#include "Soil.pb.h"
+#include "SoilChunk.pb.h"
 #include "soil/soil_chunk_location_metadata.h"
 
 namespace hina {
@@ -38,7 +38,7 @@ namespace hina {
 
     public:
 
-        void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) {
+        void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf) override {
             updateEventPtr = event::Events::ConnectBeforePhysicsUpdate(boost::bind(&HinaSSIWorldPlugin::update, this));
             onEntityAddedEventPtr = event::Events::ConnectAddEntity(
                     boost::bind(&HinaSSIWorldPlugin::OnEntityAdded, this, _1));
@@ -83,7 +83,6 @@ namespace hina {
                     }
                 }
             }
-
 
             auto model = world->EntityByName(model_name)->GetParentModel();
             auto link_v = model->GetLinks();
@@ -164,7 +163,7 @@ namespace hina {
         void init_transport() {
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
-            soilPub = node->Advertise<hina_ssi_msgs::msgs::Soil>("~/soil");
+            soilPub = node->Advertise<hina_ssi_msgs::msgs::SoilChunk>("~/soil");
         }
 
         void load_mesh(const physics::LinkPtr &link, const std::string &mesh_uri) {
@@ -183,7 +182,7 @@ namespace hina {
 
             last_sec = sec;
 
-            if (dt_viz > (1. / 4.f)) {
+            if (dt_viz > (1. / 1.f)) {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
             }
@@ -251,75 +250,33 @@ namespace hina {
         }
 
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
-            hina_ssi_msgs::msgs::Soil soilMsg;
+            auto chunks = soilPtr->chunks.get_active_chunks();
 
-            auto chunk = soilPtr->chunks.get_active_chunks();
+            for(auto& chunk : chunks) {
+                hina_ssi_msgs::msgs::SoilChunk chunk_update_msg;
 
-            if(chunk.size() <= 0) {
-                return;
-            }
+                auto field = chunk->container->field;
+                auto x_w = field->x_vert_width;
+                auto y_w = field->y_vert_width;
 
-            soilMsg.set_len_col(2);
-            soilMsg.set_len_col(2);
-            soil_v = std::make_unique<msgs::Vector3d[]>(4);
-
-            auto v = soilMsg.add_chunk_field();
-            for(uint32_t i = 0; i < 2; i++) {
-                for(uint32_t j = 0; j < 2; j++) {
-                    soil_v[i*j] = msgs::Vector3d();
-                    soil_v[i*j].set_x(0);
-                    soil_v[i*j].set_y(0);
-                    soil_v[i*j].set_z(0);
-                    *v = soil_v[i];
+                for(uint32_t i = 0; i < x_w*y_w; i++) {
+                    auto update = chunk_update_msg.add_chunk_field();
+                    auto v3 = field->get_vertex_at_flattened_index(i)->v3;
+                    auto msg = gazebo::msgs::Vector3d();
+                    msg.set_x(v3.X());
+                    msg.set_y(v3.Y());
+                    msg.set_z(v3.Z());
+                    *update = msg;
                 }
+
+                chunk_update_msg.set_len_row(x_w);
+                chunk_update_msg.set_len_col(y_w);
+                chunk_update_msg.set_id_i(chunk->location.i);
+                chunk_update_msg.set_id_j(chunk->location.j);
+                chunk_update_msg.set_len_col(y_w);
+
+                soilPub->Publish(chunk_update_msg);
             }
-
-            auto id_v = std::make_unique<msgs::Vector2d[]>(1);
-            auto v1 = soilMsg.add_id_field();
-            id_v[0] = msgs::Vector2d();
-            id_v[0].set_x(0);
-            id_v[0].set_y(0);
-            *v1 = id_v[0];
-            soilPub->Publish(soilMsg);
-
-//            if (soil_v == nullptr){
-//                soil_v = std::make_unique<msgs::Vector3d[]>(chunk.size()*field->x_vert_width * field->y_vert_width);
-//                soil_id_v = std::make_unique<msgs::Vector2d[]>(chunk.size());
-//            }
-
-//            auto x_w = field->x_vert_width;
-//            auto y_w = field->y_vert_width;
-//
-//            uint32_t counter = 0;
-//            for(auto& c : chunk) {
-//                Vector3d vert;
-//                Vector2d id;
-//                soil_id_v[counter] = msgs::Vector2d();
-//                auto sc = c->location;
-//                soil_id_v[counter].set_x(sc.i);
-//                soil_id_v[counter].set_y(sc.j);
-//                for (int idx = 0; idx < x_w * y_w; idx++) {
-//                    vert = c->container->field->vertex_at_flattened_index(idx)->v3;
-//                    (soil_v)[idx+(counter*x_w*y_w)] = msgs::Vector3d();
-//                    (soil_v)[idx+(counter*x_w*y_w)].set_x(vert.X());
-//                    (soil_v)[idx+(counter*x_w*y_w)].set_y(vert.Y());
-//                    (soil_v)[idx+(counter*x_w*y_w)].set_z(vert.Z());
-//                }
-//                counter++;
-//            }
-//            soilMsg.set_len_col(x_w);
-//            soilMsg.set_len_row(y_w);
-//
-//            for (uint32_t i = 0; i < chunk.size()*x_w * y_w; i++) {
-//                auto v = soilMsg.add_chunk_field();
-//                *v = soil_v[i];
-//            }
-//            for (uint32_t i = 0; i < chunk.size(); i++) {
-//                auto v = soilMsg.add_id_field();
-//                *v = soil_id_v[i];
-//            }
-
-            //soilPub->Publish(soilMsg);
         }
     };
     GZ_REGISTER_WORLD_PLUGIN(HinaSSIWorldPlugin)

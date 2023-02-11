@@ -9,6 +9,6 @@ message Soil
 {
   required uint32     len_row = 1;
   required uint32     len_col = 2;
-  repeated            gazebo.msgs.Vector3d chunk_field = 4;
-  repeated            gazebo.msgs.Vector2d id_field = 5;
+  repeated            gazebo.msgs.Vector3d chunk_field = 3;
+  repeated            gazebo.msgs.Vector2d id_field = 4;
 }

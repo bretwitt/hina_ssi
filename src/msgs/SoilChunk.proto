@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package hina_ssi_msgs.msgs;
+
+import "vector3d.proto";
+import "vector2d.proto";
+
+message SoilChunk
+{
+  required uint32               len_row = 1;
+  required uint32               len_col = 2;
+  required uint32               id_i = 3;
+  required uint32               id_j = 4;
+  repeated gazebo.msgs.Vector3d chunk_field = 5;
+}

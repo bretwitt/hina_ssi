@@ -19,6 +19,7 @@ namespace hina {
     private:
         rendering::ScenePtr scenePtr = nullptr;
         Ogre::ManualObject *manObj = nullptr;
+        Ogre::SceneNode *child = nullptr;
 
         void
         tri_update(const std::shared_ptr<UniformField<ColorAttributes>> &field, Ogre::ManualObject *manObj, uint32_t x_size, uint32_t y_size) {
@@ -40,14 +41,14 @@ namespace hina {
 
     public:
         void setScenePtr(rendering::ScenePtr scenePtr) {
-            this->scenePtr = std::move(scenePtr);
+            this->scenePtr = scenePtr;
         }
 
-        void create_ogre_mesh(const std::shared_ptr<UniformField<ColorAttributes>> &field, int id) {
 
+        void create_ogre_mesh(const std::shared_ptr<UniformField<ColorAttributes>> &field, std::string id) {
             auto sceneManager = scenePtr->OgreSceneManager();
 
-            manObj = sceneManager->createManualObject("terrain_mesh"+ std::to_string(id));
+            manObj = sceneManager->createManualObject("terrain_mesh_" + id);
 
             uint32_t x_size = field->x_vert_width;
             uint32_t y_size = field->y_vert_width;
@@ -56,8 +57,10 @@ namespace hina {
             tri_update(field, manObj, x_size, y_size);
             manObj->end();
 
-            sceneManager->getRootSceneNode()->createChildSceneNode()->attachObject(manObj);
+            child = sceneManager->getRootSceneNode()->createChildSceneNode();
+            child->attachObject(manObj);
         }
+
 
         void update_ogre_mesh(const std::shared_ptr<UniformField<ColorAttributes>> &field) {
             uint32_t x_size = field->x_vert_width;
@@ -66,6 +69,13 @@ namespace hina {
             manObj->beginUpdate(0);
             tri_update(field, manObj, x_size, y_size);
             manObj->end();
+        }
+
+        void delete_ogre_mesh() {
+            if(manObj != nullptr) {
+                auto sceneManager = scenePtr->OgreSceneManager();
+                sceneManager->getRootSceneNode()->removeChild(child);
+            }
         }
     };
 }

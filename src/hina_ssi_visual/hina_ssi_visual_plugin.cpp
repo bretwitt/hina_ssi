@@ -4,14 +4,16 @@
 #include <gazebo/common/common.hh>
 #include <memory>
 #include <gazebo/rendering/rendering.hh>
+#include <gazebo/physics/physics.hh>
 #include <utility>
 #include "ogre_soil_renderer.cpp"
-#include "Soil.pb.h"
+#include "SoilChunk.pb.h"
 #include "../hina_ssi_physics/soil/soil_chunk_location_metadata.h"
 #include "../common/field/chunked_field.h"
 #include "visual_chunk.h"
 
 using namespace gazebo;
+using ignition::math::Vector2d;
 
 namespace hina {
     class HinaSSIVisualPlugin : public VisualPlugin {
@@ -25,10 +27,15 @@ namespace hina {
         transport::SubscriberPtr sub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
 
+        common::Time time;
+        double sec{};
+        double last_sec{};
+        double last_sec_viz{};
+
         ChunkedField<std::shared_ptr<VisualChunk>> chunks;
 
         bool soil_initialized = false;
-        bool init_viz = false;
+
         std::unordered_map<int,std::unordered_map<int,
             std::shared_ptr<UniformField<ColorAttributes>>>> map;
 
@@ -36,13 +43,16 @@ namespace hina {
         uint32_t verts_y;
 
     public:
+        HinaSSIVisualPlugin() : VisualPlugin() {
+        }
 
-        void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) {
+        void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) override {
             connectionPtr = event::Events::ConnectRender(boost::bind(&HinaSSIVisualPlugin::update, this));
             init_transport();
             init_chunk_field();
             visual = _visual;
         }
+
 
         void init_transport() {
             this->node = transport::NodePtr(new transport::Node());
@@ -54,54 +64,48 @@ namespace hina {
             chunks.register_chunk_create_callback(boost::bind(&HinaSSIVisualPlugin::OnChunkCreated, this, _1, _2));
         }
 
-        void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::Soil> &soil_update) {
+        void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::SoilChunk> &soil_update) {
+            uint32_t x_verts = soil_update->len_col();
+            uint32_t y_verts = soil_update->len_row();
 
-            int vert_x = soil_update->len_col();
-            int vert_y = soil_update->len_row();
+            uint32_t i = soil_update->id_i();
+            uint32_t j = soil_update->id_j();
 
-            this->verts_x = vert_x;
-            this->verts_y = vert_y;
+            this->verts_x = x_verts;
+            this->verts_y = y_verts;
 
             auto v = soil_update->chunk_field();
-            auto id = soil_update->id_field();
 
-            chunks.pre_update();
+            chunks.poll_chunk( ChunkedFieldLocation { i,j });
 
-            for(const gazebo::msgs::Vector2d& id0 : id) {
-                chunks.poll_chunk({ id0.x(), id0.y() });
+            auto c = chunks.get_chunk(ChunkedFieldLocation{i,j});
+
+            uint32_t count = 0;
+            for(auto& vert : soil_update->chunk_field()) {
+                c->container->update_field(vert,count++);
             }
-
-            uint32_t i = 0;
-            uint32_t size = vert_x*vert_y;
-            for(const gazebo::msgs::Vector2d& id0 : id) {
-                auto start = i*size;
-                auto end = start + size;
-                auto c = chunks.get_chunk_cont({id0.x(), id0.y()});
-                if( c != nullptr ) {
-                    std::copy(v.begin() + start, v.begin() + end, std::back_inserter(c->field_v));
-                }
-                i++;
-            }
-
-            if(!soil_initialized) {
-                init_viz = true;
-                soil_initialized = true;
-            }
-
-            chunks.post_update();
         }
 
         std::shared_ptr<VisualChunk> OnChunkCreated(int i, int j) {
             auto vc = std::make_shared<VisualChunk>();
-            vc->init_visual_chunk(visual, this->verts_x, this->verts_y);
+            vc->init_visual_chunk(visual, this->verts_x, this->verts_y, i, j);
             return vc;
         }
 
         void update() {
-            if(soil_initialized) {
-                for(auto chunk : chunks.get_active_chunks()) {
-                    chunk->container->update();
-                }
+            time = common::Time::GetWallTime();
+
+            sec = time.Double();
+
+            double dt = sec - last_sec;
+
+            if (dt > 30) {
+                chunks.post_update();
+                chunks.pre_update();
+                last_sec = sec;
+            }
+            for(auto chunk : chunks.get_active_chunks()) {
+                chunk->container->update();
             }
         }
     };

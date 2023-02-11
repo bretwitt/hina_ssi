@@ -46,8 +46,6 @@ namespace hina {
             this->location = location;
         }
 
-
-
         void generate_vertices(SandboxConfig config) {
             for (int j = 0; j < field->y_vert_width; j++) {
                 for (int i = 0; i < field->x_vert_width; i++) {
