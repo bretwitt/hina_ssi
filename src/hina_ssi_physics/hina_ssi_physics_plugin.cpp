@@ -140,8 +140,8 @@ namespace hina {
             auto sandbox_elem = sdf->GetElement("sandbox");
             int x_width = sandbox_elem->GetElement("width_x")->Get<int>();
             int y_width = sandbox_elem->GetElement("width_y")->Get<int>();
-            auto scale = sandbox_elem->GetElement("resolution")->Get<double>();
-            auto angle = sandbox_elem->GetElement("angle")->Get<double>();
+            double scale = sandbox_elem->GetElement("resolution")->Get<double>();
+            double angle = sandbox_elem->GetElement("angle")->Get<double>();
 
             soilPtr = std::make_shared<Soil>(SandboxConfig{x_width, y_width, scale, angle});
         }
@@ -149,12 +149,12 @@ namespace hina {
         void init_dem() {
             auto dem_elem = sdf->GetElement("dem");
 
-            auto filename = dem_elem->GetElement("file")->Get<std::string>();
+            std::string filename = dem_elem->GetElement("file")->Get<std::string>();
             std::string file_name = gazebo::common::SystemPaths::Instance()->FindFile(filename);
             auto dem = DEMLoader::load_dem_from_geotiff(file_name);
 
             if(dem_elem->HasElement("upscale_res")) {
-                auto upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
+                double upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
                 dem->upsample(upscale_res);
             }
             soilPtr = std::make_shared<Soil>(dem);

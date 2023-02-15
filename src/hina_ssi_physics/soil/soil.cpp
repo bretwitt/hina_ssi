@@ -5,6 +5,10 @@ using namespace hina;
 
 using ignition::math::Vector3d;
 
+
+Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, config.y_width }, config.scale) {
+}
+
 Soil::Soil(FieldVertexDimensions dims, double scale) : Soil() {
     this->scale = scale;
     vtx_dims = dims;
@@ -15,15 +19,12 @@ Soil::Soil(FieldTrueDimensions dims, double scale) : Soil() {
     vtx_dims = UniformField<SoilAttributes>::as_vtx_dims(dims,scale);
 }
 
-Soil::Soil() {
-    chunks.register_chunk_create_callback(boost::bind(&Soil::OnChunkCreation, this, _1, _2));
-}
-
-Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, config.y_width }, config.scale) {
-}
-
 Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldVertexDimensions { dem->field->y_vert_width, dem->field->x_vert_width }, dem->field->scale) {
     load_dem_geometry(dem);
+}
+
+Soil::Soil() {
+    chunks.register_chunk_create_callback(boost::bind(&Soil::OnChunkCreation, this, _1, _2));
 }
 
 void Soil::generate_sandbox_geometry(SandboxConfig config) {
@@ -49,7 +50,7 @@ std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttri
 }
 
 Vector2d Soil::chunk_idx_to_worldpos(int i, int j) {
-    return Vector2d( i*(this->vtx_dims.verts_x*this->scale), j*(this->vtx_dims.verts_y*this->scale) );
+    return Vector2d( i*((this->vtx_dims.verts_x-1)*this->scale), j*((this->vtx_dims.verts_y-1)*this->scale) );
 }
 
 Vector2d Soil::worldpos_to_chunk_idx(Vector3d pos) {

@@ -27,8 +27,6 @@ namespace hina {
             this->x_vert_width = verts_x;
             this->y_vert_width = verts_y;
             this->scale = scl;
-            x_offset = -(double) (x_vert_width - 1) / 2;
-            y_offset = -(double) (y_vert_width - 1) / 2;
         }
 
         void recalculate_width() {
@@ -53,15 +51,7 @@ namespace hina {
 
         double scale{};
 
-        double x_offset = 0;
-        double y_offset = 0;
-
-        explicit UniformField(FieldTrueDimensions dims, double resolution) {
-            this->x_width = dims.true_x;
-            this->y_width = dims.true_y;
-            uint32_t verts_x = floor(x_width / resolution) + 1;
-            uint32_t verts_y = floor(y_width / resolution) + 1;
-            load_vertex_dims(verts_x, verts_y, resolution);
+        explicit UniformField(FieldTrueDimensions dims, double resolution) : UniformField(as_vtx_dims(dims,resolution), resolution) {
         }
 
         explicit UniformField(FieldVertexDimensions dims, double resolution) {
