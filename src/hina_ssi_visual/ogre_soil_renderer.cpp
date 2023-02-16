@@ -48,7 +48,6 @@ namespace hina {
         void create_ogre_mesh(const std::shared_ptr<UniformField<ColorAttributes>> &field, std::string id) {
             auto sceneManager = scenePtr->OgreSceneManager();
 
-            std::cout << sceneManager << std::endl;
             manObj = sceneManager->createManualObject("terrain_mesh_" + id);
 
             uint32_t x_size = field->x_vert_width;
