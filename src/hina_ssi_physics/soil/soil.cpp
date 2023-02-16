@@ -10,6 +10,10 @@ Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, co
     sampler = std::make_shared<SandboxVertexSampler>(config.angle);
 }
 
+Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldTrueDimensions { 1, 1 }, 0.005) {
+    sampler = std::make_shared<DEMVertexSampler>(dem);
+}
+
 Soil::Soil(FieldVertexDimensions dims, double scale) : Soil() {
     this->scale = scale;
     vtx_dims = dims;
@@ -20,8 +24,6 @@ Soil::Soil(FieldTrueDimensions dims, double scale) : Soil() {
     vtx_dims = UniformField<SoilAttributes>::as_vtx_dims(dims,scale);
 }
 
-Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldVertexDimensions { dem->field->y_vert_width, dem->field->x_vert_width }, dem->field->scale) {
-}
 
 Soil::Soil() {
     chunks.register_chunk_create_callback(boost::bind(&Soil::OnChunkCreation, this, _1, _2));

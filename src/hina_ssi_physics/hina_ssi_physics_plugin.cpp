@@ -152,11 +152,12 @@ namespace hina {
             std::string filename = dem_elem->GetElement("file")->Get<std::string>();
             std::string file_name = gazebo::common::SystemPaths::Instance()->FindFile(filename);
             auto dem = DEMLoader::load_dem_from_geotiff(file_name);
+//
+//            if(dem_elem->HasElement("upscale_res")) {
+//                double upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
+//                dem->upsample(upscale_res);
+//            }
 
-            if(dem_elem->HasElement("upscale_res")) {
-                double upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
-                dem->upsample(upscale_res);
-            }
             soilPtr = std::make_shared<Soil>(dem);
         }
 

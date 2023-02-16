@@ -14,6 +14,7 @@
 #include "../../common/field/chunked_field.h"
 #include "../../common/field/base_vertex_sampler.h"
 #include "../sandbox/sandbox_vertex_sampler.h"
+#include "../dem/dem_vertex_sampler.h"
 
 namespace hina {
     class Soil {
