@@ -46,7 +46,7 @@ namespace hina {
                 init_viz = true;
                 return;
             }
-            else if( init_viz ){
+            else if( init_viz && field != nullptr ){
                 update_soil_mesh(field);
             }
         }

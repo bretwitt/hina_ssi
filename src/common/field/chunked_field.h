@@ -65,7 +65,10 @@ namespace hina {
         }
 
         void update_chunk(ChunkedFieldLocation loc) {
-            chunks[loc.i][loc.j]->keep_loaded_flag = true;
+            auto c = chunks[loc.i][loc.j];
+            if(c != nullptr) {
+                c->keep_loaded_flag = true;
+            }
         }
 
         std::shared_ptr <Chunk<T>> get_chunk(ChunkedFieldLocation loc) {
@@ -73,7 +76,11 @@ namespace hina {
         }
 
         T get_chunk_cont(ChunkedFieldLocation loc) {
-            return chunks[loc.i][loc.j]->container;
+            auto c = chunks[loc.i][loc.j];
+            if(c != nullptr) {
+                return c->container;
+            }
+            return nullptr;
         }
 
         void pre_update() {

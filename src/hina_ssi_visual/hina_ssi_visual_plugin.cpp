@@ -80,10 +80,6 @@ namespace hina {
 
             auto c = chunks.get_chunk(ChunkedFieldLocation{i,j});
 
-            if(c == nullptr) {
-                return;
-            }
-
             uint32_t count = 0;
             for(auto& vert : soil_update->chunk_field()) {
                 c->container->update_field(vert,count++);
