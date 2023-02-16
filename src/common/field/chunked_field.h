@@ -6,6 +6,7 @@
 #include "chunk.h"
 #include "chunked_field_location.h"
 #include <vector>
+#include "../../common/field/base_vertex_sampler.h"
 
 using ignition::math::Vector2d;
 

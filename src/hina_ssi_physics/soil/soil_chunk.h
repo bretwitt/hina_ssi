@@ -8,6 +8,7 @@
 #include "../../common/field/uniform_field.h"
 #include "soil_data.h"
 #include "soil_chunk_location_metadata.h"
+#include "../../common/field/base_vertex_sampler.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
@@ -18,7 +19,7 @@ namespace hina {
     class SoilChunk {
 
     public:
-
+        SandboxConfig config;
         SoilChunkLocationMetadata location;
 
         Vector2d max;
@@ -30,37 +31,18 @@ namespace hina {
 
         std::shared_ptr <UniformField<SoilAttributes>> field = nullptr;
 
-        SandboxConfig config;
-
         SoilChunk() {
         }
 
-        void init_chunk(FieldTrueDimensions dims, double scale, SoilChunkLocationMetadata location) {
-              init_chunk(UniformField<SoilAttributes>::as_vtx_dims(dims,scale),scale,location);
+        void init_chunk(FieldTrueDimensions dims, double scale, SoilChunkLocationMetadata location, std::shared_ptr<BaseVertexSampler> sampler) {
+              init_chunk(UniformField<SoilAttributes>::as_vtx_dims(dims,scale),scale,location, sampler);
         }
 
-        void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocationMetadata location) {
+        void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocationMetadata location, std::shared_ptr<BaseVertexSampler> sampler) {
             this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
             this->field->set_origin({location.origin.X(), location.origin.Y()});
-            this->field->init_field();
+            this->field->init_field(sampler);
             this->location = location;
-        }
-
-        void generate_vertices(SandboxConfig config) {
-            for (int j = 0; j < field->y_vert_width; j++) {
-                for (int i = 0; i < field->x_vert_width; i++) {
-                    auto vertex = field->get_vertex_at_index(i, j);
-
-                    auto x = vertex->v3.X();
-                    auto y = vertex->v3.Y();
-
-                    const double z = y * tan(config.angle);
-
-                    auto v3 = Vector3d(x, y, z);
-
-                    field->set_vertex_at_index(i, j, std::make_shared<FieldVertex<SoilAttributes>>(v3));
-                }
-            }
         }
 
         typedef std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> FieldV;
@@ -218,10 +200,6 @@ namespace hina {
             return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
         };
 
-//
-//        void generate_vertices(DEM dem) {
-//
-//        }
     };
 }
 

@@ -12,26 +12,27 @@
 #include "../../common/field/uniform_field.h"
 #include "soil_chunk.h"
 #include "../../common/field/chunked_field.h"
+#include "../../common/field/base_vertex_sampler.h"
+#include "../sandbox/sandbox_vertex_sampler.h"
 
 namespace hina {
     class Soil {
 
     private:
-        Soil(FieldVertexDimensions dims, double scale);
-        Soil(FieldTrueDimensions dims, double scale);
-
         FieldVertexDimensions vtx_dims;
+        std::shared_ptr<BaseVertexSampler> sampler;
 
         double scale = 0;
+
+        Soil(FieldVertexDimensions dims, double scale);
+        Soil(FieldTrueDimensions dims, double scale);
 
 
     public:
         ChunkedField<std::shared_ptr<SoilChunk>> chunks;
 
         Soil(SandboxConfig config);
-
         Soil(const std::shared_ptr<DEM>& dem);
-
         Soil();
 
         void generate_sandbox_geometry(SandboxConfig config);
@@ -48,7 +49,7 @@ namespace hina {
         Vector2d chunk_idx_to_worldpos(int i, int j);
 
         std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>>
-        try_deform(const Triangle &meshTri, const physics::LinkPtr &link, float dt, float &displaced_volume);
+            try_deform(const Triangle &meshTri, const physics::LinkPtr &link, float dt, float &displaced_volume);
 
     };
 }

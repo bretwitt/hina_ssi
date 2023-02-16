@@ -9,6 +9,7 @@
 
 #include "field_vertex.h"
 #include "vertex_dims.h"
+#include "../../common/field/base_vertex_sampler.h"
 
 using namespace gazebo;
 
@@ -43,6 +44,7 @@ namespace hina {
         std::unique_ptr<uint32_t[]> indices{};
         std::unique_ptr<UniformFieldMap> vertices{};
 
+
         uint32_t x_vert_width{};
         uint32_t y_vert_width{};
 
@@ -72,11 +74,11 @@ namespace hina {
             return FieldVertexDimensions { verts_x, verts_y };
         }
 
-        void init_field() {
+        void init_field(std::shared_ptr<BaseVertexSampler> sampler) {
             vertices = std::make_unique<UniformFieldMap>();
             indices = std::make_unique<uint32_t[]>((x_vert_width - 1) * (y_vert_width - 1) * 3 * 2);
 
-            generate_vertices();
+            generate_vertices(sampler);
             generate_indices();
         }
 
@@ -120,20 +122,21 @@ namespace hina {
         }
 
         void get_nearest_index(ignition::math::Vector2d vtx, uint32_t &x, uint32_t &y) const {
-            x = (int) ((vtx.X() / scale) /*- x_offset*/);
-            y = (int) ((vtx.Y() / scale) /*- y_offset*/);
+            x = (int) ((vtx.X() / scale));
+            y = (int) ((vtx.Y() / scale));
         }
 
-        void generate_vertices() {
+        void generate_vertices(std::shared_ptr<BaseVertexSampler> sampler) {
             for (int j = 0; j < y_vert_width; j++) {
                 for (int i = 0; i < x_vert_width; i++) {
                     auto i_f = (float) i;
                     auto j_f = (float) j;
 
-                    auto x = (scale * (i_f /*+ x_offset*/)) + origin.x;
-                    auto y = (scale * (j_f /*+ y_offset*/)) + origin.y;
+                    auto x = (scale * i_f) + origin.x;
+                    auto y = (scale * j_f) + origin.y;
+                    double z = sampler->get_z_at_index(x,y);
 
-                    auto v3 = Vector3d(x, y, 0);
+                    auto v3 = Vector3d(x, y, z);
 
                     set_vertex_at_index(i, j, std::make_shared<FieldVertex<V>>(v3));
                 }

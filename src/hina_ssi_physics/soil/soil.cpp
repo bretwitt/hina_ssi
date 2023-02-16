@@ -7,6 +7,7 @@ using ignition::math::Vector3d;
 
 
 Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, config.y_width }, config.scale) {
+    sampler = std::make_shared<SandboxVertexSampler>(config.angle);
 }
 
 Soil::Soil(FieldVertexDimensions dims, double scale) : Soil() {
@@ -20,25 +21,10 @@ Soil::Soil(FieldTrueDimensions dims, double scale) : Soil() {
 }
 
 Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldVertexDimensions { dem->field->y_vert_width, dem->field->x_vert_width }, dem->field->scale) {
-    load_dem_geometry(dem);
 }
 
 Soil::Soil() {
     chunks.register_chunk_create_callback(boost::bind(&Soil::OnChunkCreation, this, _1, _2));
-}
-
-void Soil::generate_sandbox_geometry(SandboxConfig config) {
-}
-
-void Soil::load_dem_geometry(const std::shared_ptr<DEM>& dem) const {
-//    auto field = sc->field;
-//    for(int i = 0; i < dem->field->y_vert_width; i++) {
-//        for(int j = 0; j < dem->field->x_vert_width; j++) {
-//            Vector3d dem_v3 = dem->field->get_vertex_at_index(i,j)->v3;
-//            Vector3d v3 ( dem_v3.X(), dem_v3.Y(), dem_v3.Z());
-//            field->set_vertex_at_index(i, j, std::make_shared<FieldVertex<SoilAttributes>>(v3));
-//        }
-//    }
 }
 
 std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume) {
@@ -76,7 +62,7 @@ void Soil::pre_update() {
 
 std::shared_ptr<SoilChunk> Soil::OnChunkCreation(int i, int j) {
     auto sc = std::make_shared<SoilChunk>();
-    sc->init_chunk(vtx_dims, scale, { i,j, chunk_idx_to_worldpos(i,j)});
+    sc->init_chunk(vtx_dims, scale, { i,j, chunk_idx_to_worldpos(i,j)}, sampler);
     return sc;
 }
 

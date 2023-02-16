@@ -4,7 +4,7 @@
 #include <gazebo/common/common.hh>
 #include <memory>
 #include <utility>
-#include "sandbox_config.h"
+#include "../sandbox/sandbox_config.h"
 #include "../../common/field/uniform_field.h"
 
 using ignition::math::Vector3d;

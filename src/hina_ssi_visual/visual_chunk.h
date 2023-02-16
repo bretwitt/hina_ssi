@@ -34,7 +34,7 @@ namespace hina {
 
         void init_visual_chunk(rendering::VisualPtr visualPtr, uint32_t verts_x, uint32_t verts_y, int i, int j) {
             field = std::make_shared<UniformField<ColorAttributes>>(FieldVertexDimensions{verts_x,verts_y}, 1);
-            field->init_field();
+            field->init_field(std::make_shared<BaseVertexSampler>());
             visual = visualPtr;
             this->i = i;
             this->j = j;

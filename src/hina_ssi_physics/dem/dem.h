@@ -16,12 +16,12 @@ namespace hina {
 
         DEM(FieldVertexDimensions dims, double scale) {
             field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
-            field->init_field();
+            //field->init_field();
         }
 
         DEM(FieldTrueDimensions dims, double scale) {
             field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
-            field->init_field();
+            //field->init_field();
         }
 
         void load_vertex(uint32_t flattened_index, double z) {
@@ -44,7 +44,7 @@ namespace hina {
             uint32_t verts_y = field->y_vert_width;
 
             auto new_field = std::make_shared<UniformField<SoilAttributes>>(FieldTrueDimensions { static_cast<double>(x_width), static_cast<double>(y_width) }, new_res);
-            new_field->init_field();
+            //new_field->init_field();
 
             uint32_t verts_x_p = new_field->x_vert_width;
             uint32_t verts_y_p = new_field->y_vert_width;
