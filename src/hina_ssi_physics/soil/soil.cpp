@@ -29,11 +29,12 @@ Soil::Soil() {
     chunks.register_chunk_create_callback(boost::bind(&Soil::OnChunkCreation, this, _1, _2));
 }
 
-std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt, float& displaced_volume) {
+typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>> Field_V;
+Field_V Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float& displaced_volume, float dt) {
     auto idx = worldpos_to_chunk_idx(meshTri.centroid());
     auto chunk = chunks.get_chunk_cont({idx.X(),idx.Y()});
     if (chunk != nullptr) {
-        return chunk->try_deform(meshTri, link, dt);
+        return chunk->try_deform(meshTri, link, displaced_volume, dt);
     }
 }
 
@@ -47,15 +48,7 @@ Vector2d Soil::worldpos_to_chunk_idx(Vector3d pos) {
 
 void Soil::query_chunk(Vector3d pos) {
     auto v2 = worldpos_to_chunk_idx(pos);
-    auto i = static_cast<int>(v2.X());
-    auto j = static_cast<int>(v2.Y());
-
-    // TODO: RADIUS
-    chunks.poll_chunk({i,j});
-    chunks.poll_chunk({i + 1,j});
-    chunks.poll_chunk({i - 1,j});
-    chunks.poll_chunk({i,j + 1});
-    chunks.poll_chunk({i,j - 1});
+    chunks.poll_chunk({static_cast<int>(v2.X()),static_cast<int>(v2.Y())});
 }
 
 void Soil::pre_update() {
@@ -66,6 +59,10 @@ std::shared_ptr<SoilChunk> Soil::OnChunkCreation(int i, int j) {
     auto sc = std::make_shared<SoilChunk>();
     sc->init_chunk(vtx_dims, scale, { i,j, chunk_idx_to_worldpos(i,j)}, sampler);
     return sc;
+}
+
+ChunkedField<std::shared_ptr<SoilChunk>> Soil::get_chunks() {
+    return this->chunks;
 }
 
 void Soil::post_update() {

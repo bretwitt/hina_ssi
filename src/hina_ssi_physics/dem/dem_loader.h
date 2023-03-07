@@ -32,8 +32,14 @@ namespace hina {
             dataset->GetGeoTransform(geoTransform);
             double res = geoTransform[1];
 
-            std::shared_ptr<DEM> dem = std::make_shared<DEM>(FieldVertexDimensions{ static_cast<double>(nXSize),
-                                                                                    static_cast<double>(nYSize)},res);
+            std::shared_ptr<DEM> dem = std::make_shared<DEM>(
+                    FieldVertexDimensions
+                    {
+                        static_cast<double>(nXSize),
+                        static_cast<double>(nYSize)
+                    },
+                    res
+            );
 
             for(uint32_t y_line = 0; y_line < nYSize; y_line++) {
                 heightScanBuf = (float*)CPLMalloc(sizeof(float)*nXSize);

@@ -28,9 +28,11 @@ namespace hina {
         Soil(FieldVertexDimensions dims, double scale);
         Soil(FieldTrueDimensions dims, double scale);
 
+        ChunkedField<std::shared_ptr<SoilChunk>> chunks;
 
     public:
-        ChunkedField<std::shared_ptr<SoilChunk>> chunks;
+
+        ChunkedField<std::shared_ptr<SoilChunk>> get_chunks();
 
         Soil(SandboxConfig config);
         Soil(const std::shared_ptr<DEM>& dem);
@@ -49,8 +51,8 @@ namespace hina {
         Vector2d worldpos_to_chunk_idx(Vector3d pos);
         Vector2d chunk_idx_to_worldpos(int i, int j);
 
-        std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>>
-            try_deform(const Triangle &meshTri, const physics::LinkPtr &link, float dt, float &displaced_volume);
+        std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>>
+            try_deform(const Triangle &meshTri, const physics::LinkPtr &link, float& displaced_volume, float dt);
 
     };
 }

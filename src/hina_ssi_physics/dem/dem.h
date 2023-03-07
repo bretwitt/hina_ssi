@@ -64,11 +64,9 @@ namespace hina {
                     auto vertex = field->get_vertex_at_index(x,y);
                     double new_x = factor_x * ((double)x);
                     double new_y = factor_y * ((double)y);
-
                     field_x.push_back(new_x);
                     field_y.push_back(new_y);
                     field_z.push_back(vertex->v3.Z());
-
                 }
             }
             _2D::BicubicInterpolator<double> bicubicInterp;

@@ -112,12 +112,6 @@ namespace hina {
         }
 
         void init_soil() {
-            if (sdf->HasElement("dem")) {
-                init_dem();
-            } else if(sdf->HasElement("sandbox")){
-                init_sandbox();
-            }
-
             auto params = sdf->GetElement("params");
 
             auto k_phi = params->GetElement("k_phi")->Get<double>();
@@ -125,15 +119,13 @@ namespace hina {
             auto c = params->GetElement("c")->Get<double>();
             auto phi = params->GetElement("phi")->Get<double>();
 
-//            auto f = soilPtr->get_chunk()->field;
-//
-//            for(uint32_t i = 0; i < f->x_vert_width*f->y_vert_width; i++) {
-//                auto vtx = f->get_vertex_at_flattened_index(i)->v;
-//                vtx->k_phi = k_phi;
-//                vtx->k_e = k_e;
-//                vtx->c = c;
-//                vtx->phi = phi;
-//            }
+            if (sdf->HasElement("dem")) {
+                init_dem();
+            } else if(sdf->HasElement("sandbox")){
+                init_sandbox();
+            }
+
+
         }
 
         void init_sandbox() {
@@ -152,11 +144,11 @@ namespace hina {
             std::string filename = dem_elem->GetElement("file")->Get<std::string>();
             std::string file_name = gazebo::common::SystemPaths::Instance()->FindFile(filename);
             auto dem = DEMLoader::load_dem_from_geotiff(file_name);
-//
-//            if(dem_elem->HasElement("upscale_res")) {
-//                double upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
-//                dem->upsample(upscale_res);
-//            }
+
+            if(dem_elem->HasElement("upscale_res")) {
+                double upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
+                dem->upsample(upscale_res);
+            }
 
             soilPtr = std::make_shared<Soil>(dem);
         }
@@ -213,16 +205,17 @@ namespace hina {
                     auto max = aabb.Max();
                     auto min = aabb.Min();
 
-                    soil->query_chunk(max);
-                    soil->query_chunk(min);         // TODO: Loading radius
+                    soil->query_chunk((aabb.Max() + aabb.Min()) / 2);
 
-                    std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint;
-                    std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint_idx;
+                    std::vector<std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>>> footprint;
+                    std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint_idx;
+
                     float total_displaced_volume = 0.0f;
 
+                    // Vertex level computations
                     #pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                     {
-                    #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
+                    #pragma omp for nowait schedule(guided) reduction(+:total_displaced_volume)
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
                             auto idx = idx_unrolled * 3;
 
@@ -241,17 +234,53 @@ namespace hina {
                             auto meshTri = Triangle(c1v0, c1v1, c1v2);
 
                             float displaced_volume = 0.0f;
-                            footprint_idx = soil->try_deform(meshTri, link, dt, displaced_volume);
+                            footprint_idx = soil->try_deform(meshTri, link, displaced_volume, dt);
                             total_displaced_volume += displaced_volume;
+                            /*
+                            #pragma omp critical
+                            {
+                                footprint.push_back(footprint_idx);
+                            };
+                             */
                         }
                     }
+                    /*
+                    // Footprint level computations
+
+                    // 1. Compute border and inner nodes
+                    std::vector<Vector2d> border_w;
+                    std::vector<Vector2d> inner_w;
+
+                    for(const auto& tri_ftp : footprint) {
+                        for(const auto& idx : tri_ftp) {
+                            auto x = std::get<0>(idx);
+                            auto y = std::get<1>(idx);
+                            auto chunk = std::get<2>(idx);
+                            auto v3 = std::get<3>(idx);
+                        }
+                    }
+                     */
+
+                    /*
+                    for(const auto& c : soilPtr->get_chunks().get_active_chunks()) {
+
+                    }
+                     */
+
+                    // 2. Compute footprint size
+
+
+                    // 3. Deposit soil
+
+
+                    // 4. Erode
                 }
             }
             soil->post_update();
         }
 
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
-            auto chunks = soilPtr->chunks.get_active_chunks();
+            auto chunks = soilPtr->get_chunks().get_active_chunks();
 
             for(auto& chunk : chunks) {
                 hina_ssi_msgs::msgs::SoilChunk chunk_update_msg;

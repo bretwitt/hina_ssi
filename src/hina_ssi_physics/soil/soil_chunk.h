@@ -45,8 +45,8 @@ namespace hina {
             this->location = location;
         }
 
-        typedef std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> FieldV;
-        FieldV try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float dt) {
+        typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>> FieldV;
+        FieldV try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float& displaced_vol, float dt) {
             double max_x, max_y, min_x, min_y;
             double scale;
             int iter_x, iter_y;
@@ -74,28 +74,20 @@ namespace hina {
             iter_y = ceil( ((max_y - min_y) / scale) ) + 1;
 
             // Search soil field within bounds under AABB
-            std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>> penetrating_coords;
+            std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>> penetrating_coords;
 
             for(uint32_t k = 0; k < iter_x*iter_y; k++) {
-                uint32_t y = floor(k / iter_y);             // Unpack for loop into (x,y) index
-                uint32_t x = k - (iter_x*y);
-                std::shared_ptr<FieldVertex<SoilAttributes>> v3 = field->get_vertex_at_index(x + x_start, y + y_start);
+                uint32_t y = (floor(k / iter_y)) ;             // Unpack for loop into (x,y) index
+                uint32_t x = (k - (iter_x*y) ) ;
+                auto v3 = field->get_vertex_at_index(x+ x_start, y+ y_start);
+
+                // If mesh tri penetrates vtx
                 if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
-                    penetrating_coords.emplace_back(x + x_start,y + y_start,v3);
+                    penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
+                    terramx_deform(link, meshTri, x+ x_start, y+ y_start, v3, scale, dt, displaced_vol);
                 }
             }
 
-            // For each penerated vertex, perform deformation
-            // TODO: CUDA this
-            for(auto & penetrating_coord : penetrating_coords) {
-                auto x = std::get<0>(penetrating_coord);
-                auto y = std::get<1>(penetrating_coord);
-                auto v3 = std::get<2>(penetrating_coord);
-
-                float displaced_volume_vtx = 0.0f;
-
-                terramx_deform(link, meshTri, x, y, v3, scale, dt, displaced_volume_vtx);
-            }
             return penetrating_coords;
         };
 
@@ -104,6 +96,8 @@ namespace hina {
                             const std::shared_ptr<FieldVertex<SoilAttributes>> &vertex, double w, float dt,
                             float &displaced_volume)
         {
+
+            displaced_volume = 0;
 
             auto v3 = vertex->v3;
             auto v3_0 = vertex->v3_0;
@@ -150,7 +144,7 @@ namespace hina {
 
                 auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() +
                                    tri6.normal()).Normalized();
-                //auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area()) / 3;
+
                 auto area = w * w;
 
                 normal_dA = -normal_sum * area;
