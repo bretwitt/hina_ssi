@@ -51,6 +51,7 @@ namespace hina {
 
         typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>> FieldV;
         FieldV try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float& displaced_vol, float dt) {
+
             double max_x, max_y, min_x, min_y;
             double scale;
             int iter_x, iter_y;
@@ -91,7 +92,6 @@ namespace hina {
                     terramx_deform(link, meshTri, x+ x_start, y+ y_start, v3, scale, dt, displaced_vol);
                 }
             }
-
             return penetrating_coords;
         };
 
@@ -107,6 +107,7 @@ namespace hina {
             auto v3_0 = vertex->v3_0;
 
             auto vert_attr = this->sampler->get_params_at_index(x,y);
+
             auto vert_state = vertex->v;
 
             double k_phi = vert_attr.k_phi;
@@ -156,7 +157,6 @@ namespace hina {
 
                 vert_state->normal_dA = normal_dA;
 
-
                 auto sigma_star = sigma_t;
                 s_sink = s_y;
 
@@ -188,6 +188,7 @@ namespace hina {
 
             // Apply f/t
             linkPtr->AddForceAtWorldPosition(force_v, Vector3d(v3_0.X(), v3_0.Y(), force_origin));
+
         };
 
         bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect) {

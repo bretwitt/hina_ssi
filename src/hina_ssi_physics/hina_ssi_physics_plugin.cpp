@@ -214,6 +214,7 @@ namespace hina {
                     float total_displaced_volume = 0.0f;
 
                     // Vertex level computations
+
                     #pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                     {
                     #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
@@ -245,6 +246,7 @@ namespace hina {
                              */
                         }
                     }
+
                     /*
                     // Footprint level computations
 
