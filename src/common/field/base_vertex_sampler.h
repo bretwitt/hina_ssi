@@ -7,7 +7,6 @@ using ignition::math::Vector2d;
 
 class BaseVertexSampler {
 public:
-    std::string name = "base";
     virtual double get_z_at_index(double x, double y) {
         return 0;
     };

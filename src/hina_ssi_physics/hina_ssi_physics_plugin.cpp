@@ -10,7 +10,7 @@
 #include "soil/soil.h"
 #include "dem/dem_loader.h"
 #include "SoilChunk.pb.h"
-#include "soil/soil_chunk_location_metadata.h"
+#include "soil/soil_chunk_location.h"
 
 namespace hina {
     class HinaSSIWorldPlugin : public WorldPlugin {
@@ -112,6 +112,14 @@ namespace hina {
         }
 
         void init_soil() {
+            if (sdf->HasElement("dem")) {
+                init_dem();
+            } else if(sdf->HasElement("sandbox")){
+                init_sandbox();
+            }
+        }
+
+        void init_sandbox() {
             auto params = sdf->GetElement("params");
 
             auto k_phi = params->GetElement("k_phi")->Get<double>();
@@ -119,23 +127,16 @@ namespace hina {
             auto c = params->GetElement("c")->Get<double>();
             auto phi = params->GetElement("phi")->Get<double>();
 
-            if (sdf->HasElement("dem")) {
-                init_dem();
-            } else if(sdf->HasElement("sandbox")){
-                init_sandbox();
-            }
+            auto soil_params = SoilPhysicsParams { k_phi, k_e, 0, c, phi };
 
 
-        }
-
-        void init_sandbox() {
             auto sandbox_elem = sdf->GetElement("sandbox");
             int x_width = sandbox_elem->GetElement("width_x")->Get<int>();
             int y_width = sandbox_elem->GetElement("width_y")->Get<int>();
             double scale = sandbox_elem->GetElement("resolution")->Get<double>();
             double angle = sandbox_elem->GetElement("angle")->Get<double>();
 
-            soilPtr = std::make_shared<Soil>(SandboxConfig{x_width, y_width, scale, angle});
+            soilPtr = std::make_shared<Soil>(SandboxConfig{x_width, y_width, scale, angle, soil_params});
         }
 
         void init_dem() {

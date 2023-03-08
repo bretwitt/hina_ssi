@@ -8,7 +8,7 @@
 #include <utility>
 #include "ogre_soil_renderer.cpp"
 #include "SoilChunk.pb.h"
-#include "../hina_ssi_physics/soil/soil_chunk_location_metadata.h"
+#include "../hina_ssi_physics/soil/soil_chunk_location.h"
 #include "../common/field/chunked_field.h"
 #include "visual_chunk.h"
 

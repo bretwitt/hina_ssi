@@ -21,7 +21,7 @@ namespace hina {
 
     private:
         FieldVertexDimensions vtx_dims;
-        std::shared_ptr<BaseVertexSampler> sampler;
+        std::shared_ptr<SoilVertexSampler> sampler;
 
         double scale = 0;
 

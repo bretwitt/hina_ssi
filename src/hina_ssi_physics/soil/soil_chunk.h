@@ -7,8 +7,9 @@
 #include "../../common/geometry.h"
 #include "../../common/field/uniform_field.h"
 #include "soil_data.h"
-#include "soil_chunk_location_metadata.h"
+#include "soil_chunk_location.h"
 #include "../../common/field/base_vertex_sampler.h"
+#include "../soil/soil_vertex_sampler.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
@@ -29,19 +30,22 @@ namespace hina {
         double height = 0;
         double res = 0;
 
+        std::shared_ptr<SoilVertexSampler> sampler;
+
         std::shared_ptr <UniformField<SoilAttributes>> field = nullptr;
 
         SoilChunk() {
         }
 
-        void init_chunk(FieldTrueDimensions dims, double scale, SoilChunkLocationMetadata location, std::shared_ptr<BaseVertexSampler> sampler) {
+        void init_chunk(FieldTrueDimensions dims, double scale, SoilChunkLocationMetadata location, std::shared_ptr<SoilVertexSampler> sampler) {
               init_chunk(UniformField<SoilAttributes>::as_vtx_dims(dims,scale),scale,location, sampler);
         }
 
-        void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocationMetadata location, std::shared_ptr<BaseVertexSampler> sampler) {
+        void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocationMetadata location, std::shared_ptr<SoilVertexSampler> sampler) {
             this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
             this->field->set_origin({location.origin.X(), location.origin.Y()});
             this->field->init_field(sampler);
+            this->sampler = sampler;
             this->location = location;
         }
 
@@ -102,16 +106,17 @@ namespace hina {
             auto v3 = vertex->v3;
             auto v3_0 = vertex->v3_0;
 
-            auto vert_attr = vertex->v;
+            auto vert_attr = this->sampler->get_params_at_index(x,y);
+            auto vert_state = vertex->v;
 
-            double k_phi = vert_attr->k_phi;
-            double k_e = vert_attr->k_e;
+            double k_phi = vert_attr.k_phi;
+            double k_e = vert_attr.k_e;
 
             double y_h = meshTri.centroid().Z();
             double y_r = v3_0.Z();
 
             double s_y = y_r - y_h;
-            double s_p = vert_attr->s_p;
+            double s_p = vert_state->s_p;
 
             double sigma_t = k_e*(s_y - s_p);
             double sigma_p = 0.0;
@@ -149,36 +154,36 @@ namespace hina {
 
                 normal_dA = -normal_sum * area;
 
-                vert_attr->normal_dA = normal_dA;
+                vert_state->normal_dA = normal_dA;
 
 
                 auto sigma_star = sigma_t;
                 s_sink = s_y;
 
-                if(sigma_star < vert_attr->sigma_yield) {
+                if(sigma_star < vert_state->sigma_yield) {
                     sigma_p = sigma_star;
                 } else {
                     sigma_p = (k_phi /* + (k_c/B)*/)*(s_y);
-                    vert_attr->sigma_yield = sigma_p;
+                    vert_state->sigma_yield = sigma_p;
                     auto s_p_o = s_p;
-                    vert_attr->s_p = s_sink - (sigma_p / k_e);
-                    vert_attr->s_e = s_sink - s_p;
-                    vert_attr->plastic_flow = -(s_p - s_p_o)*dt;
+                    vert_state->s_p = s_sink - (sigma_p / k_e);
+                    vert_state->s_e = s_sink - s_p;
+                    vert_state->plastic_flow = -(s_p - s_p_o)*dt;
                 }
             }
 
             auto z = v3_0.Z() - s_p;
             auto force_origin = v3_0.Z() - s_sink;
 
-            vert_attr->sigma = sigma_p;
+            vert_state->sigma = sigma_p;
 
             vertex->v3 = Vector3d(v3.X(), v3.Y(), z);
 
 
             auto force_v = Vector3d(
-                    (vert_attr->c + (vert_attr->sigma * tan(vert_attr->phi))) * vert_attr->normal_dA.X(),
-                    (vert_attr->c + (vert_attr->sigma * tan(vert_attr->phi))) * vert_attr->normal_dA.Y(),
-                    (vert_attr->sigma) * vert_attr->normal_dA.Z()
+                    (vert_attr.c + (vert_state->sigma * tan(vert_attr.phi))) * vert_state->normal_dA.X(),
+                    (vert_attr.c + (vert_state->sigma * tan(vert_attr.phi))) * vert_state->normal_dA.Y(),
+                    (vert_state->sigma) * vert_state->normal_dA.Z()
             );
 
             // Apply f/t

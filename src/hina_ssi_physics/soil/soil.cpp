@@ -7,7 +7,7 @@ using ignition::math::Vector3d;
 
 
 Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, config.y_width }, config.scale) {
-    sampler = std::make_shared<SandboxVertexSampler>(config.angle);
+    sampler = std::make_shared<SandboxVertexSampler>(config.angle,config.params);
 }
 
 Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldTrueDimensions { 1, 1 }, 0.005) {
