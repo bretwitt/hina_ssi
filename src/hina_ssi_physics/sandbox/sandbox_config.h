@@ -6,8 +6,8 @@
  namespace hina {
     struct SandboxConfig {
 
-        double x_width;
-        double y_width;
+        int x_width;
+        int y_width;
         double scale;
         double angle;
         SoilPhysicsParams params;

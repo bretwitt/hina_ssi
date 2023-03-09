@@ -30,7 +30,7 @@ namespace hina {
         double height = 0;
         double res = 0;
 
-        std::shared_ptr<SoilVertexSampler> sampler;
+        std::shared_ptr<SoilVertexSampler> sampler = nullptr;
 
         std::shared_ptr <UniformField<SoilAttributes>> field = nullptr;
 
@@ -100,7 +100,6 @@ namespace hina {
                             const std::shared_ptr<FieldVertex<SoilAttributes>> &vertex, double w, float dt,
                             float &displaced_volume)
         {
-
             displaced_volume = 0;
 
             auto v3 = vertex->v3;

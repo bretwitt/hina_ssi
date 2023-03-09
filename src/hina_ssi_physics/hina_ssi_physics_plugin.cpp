@@ -215,7 +215,7 @@ namespace hina {
 
                     // Vertex level computations
 
-                    #pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_displaced_volume) firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
+                    #pragma omp parallel num_threads(col_threads) default(none) /*shared(footprint, total_displaced_volume)*/ firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                     {
                     #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
@@ -237,7 +237,7 @@ namespace hina {
 
                             float displaced_volume = 0.0f;
                             footprint_idx = soil->try_deform(meshTri, link, displaced_volume, dt);
-                            total_displaced_volume += displaced_volume;
+                            //total_displaced_volume += displaced_volume;
                             /*
                             #pragma omp critical
                             {
