@@ -16,19 +16,22 @@ namespace hina {
 
         DEM(FieldVertexDimensions dims, double scale) {
             field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
-            field->init_field();
+            field->init_field(std::make_shared<BaseVertexSampler>());
         }
 
-        DEM(FieldTrueDimensions dims, double scale) {
-            field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
-            field->init_field();
-        }
+        DEM(FieldTrueDimensions dims, double scale) : DEM(UniformField<SoilAttributes>::as_vtx_dims(dims,scale), scale) {}
 
         void load_vertex(uint32_t flattened_index, double z) {
             auto vert = field->get_vertex_at_flattened_index(flattened_index);
             Vector3d v3(vert->v3.X(), vert->v3.Y(), z);
             vert->v3 = v3;
             vert->v3_0 = v3;
+        }
+
+        double get_z_at_position(double x, double y) {
+            uint32_t i = floor((x + (field->x_width/2)) / field->scale);
+            uint32_t j = floor((y + (field->y_width/2)) / field->scale);
+            return field->get_vertex_at_index(i,j)->v3.Z();
         }
 
         void upsample(double new_res) {
@@ -44,7 +47,7 @@ namespace hina {
             uint32_t verts_y = field->y_vert_width;
 
             auto new_field = std::make_shared<UniformField<SoilAttributes>>(FieldTrueDimensions { static_cast<double>(x_width), static_cast<double>(y_width) }, new_res);
-            new_field->init_field();
+            new_field->init_field(std::make_shared<BaseVertexSampler>());
 
             uint32_t verts_x_p = new_field->x_vert_width;
             uint32_t verts_y_p = new_field->y_vert_width;
@@ -61,11 +64,9 @@ namespace hina {
                     auto vertex = field->get_vertex_at_index(x,y);
                     double new_x = factor_x * ((double)x);
                     double new_y = factor_y * ((double)y);
-
                     field_x.push_back(new_x);
                     field_y.push_back(new_y);
                     field_z.push_back(vertex->v3.Z());
-
                 }
             }
             _2D::BicubicInterpolator<double> bicubicInterp;

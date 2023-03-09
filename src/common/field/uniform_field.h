@@ -6,10 +6,20 @@
 #include <memory>
 #include <cmath>
 #include <gazebo/common/common.hh>
+
 #include "field_vertex.h"
 #include "vertex_dims.h"
+#include "../../common/field/base_vertex_sampler.h"
+
+using namespace gazebo;
 
 namespace hina {
+
+    struct FieldVector2 {
+        double x;
+        double y;
+    };
+
     template<class V>
     class UniformField {
 
@@ -18,8 +28,6 @@ namespace hina {
             this->x_vert_width = verts_x;
             this->y_vert_width = verts_y;
             this->scale = scl;
-            x_offset = -(double) (x_vert_width - 1) / 2;
-            y_offset = -(double) (y_vert_width - 1) / 2;
         }
 
         void recalculate_width() {
@@ -28,12 +36,14 @@ namespace hina {
         }
 
     public:
+        FieldVector2 origin;
 
         typedef std::shared_ptr<FieldVertex<V>> FieldVertexVPtr;
         typedef std::unordered_map<uint32_t, std::unordered_map<uint32_t, FieldVertexVPtr>> UniformFieldMap;
 
         std::unique_ptr<uint32_t[]> indices{};
         std::unique_ptr<UniformFieldMap> vertices{};
+
 
         uint32_t x_vert_width{};
         uint32_t y_vert_width{};
@@ -43,15 +53,7 @@ namespace hina {
 
         double scale{};
 
-        double x_offset = 0;
-        double y_offset = 0;
-
-        explicit UniformField(FieldTrueDimensions dims, double resolution) {
-            this->x_width = dims.true_x;
-            this->y_width = dims.true_y;
-            uint32_t verts_x = floor(x_width / resolution) + 1;
-            uint32_t verts_y = floor(y_width / resolution) + 1;
-            load_vertex_dims(verts_x, verts_y, resolution);
+        explicit UniformField(FieldTrueDimensions dims, double resolution) : UniformField(as_vtx_dims(dims,resolution), resolution) {
         }
 
         explicit UniformField(FieldVertexDimensions dims, double resolution) {
@@ -66,15 +68,19 @@ namespace hina {
             recalculate_width();
         }
 
+        static FieldVertexDimensions as_vtx_dims(FieldTrueDimensions true_dims, double resolution) {
+            uint32_t verts_x = floor(true_dims.true_x / resolution) + 1;
+            uint32_t verts_y = floor(true_dims.true_y / resolution) + 1;
+            return FieldVertexDimensions { verts_x, verts_y };
+        }
 
-        void init_field() {
+        void init_field(std::shared_ptr<BaseVertexSampler> sampler) {
             vertices = std::make_unique<UniformFieldMap>();
             indices = std::make_unique<uint32_t[]>((x_vert_width - 1) * (y_vert_width - 1) * 3 * 2);
 
-            generate_vertices();
+            generate_vertices(sampler);
             generate_indices();
         }
-
 
         FieldVertexVPtr vertex_at_flattened_index(uint32_t idx) {
             uint32_t x;
@@ -89,6 +95,10 @@ namespace hina {
             unflatten_index(idx, x, y);
             auto _vtx = get_vertex_at_index(x, y);
             *_vtx = vtx;
+        }
+
+        void set_origin(FieldVector2 origin) {
+            this->origin = origin;
         }
 
         FieldVertexVPtr get_vertex_at_index(uint32_t x, uint32_t y) {
@@ -112,20 +122,21 @@ namespace hina {
         }
 
         void get_nearest_index(ignition::math::Vector2d vtx, uint32_t &x, uint32_t &y) const {
-            x = (int) ((vtx.X() / scale) - x_offset);
-            y = (int) ((vtx.Y() / scale) - y_offset);
+            x = (int) ((vtx.X() / scale));
+            y = (int) ((vtx.Y() / scale));
         }
 
-        void generate_vertices() {
+        void generate_vertices(std::shared_ptr<BaseVertexSampler> sampler) {
             for (int j = 0; j < y_vert_width; j++) {
                 for (int i = 0; i < x_vert_width; i++) {
                     auto i_f = (float) i;
                     auto j_f = (float) j;
 
-                    auto x = scale * (i_f + x_offset);
-                    auto y = scale * (j_f + y_offset);
+                    auto x = (scale * i_f) + origin.x;
+                    auto y = (scale * j_f) + origin.y;
+                    double z = sampler->get_z_at_index(x,y);
 
-                    auto v3 = Vector3d(x, y, 0);
+                    auto v3 = Vector3d(x, y, z);
 
                     set_vertex_at_index(i, j, std::make_shared<FieldVertex<V>>(v3));
                 }

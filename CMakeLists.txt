@@ -13,7 +13,6 @@ if(OpenMP_CXX_FOUND)
     list(APPEND LIB_OPENMP OpenMP::OpenMP_CXX)
 endif()
 
-#set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(gazebo REQUIRED)

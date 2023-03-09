@@ -6,42 +6,54 @@
 
 #include "../../common/geometry.h"
 #include "soil_data.h"
-#include "../dem/dem.h"
 #include <cmath>
+#include "../dem/dem.h"
 #include "../../../thirdparty/PerlinNoise.h"
 #include "../../common/field/uniform_field.h"
+#include "soil_chunk.h"
+#include "../../common/field/chunked_field.h"
+#include "../../common/field/base_vertex_sampler.h"
+#include "../sandbox/sandbox_vertex_sampler.h"
+#include "../dem/dem_vertex_sampler.h"
 
 namespace hina {
     class Soil {
-    private:
-        Soil(FieldVertexDimensions dims, double scale);
 
+    private:
+        FieldVertexDimensions vtx_dims;
+        std::shared_ptr<SoilVertexSampler> sampler = nullptr;
+
+        double scale = 0;
+
+        Soil(FieldVertexDimensions dims, double scale);
         Soil(FieldTrueDimensions dims, double scale);
+
+        ChunkedField<std::shared_ptr<SoilChunk>> chunks;
 
     public:
 
-        explicit Soil(SandboxConfig config);
+        ChunkedField<std::shared_ptr<SoilChunk>> get_chunks();
 
+        Soil(SandboxConfig config);
         Soil(const std::shared_ptr<DEM>& dem);
+        Soil();
 
         void generate_sandbox_geometry(SandboxConfig config);
 
-        void generate_sandbox_soil_vertices(SandboxConfig config);
-
         void load_dem_geometry(const std::shared_ptr<DEM> &dem) const;
 
-        std::vector<std::tuple<uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilAttributes>>>>
-        try_deform(const Triangle &meshTri, const physics::LinkPtr &link, float dt, float &displaced_volume);
+        void query_chunk(Vector3d pos);
+        void pre_update();
+        void post_update();
 
-        static bool intersects_projected(const Triangle &meshTri, const AABB &vertexRect);
+        std::shared_ptr<SoilChunk> OnChunkCreation(int i, int j);
 
-        std::shared_ptr<UniformField<SoilAttributes>> field;
+        Vector2d worldpos_to_chunk_idx(Vector3d pos);
+        Vector2d chunk_idx_to_worldpos(int i, int j);
 
-        bool penetrates(const Triangle &meshTri, const std::shared_ptr<FieldVertex<SoilAttributes>> &vtx, double w);
+        std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>>
+            try_deform(const Triangle &meshTri, const physics::LinkPtr &link, float& displaced_volume, float dt);
 
-        void terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &meshTri, uint32_t x, uint32_t y,
-                            const std::shared_ptr<FieldVertex<SoilAttributes>> &vertex, double w, float dt,
-                            float &displaced_volume);
     };
 }
 #endif

@@ -4,18 +4,21 @@
 #include <gazebo/common/common.hh>
 #include <memory>
 #include <gazebo/rendering/rendering.hh>
+#include <gazebo/physics/physics.hh>
 #include <utility>
 #include "ogre_soil_renderer.cpp"
-#include "Soil.pb.h"
+#include "SoilChunk.pb.h"
+#include "../hina_ssi_physics/soil/soil_chunk_location.h"
+#include "../common/field/chunked_field.h"
+#include "visual_chunk.h"
 
 using namespace gazebo;
+using ignition::math::Vector2d;
 
 namespace hina {
-
     class HinaSSIVisualPlugin : public VisualPlugin {
 
     private:
-        std::shared_ptr<OgreSoilRenderer> p_ogre_soil_renderer = nullptr;
 
         event::ConnectionPtr connectionPtr = nullptr;
         rendering::VisualPtr visual = nullptr;
@@ -24,10 +27,20 @@ namespace hina {
         transport::SubscriberPtr sub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
 
-        std::shared_ptr<UniformField<ColorAttributes>> field;
+        common::Time time;
+        double sec{};
+        double last_sec{};
+        double last_sec_viz{};
+
+        ChunkedField<std::shared_ptr<VisualChunk>> chunks;
 
         bool soil_initialized = false;
-        bool init_viz = false;
+
+        std::unordered_map<int,std::unordered_map<int,
+            std::shared_ptr<UniformField<ColorAttributes>>>> map;
+
+        uint32_t verts_x;
+        uint32_t verts_y;
 
     public:
         HinaSSIVisualPlugin() : VisualPlugin() {
@@ -36,8 +49,10 @@ namespace hina {
         void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) override {
             connectionPtr = event::Events::ConnectRender(boost::bind(&HinaSSIVisualPlugin::update, this));
             init_transport();
+            init_chunk_field();
             visual = _visual;
         }
+
 
         void init_transport() {
             this->node = transport::NodePtr(new transport::Node());
@@ -45,54 +60,55 @@ namespace hina {
             sub = node->Subscribe("~/soil", &HinaSSIVisualPlugin::OnSoilUpdate, this);
         }
 
-        void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::Soil> &soil_update) {
+        void init_chunk_field() {
+            chunks.register_chunk_create_callback(boost::bind(&HinaSSIVisualPlugin::OnChunkCreated, this, _1, _2));
+        }
 
-            int vert_x = soil_update->len_col();
-            int vert_y = soil_update->len_row();
+        void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::SoilChunk> &soil_update) {
+            uint32_t x_verts = soil_update->len_col();
+            uint32_t y_verts = soil_update->len_row();
 
-            auto v = soil_update->flattened_field();
+            uint32_t i = soil_update->id_i();
+            uint32_t j = soil_update->id_j();
 
-            if(field == nullptr) {
-                field = std::make_shared<UniformField<ColorAttributes>>(FieldVertexDimensions { static_cast<double>(vert_x), static_cast<double>(vert_y) }, 1);
-                field->init_field();
+            this->verts_x = x_verts;
+            this->verts_y = y_verts;
+
+            auto v = soil_update->chunk_field();
+
+            chunks.poll_chunk( ChunkedFieldLocation { i,j });
+
+            auto c = chunks.get_chunk(ChunkedFieldLocation{i,j});
+
+            uint32_t count = 0;
+            for(auto& vert : soil_update->chunk_field()) {
+                c->container->update_field(vert,count++);
             }
+        }
 
-            uint32_t i = 0;
-            for(const gazebo::msgs::Vector3d& v0 : v) {
-                auto vert = FieldVertex<ColorAttributes>(Vector3d(v0.x(), v0.y(), v0.z()));
-                field->set_vertex_at_flattened_index(i++, vert);
-            }
-
-            if(!soil_initialized) {
-                init_viz = true;
-                soil_initialized = true;
-            }
+        std::shared_ptr<VisualChunk> OnChunkCreated(int i, int j) {
+            auto vc = std::make_shared<VisualChunk>();
+            vc->init_visual_chunk(visual, this->verts_x, this->verts_y, i, j);
+            return vc;
         }
 
         void update() {
-            if(init_viz) {
-                init_soil(field);
-                init_viz = false;
-                return;
-            }
-            if(soil_initialized) {
-                update_soil_mesh(field);
-            }
-        }
+            time = common::Time::GetWallTime();
 
-        void init_soil(const std::shared_ptr<UniformField<ColorAttributes>>& p_field) {
-            p_ogre_soil_renderer = std::make_shared<OgreSoilRenderer>();
-            p_ogre_soil_renderer->setScenePtr(visual->GetScene());
-            p_ogre_soil_renderer->create_ogre_mesh(p_field);
-        }
+            sec = time.Double();
 
-        void update_soil_mesh(const std::shared_ptr<UniformField<ColorAttributes>>& p_soil) {
-            p_ogre_soil_renderer->update_ogre_mesh(p_soil);
+            double dt = sec - last_sec;
+
+            if (dt > 10) {
+                chunks.post_update();
+                chunks.pre_update();
+                last_sec = sec;
+            }
+            for(auto chunk : chunks.get_active_chunks()) {
+                chunk->container->update();
+            }
         }
     };
-
     GZ_REGISTER_VISUAL_PLUGIN(HinaSSIVisualPlugin)
-
 }
-
 #endif
