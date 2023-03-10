@@ -7,6 +7,7 @@
 #include "../../common/geometry.h"
 #include "soil_data.h"
 #include <cmath>
+#include <gz/math/Vector3.hh>
 #include "../dem/dem.h"
 #include "../../../thirdparty/PerlinNoise.h"
 #include "../../common/field/uniform_field.h"

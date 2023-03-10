@@ -31,11 +31,15 @@ Soil::Soil() {
 
 typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>> Field_V;
 Field_V Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float& displaced_volume, float dt) {
+
     auto idx = worldpos_to_chunk_idx(meshTri.centroid());
-    auto chunk = chunks.get_chunk_cont({idx.X(),idx.Y()});
-    if (chunk != nullptr) {
-        return chunk->try_deform(meshTri, link, displaced_volume, dt);
+    auto chunk = chunks.get_chunk({static_cast<int>(idx.X()),static_cast<int>(idx.Y())});
+
+    if (chunk != nullptr && chunk->container != nullptr) {
+        return chunk->container->try_deform(meshTri, link, displaced_volume, dt);
     }
+
+    return {};
 }
 
 Vector2d Soil::chunk_idx_to_worldpos(int i, int j) {

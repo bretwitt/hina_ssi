@@ -1,14 +1,23 @@
 <?xml version='1.0'?>
 <sdf version='1.7'>	
   <world name='empty'>
-    <plugin name='hina_physics' filename='libhina_ssi_plugin_physics.so'>
-	<width_x>250</width_x>
-        <width_y>50</width_y>
-        <scale>0.05</scale>
-	<angle>0</angle>
-	<links>
-	    <link>wheel</link>
-	</links>
+   <plugin name='hina_ssi_physics' filename='libhina_ssi_plugin_physics.so'>
+      	<col_threads>5</col_threads>    
+      	<sandbox>
+      		<width_x>0.5</width_x>
+      		<width_y>0.5</width_y>
+      		<resolution>0.005</resolution>
+      		<angle>0.0</angle>
+      	</sandbox>
+      	<params>
+               <k_phi>8.14e5</k_phi>
+               <k_e>7.8e7</k_e>
+               <c>3.5e3</c>
+               <phi>0.55</phi>
+      	</params>
+      	<links>
+      	    <link>wheel</link>
+      	</links>
     </plugin>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
@@ -55,7 +64,7 @@
           <visual name='visual'>
             <cast_shadows>1</cast_shadows>
             <geometry>
-                <mesh><uri>file://astrowheel.dae</uri></mesh>
+		    <mesh><uri>file://astrowheel.dae</uri></mesh>
             </geometry>
             <material>
               <script>
@@ -66,16 +75,16 @@
           </visual>
         </link>
     </model>
-    <model name='ground_plane'>
+    <model name='hina_ssi_visual_root'>
       <static>1</static>
-      <link name='link'>
-        <visual name='visual'>
-          <plugin name='hina' filename='libhina_ssi_plugin_visual.so'/>
+      <link name='hina_ssi_visual_root_link'>
+        <visual name='hina_ssi_visual'>
+          <plugin name='hina_ssi_visual_plugin' filename='libhina_ssi_plugin_visual.so'/>
           <cast_shadows>0</cast_shadows>
           <geometry>
             <plane>
               <normal>0 0 1</normal>
-              <size>0 0</size>
+              <size>0.000001 0.000001</size>
             </plane>
           </geometry>
           <material>
@@ -89,23 +98,24 @@
         <enable_wind>0</enable_wind>
         <kinematic>0</kinematic>
       </link>
-      <pose>0.252724 -0.228037 0 0 -0 0</pose>
     </model>
     <state world_name='empty'>
       <sim_time>158 460000000</sim_time>
       <real_time>28 466482100</real_time>
       <wall_time>1653677154 612083700</wall_time>
       <iterations>28293</iterations>
-      <model name='ground_plane'>
-        <pose>0.252724 -0.228037 0 0 -0 0</pose>
+
+      <model name='hina_ssi_visual_root'>
+        <pose>0 0 0 0 0 0</pose>
         <scale>1 1 1</scale>
-        <link name='link'>
-          <pose>0.252724 -0.228037 0 0 -0 0</pose>
+        <link name='hina_ssi_visual_root_link'>
+          <pose>0 0 0 0 0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
+          <wrench>0 0 0 0 0 0</wrench>
         </link>
       </model>
+
       <light name='sun'>
         <pose>2.80879 2.02825 10 0 -0 0</pose>
       </light>

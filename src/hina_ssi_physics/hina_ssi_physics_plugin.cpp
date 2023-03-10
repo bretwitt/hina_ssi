@@ -131,8 +131,8 @@ namespace hina {
 
 
             auto sandbox_elem = sdf->GetElement("sandbox");
-            int x_width = sandbox_elem->GetElement("width_x")->Get<int>();
-            int y_width = sandbox_elem->GetElement("width_y")->Get<int>();
+            double x_width = sandbox_elem->GetElement("width_x")->Get<double>();
+            double y_width = sandbox_elem->GetElement("width_y")->Get<double>();
             double scale = sandbox_elem->GetElement("resolution")->Get<double>();
             double angle = sandbox_elem->GetElement("angle")->Get<double>();
 
@@ -147,7 +147,7 @@ namespace hina {
             auto dem = DEMLoader::load_dem_from_geotiff(file_name);
 
             if(dem_elem->HasElement("upscale_res")) {
-                double upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
+                auto upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
                 dem->upsample(upscale_res);
             }
 
@@ -191,6 +191,7 @@ namespace hina {
                 auto mesh = iter.second;
 
                 for (uint32_t i = 0; i < mesh->GetSubMeshCount(); i++) {
+
                     auto submesh = mesh->GetSubMesh(i);
                     auto indices = submesh->GetIndexCount();
 
@@ -219,6 +220,7 @@ namespace hina {
                     {
                     #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
+
                             auto idx = idx_unrolled * 3;
 
                             auto v0 = submesh->Vertex(submesh->GetIndex(idx));
@@ -236,7 +238,8 @@ namespace hina {
                             auto meshTri = Triangle(c1v0, c1v1, c1v2);
 
                             float displaced_volume = 0.0f;
-                            footprint_idx = soil->try_deform(meshTri, link, displaced_volume, dt);
+                            soil->try_deform(meshTri, link, displaced_volume, dt);
+
                             //total_displaced_volume += displaced_volume;
                             /*
                             #pragma omp critical
@@ -277,9 +280,11 @@ namespace hina {
 
 
                     // 4. Erode
+
                 }
             }
             soil->post_update();
+
         }
 
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
