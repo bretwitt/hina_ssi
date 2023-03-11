@@ -41,7 +41,7 @@ namespace hina {
 
     public:
         void setScenePtr(rendering::ScenePtr scenePtr) {
-            this->scenePtr = scenePtr;
+            this->scenePtr = std::move(scenePtr);
         }
 
 

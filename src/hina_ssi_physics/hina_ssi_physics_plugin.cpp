@@ -1,6 +1,8 @@
 #ifndef HINA_SSI_PHYSICS_PLUGIN_CPP
 #define HINA_SSI_PHYSICS_PLUGIN_CPP
 
+#define PHYS_PROFILER 0
+
 #include "../common/field/uniform_field.h"
 #include <gazebo/common/common.hh>
 #include <memory>
@@ -10,7 +12,7 @@
 #include "soil/soil.h"
 #include "dem/dem_loader.h"
 #include "SoilChunk.pb.h"
-#include "soil/soil_chunk_location.h"
+#include <ignition/common/Profiler.hh>
 
 namespace hina {
     class HinaSSIWorldPlugin : public WorldPlugin {
@@ -131,10 +133,10 @@ namespace hina {
 
 
             auto sandbox_elem = sdf->GetElement("sandbox");
-            double x_width = sandbox_elem->GetElement("width_x")->Get<double>();
-            double y_width = sandbox_elem->GetElement("width_y")->Get<double>();
-            double scale = sandbox_elem->GetElement("resolution")->Get<double>();
-            double angle = sandbox_elem->GetElement("angle")->Get<double>();
+            auto x_width = sandbox_elem->GetElement("width_x")->Get<double>();
+            auto y_width = sandbox_elem->GetElement("width_y")->Get<double>();
+            auto scale = sandbox_elem->GetElement("resolution")->Get<double>();
+            auto angle = sandbox_elem->GetElement("angle")->Get<double>();
 
             soilPtr = std::make_shared<Soil>(SandboxConfig{x_width, y_width, scale, angle, soil_params});
         }
@@ -166,13 +168,22 @@ namespace hina {
         }
 
         void update() {
+
             time = common::Time::GetWallTime();
             sec = time.Double();
 
+#ifdef PHYS_PROFILER
+            IGN_PROFILE_BEGIN("TAROSCM::Soil Physics Update");
+#endif
             double dt = sec - last_sec;
             double dt_viz = sec - last_sec_viz;
 
             update_soil(soilPtr, dt);
+
+#ifdef PHYS_PROFILER
+            IGN_PROFILE_END();
+            IGN_PROFILE_BEGIN("TAROSCM::Broadcast Soil");
+#endif
 
             last_sec = sec;
 
@@ -180,7 +191,13 @@ namespace hina {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
             }
+
+#ifdef PHYS_PROFILER
+            IGN_PROFILE_END();
+#endif
+
         }
+
 
         void update_soil(std::shared_ptr<Soil> soil, float dt) {
 
@@ -215,10 +232,13 @@ namespace hina {
                     float total_displaced_volume = 0.0f;
 
                     // Vertex level computations
-
+#if PHYS_PROFILER == 1
+                    IGN_PROFILE_BEGIN("Collision Detection");
+#endif
                     #pragma omp parallel num_threads(col_threads) default(none) /*shared(footprint, total_displaced_volume)*/ firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                     {
                     #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
+
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
 
                             auto idx = idx_unrolled * 3;
@@ -249,7 +269,9 @@ namespace hina {
                              */
                         }
                     }
-
+#if PHYS_PROFILER == 1
+                    IGN_PROFILE_END();
+#endif
                     /*
                     // Footprint level computations
 
@@ -288,6 +310,7 @@ namespace hina {
         }
 
         void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
+
             auto chunks = soilPtr->get_chunks().get_active_chunks();
 
             for(auto& chunk : chunks) {
@@ -315,6 +338,7 @@ namespace hina {
 
                 soilPub->Publish(chunk_update_msg);
             }
+
         }
     };
     GZ_REGISTER_WORLD_PLUGIN(HinaSSIWorldPlugin)

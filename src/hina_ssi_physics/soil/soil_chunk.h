@@ -10,6 +10,7 @@
 #include "soil_chunk_location.h"
 #include "../../common/field/base_vertex_sampler.h"
 #include "../soil/soil_vertex_sampler.h"
+#include <ignition/common/Profiler.hh>
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
@@ -92,6 +93,7 @@ namespace hina {
                     terramx_deform(link, meshTri, x+ x_start, y+ y_start, v3, scale, dt, displaced_vol);
                 }
             }
+
             return penetrating_coords;
         };
 

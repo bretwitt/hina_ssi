@@ -21,7 +21,7 @@ namespace hina {
     class Soil {
 
     private:
-        FieldVertexDimensions vtx_dims;
+        FieldVertexDimensions vtx_dims{};
         std::shared_ptr<SoilVertexSampler> sampler = nullptr;
 
         double scale = 0;
@@ -39,9 +39,6 @@ namespace hina {
         Soil(const std::shared_ptr<DEM>& dem);
         Soil();
 
-        void generate_sandbox_geometry(SandboxConfig config);
-
-        void load_dem_geometry(const std::shared_ptr<DEM> &dem) const;
 
         void query_chunk(Vector3d pos);
         void pre_update();
