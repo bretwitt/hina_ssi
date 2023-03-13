@@ -131,7 +131,7 @@ namespace hina {
             auto c = params->GetElement("c")->Get<double>();
             auto phi = params->GetElement("phi")->Get<double>();
 
-            auto soil_params = SoilPhysicsParams { k_phi, k_e, 0, c, phi };
+            auto soil_params = SoilPhysicsParams { k_phi, k_e, 0, c, phi, 0.25 };
 
 
             auto sandbox_elem = sdf->GetElement("sandbox");
@@ -329,11 +329,8 @@ namespace hina {
 
                     for(const auto& v : deposit_footprint_v) {
                         auto chunk = std::get<0>(v);
-                        auto x = std::get<1>(v);
-                        auto y = std::get<1>(v);
                         auto vtx = std::get<3>(v);
                         double w = chunk.field->scale;
-
 
                         if(vtx->v->footprint == 2) {
                             vtx->v3 += Vector3d(0 ,0, deposit/(w*w));

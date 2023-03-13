@@ -172,7 +172,7 @@ namespace hina {
                     auto s_p_o = vert_state->s_p;
                     vert_state->s_p = s_sink - (sigma_p / k_e);
                     vert_state->s_e = s_sink - vert_state->s_p;
-                    vert_state->plastic_flow = (vert_state->s_p - s_p_o);
+                    vert_state->plastic_flow = (vert_state->s_p - s_p_o)*vert_attr.mfr;
                 }
 
                 /* update footprints */
