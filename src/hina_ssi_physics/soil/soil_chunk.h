@@ -180,7 +180,7 @@ namespace hina {
                 auto v1 = field->get_vertex_at_index(x, y + 1)->v;
                 auto v2 = field->get_vertex_at_index(x, y - 1)->v;
                 auto v3 = field->get_vertex_at_index(x + 1, y)->v;
-                auto v4 = field->get_vertex_at_index(x + 1, y)->v;
+                auto v4 = field->get_vertex_at_index(x - 1, y)->v;
 
                 vertex->v->footprint = 1;
                 if(v1->footprint != 1) {

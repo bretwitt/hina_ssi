@@ -17,6 +17,7 @@
                <k_e>7.8e7</k_e>
                <c>3.5e3</c>
                <phi>0.55</phi>
+               <mfr>0.35</mfr>
       	</params>
       	
     </plugin>

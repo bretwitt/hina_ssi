@@ -22,6 +22,13 @@ struct SoilVertex {
     double s_e{};
     double sigma{};
     Vector3d normal_dA;
+
+    /*
+     * 0 = not a node
+     * 1 = footprint node
+     * 2 = soil deposit node
+     * 3 = flow out node
+     * */
     int footprint;
 
     explicit SoilVertex() = default;
