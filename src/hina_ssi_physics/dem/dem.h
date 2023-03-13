@@ -12,14 +12,14 @@ namespace hina {
     class DEM {
 
     public:
-        std::shared_ptr<UniformField<SoilAttributes>> field = nullptr;
+        std::shared_ptr<UniformField<SoilVertex>> field = nullptr;
 
         DEM(FieldVertexDimensions dims, double scale) {
-            field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
+            field = std::make_shared<UniformField<SoilVertex>>(dims, scale);
             field->init_field(std::make_shared<BaseVertexSampler>());
         }
 
-        DEM(FieldTrueDimensions dims, double scale) : DEM(UniformField<SoilAttributes>::as_vtx_dims(dims,scale), scale) {}
+        DEM(FieldTrueDimensions dims, double scale) : DEM(UniformField<SoilVertex>::as_vtx_dims(dims, scale), scale) {}
 
         void load_vertex(uint32_t flattened_index, double z) {
             auto vert = field->get_vertex_at_flattened_index(flattened_index);
@@ -46,7 +46,7 @@ namespace hina {
             uint32_t verts_x = field->x_vert_width;
             uint32_t verts_y = field->y_vert_width;
 
-            auto new_field = std::make_shared<UniformField<SoilAttributes>>(FieldTrueDimensions { static_cast<double>(x_width), static_cast<double>(y_width) }, new_res);
+            auto new_field = std::make_shared<UniformField<SoilVertex>>(FieldTrueDimensions {static_cast<double>(x_width), static_cast<double>(y_width) }, new_res);
             new_field->init_field(std::make_shared<BaseVertexSampler>());
 
             uint32_t verts_x_p = new_field->x_vert_width;

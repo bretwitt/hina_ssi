@@ -1,23 +1,24 @@
 <?xml version='1.0'?>
-<sdf version='1.7'>	
-  <world name='empty'>
+<sdf version='1.6'>	
+  <world name='test'>
    <plugin name='hina_ssi_physics' filename='libhina_ssi_plugin_physics.so'>
       	<col_threads>5</col_threads>    
       	<sandbox>
-      		<width_x>0.5</width_x>
-      		<width_y>0.5</width_y>
+      		<width_x>1.0</width_x>
+      		<width_y>1.0</width_y>
       		<resolution>0.005</resolution>
       		<angle>0.0</angle>
       	</sandbox>
+        <links>
+            <link>wheel</link>
+        </links>
       	<params>
                <k_phi>8.14e5</k_phi>
                <k_e>7.8e7</k_e>
                <c>3.5e3</c>
                <phi>0.55</phi>
       	</params>
-      	<links>
-      	    <link>wheel</link>
-      	</links>
+      	
     </plugin>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
@@ -40,41 +41,7 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
-    <model name="wheel">
-        <pose>0 0 0.125 0 0 0</pose>
-        <link name='wheel'>
-          <gravity>0</gravity>
-          <inertial>
-            <mass>1</mass>
-            <inertia>
-              <ixx>2.5</ixx>
-              <ixy>0.000</ixy>
-              <ixz>0.000</ixz>
-              <iyy>2.5</iyy>
-              <iyz>0.000</iyz>
-              <izz>2.5</izz>
-            </inertia>
-            <pose>0 0 0 0 0 0</pose>
-          </inertial>
-          <collision name="collision">
-              <geometry>
-                  <mesh><uri>file://astrowheel.dae</uri></mesh>
-              </geometry>
-          </collision>
-          <visual name='visual'>
-            <cast_shadows>1</cast_shadows>
-            <geometry>
-		    <mesh><uri>file://astrowheel.dae</uri></mesh>
-            </geometry>
-            <material>
-              <script>
-                <uri>file://media/materials/scripts/gazebo.material</uri>
-                <name>Gazebo/Grey</name>
-              </script>
-            </material>
-          </visual>
-        </link>
-    </model>
+    
     <model name='hina_ssi_visual_root'>
       <static>1</static>
       <link name='hina_ssi_visual_root_link'>
@@ -99,27 +66,44 @@
         <kinematic>0</kinematic>
       </link>
     </model>
-    <state world_name='empty'>
-      <sim_time>158 460000000</sim_time>
-      <real_time>28 466482100</real_time>
-      <wall_time>1653677154 612083700</wall_time>
-      <iterations>28293</iterations>
 
-      <model name='hina_ssi_visual_root'>
+    <model name="wheel1">
+    <pose>0 0 0.125 0 0 0</pose>
+    <link name='wheel'>
+      <gravity>1</gravity>
+      <inertial>
+        <mass>0.069</mass>
+        <inertia>
+          <ixx>2.5</ixx>
+          <ixy>0.000</ixy>
+          <ixz>0.000</ixz>
+          <iyy>2.5</iyy>
+          <iyz>0.000</iyz>
+          <izz>2.5</izz>
+        </inertia>
         <pose>0 0 0 0 0 0</pose>
-        <scale>1 1 1</scale>
-        <link name='hina_ssi_visual_root_link'>
-          <pose>0 0 0 0 0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 0 0</wrench>
-        </link>
-      </model>
+      </inertial>
+      <collision name="collision">
+          <geometry>
+              <mesh><uri>file://astrowheel.dae</uri></mesh>
+          </geometry>
+      </collision>
+      <visual name='visual'>
+        <cast_shadows>1</cast_shadows>
+        <geometry>
+          <mesh><uri>file://astrowheel.stl</uri></mesh>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Grey</name>
+          </script>
+        </material>
+      </visual>
+    </link>
+    </model>
 
-      <light name='sun'>
-        <pose>2.80879 2.02825 10 0 -0 0</pose>
-      </light>
-    </state>
+
     <gui fullscreen='0'>
       <camera name='user_camera'>
         <pose>2 2 2 0 0.565796 2.52419</pose>
@@ -141,4 +125,5 @@
       <direction>-0.5 0.1 -0.9</direction>
     </light>
   </world>
+  
 </sdf>

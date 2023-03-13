@@ -122,8 +122,8 @@ namespace hina {
         }
 
         void get_nearest_index(ignition::math::Vector2d vtx, uint32_t &x, uint32_t &y) const {
-            x = (int) ((vtx.X() / scale));
-            y = (int) ((vtx.Y() / scale));
+            x = (int) (floor(vtx.X() / scale));
+            y = (int) (floor(vtx.Y() / scale));
         }
 
         void generate_vertices(std::shared_ptr<BaseVertexSampler> sampler) {

@@ -6,7 +6,7 @@
 #include <cmath>
 #include "../../common/geometry.h"
 #include "../../common/field/uniform_field.h"
-#include "soil_data.h"
+#include "soil_vertex.h"
 #include "soil_chunk_location.h"
 #include "../../common/field/base_vertex_sampler.h"
 #include "../soil/soil_vertex_sampler.h"
@@ -33,30 +33,25 @@ namespace hina {
 
         std::shared_ptr<SoilVertexSampler> sampler = nullptr;
 
-        std::shared_ptr <UniformField<SoilAttributes>> field = nullptr;
+        std::shared_ptr <UniformField<SoilVertex>> field = nullptr;
 
-        SoilChunk() {
-        }
+        SoilChunk() = default;
 
-        void init_chunk(FieldTrueDimensions dims, double scale, SoilChunkLocationMetadata location, std::shared_ptr<SoilVertexSampler> sampler) {
-              init_chunk(UniformField<SoilAttributes>::as_vtx_dims(dims,scale),scale,location, sampler);
-        }
-
-        void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocationMetadata location, std::shared_ptr<SoilVertexSampler> sampler) {
-            this->field = std::make_shared<UniformField<SoilAttributes>>(dims, scale);
+        void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocationMetadata location, const std::shared_ptr<SoilVertexSampler>& sampler) {
+            this->field = std::make_shared<UniformField<SoilVertex>>(dims, scale);
             this->field->set_origin({location.origin.X(), location.origin.Y()});
             this->field->init_field(sampler);
             this->sampler = sampler;
             this->location = location;
         }
 
-        typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>> FieldV;
-        FieldV try_deform(const Triangle& meshTri, const physics::LinkPtr& link, float& displaced_vol, float dt) {
+        typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> FieldV;
+        FieldV try_deform(const Triangle& meshTri, const physics::LinkPtr& link, double& displaced_vol, double dt) {
 
             double max_x, max_y, min_x, min_y;
             double scale;
-            int iter_x, iter_y;
-            uint32_t x_start, y_start;
+            uint32_t iter_x, iter_y;
+            uint32_t x_start, y_start, x_end, y_end;
 
             double chunk_x = location.origin.X();
             double chunk_y = location.origin.Y();
@@ -75,23 +70,32 @@ namespace hina {
             y_start = 0;
             field->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
-            // Calculate number of iterations required in each direction
+            // Get last soil vertex coordinates (x_end, y_end)
+//            x_end = 0;
+//            y_end = 0;
+//            field->get_nearest_index(Vector2d(max_x, max_y), x_end, y_end);
+//
+//            // Calculate number of iterations required in each direction
+//            iter_x = x_end - x_start + 1;
+//            iter_y = y_end - y_start + 1;
+
             iter_x = ceil( ((max_x - min_x) / scale) ) + 1;
             iter_y = ceil( ((max_y - min_y) / scale) ) + 1;
 
             // Search soil field within bounds under AABB
-            std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>> penetrating_coords;
+            FieldV penetrating_coords;
 
             for(uint32_t k = 0; k < iter_x*iter_y; k++) {
-                uint32_t y = (floor(k / iter_y)) ;             // Unpack for loop into (x,y) index
-                uint32_t x = (k - (iter_x*y) ) ;
-                auto v3 = field->get_vertex_at_index(x+ x_start, y+ y_start);
+                uint32_t y = floor(k / iter_y);                                 // Unpack for loop into (x,y) index
+                uint32_t x = k - (iter_x*y);
+                auto v3 = field->get_vertex_at_index(x + x_start, y + y_start);
 
                 // If mesh tri penetrates vtx
                 if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
                     penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
-                    terramx_deform(link, meshTri, x+ x_start, y+ y_start, v3, scale, dt, displaced_vol);
+                    terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt, displaced_vol);
                 }
+                //penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
             }
 
             return penetrating_coords;
@@ -99,10 +103,9 @@ namespace hina {
 
 
         void terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &meshTri, uint32_t x, uint32_t y,
-                            const std::shared_ptr<FieldVertex<SoilAttributes>> &vertex, double w, float dt,
-                            float &displaced_volume)
+                            const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w, double dt,
+                            double &displaced_volume)
         {
-            displaced_volume = 0;
 
             auto v3 = vertex->v3;
             auto v3_0 = vertex->v3_0;
@@ -166,11 +169,33 @@ namespace hina {
                 } else {
                     sigma_p = (k_phi /* + (k_c/B)*/)*(s_y);
                     vert_state->sigma_yield = sigma_p;
-                    auto s_p_o = s_p;
+                    auto s_p_o = vert_state->s_p;
                     vert_state->s_p = s_sink - (sigma_p / k_e);
-                    vert_state->s_e = s_sink - s_p;
-                    vert_state->plastic_flow = -(s_p - s_p_o)*dt;
+                    vert_state->s_e = s_sink - vert_state->s_p;
+                    vert_state->plastic_flow = (vert_state->s_p - s_p_o);
                 }
+
+                /* update footprints */
+
+                auto v1 = field->get_vertex_at_index(x, y + 1)->v;
+                auto v2 = field->get_vertex_at_index(x, y - 1)->v;
+                auto v3 = field->get_vertex_at_index(x + 1, y)->v;
+                auto v4 = field->get_vertex_at_index(x + 1, y)->v;
+
+                vertex->v->footprint = 1;
+                if(v1->footprint != 1) {
+                    v1->footprint = 2;
+                }
+                if(v2->footprint != 1) {
+                    v2->footprint = 2;
+                }
+                if(v3->footprint != 1) {
+                    v3->footprint = 2;
+                }
+                if(v4->footprint != 1) {
+                    v4->footprint = 2;
+                }
+
             }
 
             auto z = v3_0.Z() - s_p;
@@ -180,6 +205,8 @@ namespace hina {
 
             vertex->v3 = Vector3d(v3.X(), v3.Y(), z);
 
+            displaced_volume = vert_state->plastic_flow*w*w;
+            //std::cout << displaced_volume << std::endl;
 
             auto force_v = Vector3d(
                     (vert_attr.c + (vert_state->sigma * tan(vert_attr.phi))) * vert_state->normal_dA.X(),
@@ -192,11 +219,20 @@ namespace hina {
 
         };
 
-        bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect) {
+        void clear_footprint() {
+            auto x_w = field->x_vert_width;
+            auto y_w = field->y_vert_width;
+            for(uint32_t i = 0; i < x_w*y_w; i++) {
+                auto v3 = field->get_vertex_at_flattened_index(i)->v;
+                v3->footprint = 0;
+            }
+        }
+
+        static bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect) {
             return Geometry::getInstance()->intersects_box_tri(meshTri, vertexRect) ;
         };
 
-        bool penetrates(const Triangle& meshTri, const std::shared_ptr<FieldVertex<SoilAttributes>>& vtx, double w) {
+        static bool penetrates(const Triangle& meshTri, const std::shared_ptr<FieldVertex<SoilVertex>>& vtx, double w) {
             auto point = vtx->v3;
             return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
         };

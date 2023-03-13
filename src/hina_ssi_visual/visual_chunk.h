@@ -5,6 +5,7 @@
 #include <gazebo/common/common.hh>
 #include "ogre_soil_renderer.cpp"
 #include <gazebo/rendering/rendering.hh>
+#include <utility>
 
 using gazebo::msgs::Vector3d;
 
@@ -35,7 +36,7 @@ namespace hina {
         void init_visual_chunk(rendering::VisualPtr visualPtr, uint32_t verts_x, uint32_t verts_y, int i, int j) {
             field = std::make_shared<UniformField<ColorAttributes>>(FieldVertexDimensions{verts_x,verts_y}, 1);
             field->init_field(std::make_shared<BaseVertexSampler>());
-            visual = visualPtr;
+            visual = std::move(visualPtr);
             this->i = i;
             this->j = j;
         }
@@ -53,6 +54,13 @@ namespace hina {
 
         void update_field(const gazebo::msgs::Vector3d& _v, uint32_t i) {
             field->set_vertex_at_flattened_index(i, FieldVertex<ColorAttributes>(Vector3d(_v.x(), _v.y(), _v.z())));
+        }
+
+        void set_vtx_color(uint32_t i, float r, float g, float b) {
+            std::shared_ptr<FieldVertex<ColorAttributes>> vtx = field->get_vertex_at_flattened_index(i);
+            vtx->v->r = r;
+            vtx->v->g = g;
+            vtx->v->b = b;
         }
 
         void init_soil(std::shared_ptr<UniformField<ColorAttributes>> p_field) {

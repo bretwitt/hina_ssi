@@ -5,6 +5,9 @@
 
 namespace hina {
     struct ColorAttributes {
+        float r;
+        float g;
+        float b;
     };
 }
 

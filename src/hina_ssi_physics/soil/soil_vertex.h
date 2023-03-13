@@ -1,5 +1,5 @@
-#ifndef HINA_SSI_PLUGIN_SOIL_DATA_H
-#define HINA_SSI_PLUGIN_SOIL_DATA_H
+#ifndef HINA_SSI_PLUGIN_SOIL_VERTEX_H
+#define HINA_SSI_PLUGIN_SOIL_VERTEX_H
 
 #include <gazebo/common/common.hh>
 #include <memory>
@@ -11,7 +11,7 @@ using ignition::math::Vector3d;
 using ignition::math::Vector2d;
 
 namespace hina {
-struct SoilAttributes {
+struct SoilVertex {
 
     bool isAir = false;
 
@@ -22,11 +22,12 @@ struct SoilAttributes {
     double s_e{};
     double sigma{};
     Vector3d normal_dA;
+    int footprint;
 
-    explicit SoilAttributes() = default;
+    explicit SoilVertex() = default;
 
-    ~SoilAttributes() = default;
+    ~SoilVertex() = default;
 
 };
 }
-#endif //HINA_SSI_PLUGIN_SOIL_DATA_H
+#endif //HINA_SSI_PLUGIN_SOIL_VERTEX_H

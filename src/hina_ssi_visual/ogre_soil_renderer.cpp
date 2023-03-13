@@ -31,7 +31,7 @@ namespace hina {
                 auto v3 = vertex->v3;
 
                 manObj->position(v3.X(), v3.Y(), v3.Z());
-                manObj->colour(120, 120, 120);
+                manObj->colour(vertex->v->r, vertex->v->g, vertex->v->b);
             }
 
             for (uint32_t i = 0; i < (x_size - 1) * (y_size - 1) * 3 * 2;) {

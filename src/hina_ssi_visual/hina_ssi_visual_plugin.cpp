@@ -39,6 +39,9 @@ namespace hina {
         std::unordered_map<int,std::unordered_map<int,
             std::shared_ptr<UniformField<ColorAttributes>>>> map;
 
+        std::vector<double> flow_v;
+        double frame_flow_max;
+
         uint32_t verts_x;
         uint32_t verts_y;
 
@@ -68,8 +71,8 @@ namespace hina {
             uint32_t x_verts = soil_update->len_col();
             uint32_t y_verts = soil_update->len_row();
 
-            uint32_t i = soil_update->id_i();
-            uint32_t j = soil_update->id_j();
+            int i = soil_update->id_i();
+            int j = soil_update->id_j();
 
             this->verts_x = x_verts;
             this->verts_y = y_verts;
@@ -84,6 +87,33 @@ namespace hina {
             for(auto& vert : soil_update->chunk_field()) {
                 c->container->update_field(vert,count++);
             }
+            count = 0;
+            for(auto &vert : soil_update->footprint_field()) {
+                float r;
+                float g;
+                float b;
+                get_rgb_from_sp(vert,r,g,b);
+                c->container->set_vtx_color(count++,r,g,b);
+            }
+        }
+
+        void get_rgb_from_sp(int footprint, float& r, float& g, float& b) {
+//            std::cout << s_p << " " << frame_flow_max << std::endl;
+            if(footprint == 1) {
+                r = 127;
+                g = 0;
+                b = 0;
+            } else if (footprint == 2) {
+                r = 0;
+                g = 127;
+                b = 0;
+            } else {
+                r = 0;
+                g = 0;
+                b = 127;
+            }
+            
+            //std::cout << b << std::endl;
         }
 
         std::shared_ptr<VisualChunk> OnChunkCreated(int i, int j) {

@@ -9,7 +9,6 @@ material Hina/Soil
 			emissive vertexcolour
 			lighting on
 			polygon_mode wireframe
-
 		}
 
 	}

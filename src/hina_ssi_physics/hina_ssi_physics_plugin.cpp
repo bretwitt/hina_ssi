@@ -106,6 +106,8 @@ namespace hina {
                                 auto model_name = model->GetName();
                                 auto uri = uriElemPtr->Get<std::string>();
                                 load_mesh(link, uri);
+
+                                std::cout << "Loaded " << model_name << ": " << link->GetName() << " uri..." << uri << std::endl;
                             }
                         }
                     }
@@ -199,7 +201,7 @@ namespace hina {
         }
 
 
-        void update_soil(std::shared_ptr<Soil> soil, float dt) {
+        void update_soil(std::shared_ptr<Soil> soil, double dt) {
 
             soil->pre_update();
 
@@ -226,18 +228,19 @@ namespace hina {
 
                     soil->query_chunk((aabb.Max() + aabb.Min()) / 2);
 
-                    std::vector<std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>>> footprint;
-                    std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilAttributes>>>> footprint_idx;
+                    std::vector<std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>>> footprint;
+                    std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> footprint_idx;
 
-                    float total_displaced_volume = 0.0f;
+                    double total_displaced_volume = 0.0f;
+                    float total_footprint_size = 0.0f;
 
                     // Vertex level computations
-#if PHYS_PROFILER == 1
+#ifdef PHYS_PROFILER
                     IGN_PROFILE_BEGIN("Collision Detection");
 #endif
-                    #pragma omp parallel num_threads(col_threads) default(none) /*shared(footprint, total_displaced_volume)*/ firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
+                    #pragma omp parallel num_threads(col_threads) default(none) shared(footprint, total_footprint_size, total_displaced_volume) firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                     {
-                    #pragma omp for nowait schedule(guided) //reduction(+:total_displaced_volume)
+                    #pragma omp for nowait schedule(guided) reduction(+:total_displaced_volume)
 
                         for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
 
@@ -257,48 +260,85 @@ namespace hina {
 
                             auto meshTri = Triangle(c1v0, c1v1, c1v2);
 
-                            float displaced_volume = 0.0f;
-                            soil->try_deform(meshTri, link, displaced_volume, dt);
+                            double displaced_volume = 0.0f;
+                            footprint_idx = soil->try_deform(meshTri, link, displaced_volume, dt);
 
-                            //total_displaced_volume += displaced_volume;
-                            /*
+                            total_displaced_volume += displaced_volume;
+
                             #pragma omp critical
                             {
                                 footprint.push_back(footprint_idx);
-                            };
-                             */
+                            }
                         }
                     }
-#if PHYS_PROFILER == 1
+
+
+#ifdef PHYS_PROFILER
                     IGN_PROFILE_END();
 #endif
-                    /*
+
+
                     // Footprint level computations
 
                     // 1. Compute border and inner nodes
-                    std::vector<Vector2d> border_w;
-                    std::vector<Vector2d> inner_w;
+                    // 2. Compute footprint size
+                    // 3. Deposit soil
+                    double footprint_size;
 
-                    for(const auto& tri_ftp : footprint) {
-                        for(const auto& idx : tri_ftp) {
-                            auto x = std::get<0>(idx);
-                            auto y = std::get<1>(idx);
-                            auto chunk = std::get<2>(idx);
-                            auto v3 = std::get<3>(idx);
+                    std::unordered_map<uint32_t, std::unordered_map<uint32_t,
+                        std::unordered_map<uint32_t,std::unordered_map<uint32_t,
+                            int>>>> deposit_footprint;
+
+                    std::vector<std::tuple<SoilChunk,uint32_t,uint32_t,std::shared_ptr<FieldVertex<SoilVertex>>>> deposit_footprint_v;
+
+                    for (const auto &tri_ftp: footprint) {
+                        for (const auto &vtx: tri_ftp) {
+                            auto x = std::get<0>(vtx);
+                            auto y = std::get<1>(vtx);
+                            auto chunk = std::get<2>(vtx);
+
+                            auto field = chunk.field;
+
+                            auto vtx1 = field->get_vertex_at_index(x+1,y);
+                            auto vtx2 = field->get_vertex_at_index(x,y+1);
+                            auto vtx3 = field->get_vertex_at_index(x-1,y);
+                            auto vtx4 = field->get_vertex_at_index(x,y-1);
+
+                            if(vtx1->v->footprint == 2 && (deposit_footprint[chunk.location.i][chunk.location.j][x+1][y] == 0)) {
+                                deposit_footprint[chunk.location.i][chunk.location.j][x+1][y] = 1;
+                                deposit_footprint_v.emplace_back(chunk, x+1, y, vtx1);
+                            }
+                            if(vtx2->v->footprint == 2 && (deposit_footprint[chunk.location.i][chunk.location.j][x][y+1] == 0)) {
+                                deposit_footprint[chunk.location.i][chunk.location.j][x][y+1] = 1;
+                                deposit_footprint_v.emplace_back(chunk, x, y+1, vtx2);
+                            }
+                            if(vtx3->v->footprint == 2 && (deposit_footprint[chunk.location.i][chunk.location.j][x-1][y] == 0)) {
+                                deposit_footprint[chunk.location.i][chunk.location.j][x-1][y] = 1;
+                                deposit_footprint_v.emplace_back(chunk, x-1, y, vtx3);
+                            }
+                            if(vtx4->v->footprint == 2 && (deposit_footprint[chunk.location.i][chunk.location.j][x][y-1] == 0)) {
+                                deposit_footprint[chunk.location.i][chunk.location.j][x][y-1] = 1;
+                                deposit_footprint_v.emplace_back(chunk, x, y-1, vtx4);
+                            }
                         }
                     }
-                     */
-
-                    /*
-                    for(const auto& c : soilPtr->get_chunks().get_active_chunks()) {
-
+                    double deposit = 0;
+                    if(!footprint.empty()) {
+                        deposit = total_displaced_volume / (double)deposit_footprint_v.size();
                     }
-                     */
 
-                    // 2. Compute footprint size
+                    for(const auto& v : deposit_footprint_v) {
+                        auto chunk = std::get<0>(v);
+                        auto x = std::get<1>(v);
+                        auto y = std::get<1>(v);
+                        auto vtx = std::get<3>(v);
+                        double w = chunk.field->scale;
 
 
-                    // 3. Deposit soil
+                        if(vtx->v->footprint == 2) {
+                            vtx->v3 += Vector3d(0 ,0, deposit/(w*w));
+                        }
+                    }
 
 
                     // 4. Erode
@@ -309,9 +349,9 @@ namespace hina {
 
         }
 
-        void broadcast_soil(std::shared_ptr<Soil> soilPtr) {
+        void broadcast_soil(const std::shared_ptr<Soil>& soilPtr) {
 
-            auto chunks = soilPtr->get_chunks().get_active_chunks();
+            auto chunks = soilPtr->get_chunks()->get_active_chunks();
 
             for(auto& chunk : chunks) {
                 hina_ssi_msgs::msgs::SoilChunk chunk_update_msg;
@@ -328,6 +368,9 @@ namespace hina {
                     msg.set_y(v3.Y());
                     msg.set_z(v3.Z());
                     *update = msg;
+
+                    chunk_update_msg.add_footprint_field(field->get_vertex_at_flattened_index(i)->v->footprint);
+
                 }
 
                 chunk_update_msg.set_len_row(x_w);
@@ -337,6 +380,8 @@ namespace hina {
                 chunk_update_msg.set_len_col(y_w);
 
                 soilPub->Publish(chunk_update_msg);
+
+                chunk->container->clear_footprint();
             }
 
         }

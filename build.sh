@@ -11,7 +11,7 @@ done
 
 
 if [[ $skip == false ]];
-then cmake ..
+then cmake .. -DCMAKE_BUILD_TYPE=Release
 fi
 
 sudo make
