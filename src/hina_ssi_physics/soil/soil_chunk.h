@@ -70,32 +70,46 @@ namespace hina {
             y_start = 0;
             field->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
-            // Get last soil vertex coordinates (x_end, y_end)
-//            x_end = 0;
-//            y_end = 0;
-//            field->get_nearest_index(Vector2d(max_x, max_y), x_end, y_end);
-//
-//            // Calculate number of iterations required in each direction
-//            iter_x = x_end - x_start + 1;
-//            iter_y = y_end - y_start + 1;
+            min_x = min_x - fmod(min_x, scale);
+            max_x = (max_x+scale) - fmod(max_x, scale);
 
-            iter_x = ceil( ((max_x - min_x) / scale) ) + 1;
-            iter_y = ceil( ((max_y - min_y) / scale) ) + 1;
+            min_y = min_y - fmod(min_y, scale);
+            max_y = (max_y+scale) - fmod(max_y, scale);
+
+            iter_x = ceil( ((max_x - min_x) / scale) );
+            iter_y = ceil( ((max_y - min_y) / scale) );
 
             // Search soil field within bounds under AABB
             FieldV penetrating_coords;
 
             for(uint32_t k = 0; k < iter_x*iter_y; k++) {
-                uint32_t y = floor(k / iter_y);                                 // Unpack for loop into (x,y) index
-                uint32_t x = k - (iter_x*y);
+                //uint32_t y = floor(k / iter_y);                                 // Unpack for loop into (x,y) index
+                //uint32_t x = k - (iter_x*y);
+                uint32_t y = floor( k / iter_y);
+                uint32_t x = k % iter_y;
+
                 auto v3 = field->get_vertex_at_index(x + x_start, y + y_start);
 
                 // If mesh tri penetrates vtx
                 if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
                     penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
                     terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, dt, displaced_vol);
+                    //v3->v3 = Vector3d(v3->v3.X(), v3->v3.Y(), meshTri.centroid().Z());
                 }
-                //penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
+
+                /*
+                if(k == 0) {
+                    v3->v->footprint = 2;
+                } else if (k == (iter_x*iter_y-1)) {
+                    v3->v->footprint = 2;
+                } else
+                {
+                    v3->v->footprint = 1;
+                }
+
+                penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
+                 */
+
             }
 
             return penetrating_coords;
@@ -228,14 +242,16 @@ namespace hina {
             }
         }
 
-        static bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect) {
-            return Geometry::getInstance()->intersects_box_tri(meshTri, vertexRect) ;
-        };
-
         static bool penetrates(const Triangle& meshTri, const std::shared_ptr<FieldVertex<SoilVertex>>& vtx, double w) {
             auto point = vtx->v3;
             return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
         };
+
+        static bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect) {
+            return Geometry::getInstance()->intersects_box_tri(meshTri, vertexRect) ;
+        };
+
+
 
     };
 }

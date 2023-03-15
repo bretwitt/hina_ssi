@@ -13,6 +13,7 @@ namespace hina {
 
     public:
         std::shared_ptr<UniformField<SoilVertex>> field = nullptr;
+        double scale = 0;
 
         DEM(FieldVertexDimensions dims, double scale) {
             field = std::make_shared<UniformField<SoilVertex>>(dims, scale);

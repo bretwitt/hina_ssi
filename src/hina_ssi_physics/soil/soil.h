@@ -47,7 +47,7 @@ namespace hina {
         std::shared_ptr<SoilChunk> OnChunkCreation(int i, int j);
 
         Vector2d worldpos_to_chunk_idx(Vector3d pos);
-        Vector2d chunk_idx_to_worldpos(int i, int j);
+        Vector2d chunk_idx_to_worldpos(int i, int j) const;
 
         std::vector<std::tuple<uint32_t, uint32_t,SoilChunk,  std::shared_ptr<FieldVertex<SoilVertex>>>>
             try_deform(const Triangle &meshTri, const physics::LinkPtr &link, double& displaced_volume, double dt);

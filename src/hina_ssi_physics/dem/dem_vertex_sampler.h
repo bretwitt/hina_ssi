@@ -23,7 +23,8 @@ namespace hina {
             return { 814000.0f, 7.8e7, 20680.0f, 3500, 0.55 };
         }
 
-        double get_z_at_index(double x, double y) {
+        double get_z_at_index(double x, double y) override {
+            //return 0;
             return dem->get_z_at_position(x,y);
         }
     };

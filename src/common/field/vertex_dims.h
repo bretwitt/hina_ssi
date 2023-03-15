@@ -5,8 +5,8 @@
  *  Counts size of field as the number of vertices on each axis
  */
 struct FieldVertexDimensions {
-    double verts_x;
-    double verts_y;
+    uint32_t verts_x;
+    uint32_t verts_y;
 };
 
 /*

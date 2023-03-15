@@ -4,8 +4,8 @@
    <plugin name='hina_ssi_physics' filename='libhina_ssi_plugin_physics.so'>
       	<col_threads>5</col_threads>    
       	<sandbox>
-      		<width_x>1.0</width_x>
-      		<width_y>1.0</width_y>
+      		<width_x>0.5</width_x>
+      		<width_y>0.5</width_y>
       		<resolution>0.005</resolution>
       		<angle>0.0</angle>
       	</sandbox>
@@ -71,7 +71,7 @@
     <model name="wheel1">
     <pose>0 0 0.125 0 0 0</pose>
     <link name='wheel'>
-      <gravity>1</gravity>
+      <gravity>0</gravity>
       <inertial>
         <mass>0.069</mass>
         <inertia>

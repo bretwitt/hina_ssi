@@ -10,7 +10,7 @@ Soil::Soil(SandboxConfig config) : Soil(FieldTrueDimensions { config.x_width, co
     sampler = std::make_shared<SandboxVertexSampler>(config.angle,config.params);
 }
 
-Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldTrueDimensions { 1, 1 }, 0.005) {
+Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldTrueDimensions { 0.5, 0.5 }, dem->field->scale) {
     sampler = std::make_shared<DEMVertexSampler>(dem);
 }
 
@@ -43,7 +43,7 @@ Field_V Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link, 
     return {};
 }
 
-Vector2d Soil::chunk_idx_to_worldpos(int i, int j) {
+Vector2d Soil::chunk_idx_to_worldpos(int i, int j) const {
     return Vector2d( i*((this->vtx_dims.verts_x-1)*this->scale), j*((this->vtx_dims.verts_y-1)*this->scale) );
 }
 
