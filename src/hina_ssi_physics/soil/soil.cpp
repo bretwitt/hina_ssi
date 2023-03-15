@@ -71,7 +71,7 @@ std::shared_ptr<ChunkedField<std::shared_ptr<SoilChunk>>> Soil::get_chunks() {
 }
 
 void Soil::post_update() {
-    //chunks->post_update();
+    chunks->post_update();
 }
 
 

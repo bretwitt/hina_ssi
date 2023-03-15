@@ -329,23 +329,26 @@ namespace hina {
                     }
                     // 3. Deposit soil
 
-//                    double deposit = 0;
-//                    if (!footprint.empty()) {
-//                        deposit = total_displaced_volume / (double) deposit_footprint_v.size();
-//                    }
-//
-//                    for (const auto &v: deposit_footprint_v) {
-//                        auto chunk = std::get<0>(v);
-//                        auto vtx = std::get<3>(v);
-//                        double w = chunk.field->scale;
-//
-//                        if (vtx->v->footprint == 2) {
-//                            vtx->v3 += Vector3d(0, 0, deposit / (w * w));
-//                            if(vtx->v3.Z() >= chunk.field->scale/(tan(0.5))) {
-//                                vtx->v3 = Vector3d(vtx->v3.X(), vtx->v3.Y(), chunk.field->scale/tan(0.5));
-//                            }
-//                        }
-//                    }
+                    double deposit = 0;
+                    if (!footprint.empty()) {
+                        deposit = total_displaced_volume / (double) deposit_footprint_v.size();
+                    }
+
+                    for (const auto &v: deposit_footprint_v) {
+                        auto chunk = std::get<0>(v);
+                        auto vtx = std::get<3>(v);
+                        double w = chunk.field->scale;
+
+                        if (vtx->v->footprint == 2) {
+                            vtx->v3 += Vector3d(0, 0, deposit / (w * w));
+                            if(vtx->v3.Z() >= chunk.field->scale/(tan(0.5))) {
+                                vtx->v3 = Vector3d(vtx->v3.X(), vtx->v3.Y(), chunk.field->scale/tan(0.5));
+                            }
+                        }
+
+
+
+                    }
 
                     // 4. Erode
 //                    std::vector<std::tuple<SoilChunk, uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilVertex>>>> flow_graph_v;
@@ -392,7 +395,7 @@ namespace hina {
 //                        }
 //                    }
 
-                    /*
+/*
 //                    for(uint32_t i = 0; i < 6; i++) {
 //                        for(const auto& v : deposit_footprint_v) {
 //                            auto chunk = std::get<0>(v);
