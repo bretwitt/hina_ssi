@@ -3,16 +3,18 @@
 
 #define PHYS_PROFILER 0
 
-#include "../common/field/uniform_field.h"
 #include <gazebo/common/common.hh>
-#include <memory>
 #include <gazebo/rendering/rendering.hh>
 #include <gazebo/physics/physics.hh>
+#include <ignition/common/Profiler.hh>
+#include <memory>
 #include <utility>
+
 #include "soil/soil.h"
 #include "dem/dem_loader.h"
+#include "../common/field/uniform_field.h"
+
 #include "SoilChunk.pb.h"
-#include <ignition/common/Profiler.hh>
 
 namespace hina {
     class HinaSSIWorldPlugin : public WorldPlugin {
@@ -134,14 +136,14 @@ namespace hina {
 
             auto soil_params = SoilPhysicsParams { k_phi, k_e, 0, c, phi, mfr };
 
-
             auto sandbox_elem = sdf->GetElement("sandbox");
             auto x_width = sandbox_elem->GetElement("width_x")->Get<double>();
             auto y_width = sandbox_elem->GetElement("width_y")->Get<double>();
             auto scale = sandbox_elem->GetElement("resolution")->Get<double>();
             auto angle = sandbox_elem->GetElement("angle")->Get<double>();
 
-            soilPtr = std::make_shared<Soil>(SandboxConfig{x_width, y_width, scale, angle, soil_params});
+            auto sandbox_sampler = std::make_shared<SandboxVertexSampler>(angle,soil_params);
+            soilPtr = std::make_shared<Soil>(sandbox_sampler, FieldTrueDimensions { x_width, y_width }, scale);
         }
 
         void init_dem() {
@@ -156,7 +158,8 @@ namespace hina {
                 dem->upsample(upscale_res);
             }
 
-            soilPtr = std::make_shared<Soil>(dem);
+            auto sampler = std::make_shared<DEMVertexSampler>(dem);
+            soilPtr = std::make_shared<Soil>(sampler,FieldTrueDimensions { 0.5, 0.5 }, dem->field->scale);
         }
 
         void init_transport() {
@@ -334,6 +337,7 @@ namespace hina {
                         deposit = total_displaced_volume / (double) deposit_footprint_v.size();
                     }
 
+
                     for (const auto &v: deposit_footprint_v) {
                         auto chunk = std::get<0>(v);
                         auto vtx = std::get<3>(v);
@@ -346,12 +350,12 @@ namespace hina {
                             }
                         }
 
-
-
                     }
 
                     // 4. Erode
-//                    std::vector<std::tuple<SoilChunk, uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilVertex>>>> flow_graph_v;
+
+
+/*                    std::vector<std::tuple<SoilChunk, uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilVertex>>>> flow_graph_v;
 //
 //                    for (const auto &v: deposit_footprint_v) {
 //                        auto chunk = std::get<0>(v);
@@ -393,7 +397,8 @@ namespace hina {
 //                                }
 //                            }
 //                        }
-//                    }
+//                  }
+ */
 
 /*
 //                    for(uint32_t i = 0; i < 6; i++) {

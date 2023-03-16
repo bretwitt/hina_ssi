@@ -24,5 +24,5 @@ list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
 
 add_subdirectory(src/msgs)
 add_subdirectory(src/common)
-add_subdirectory(src/hina_ssi_visual)
-add_subdirectory(src/hina_ssi_physics)
+add_subdirectory(src/visual)
+add_subdirectory(src/physics)
