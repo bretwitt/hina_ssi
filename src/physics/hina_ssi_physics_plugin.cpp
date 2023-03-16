@@ -153,13 +153,15 @@ namespace hina {
             std::string file_name = gazebo::common::SystemPaths::Instance()->FindFile(filename);
             auto dem = DEMLoader::load_dem_from_geotiff(file_name);
 
+            /*
             if(dem_elem->HasElement("upscale_res")) {
                 auto upscale_res = dem_elem->GetElement("upscale_res")->Get<double>();
                 dem->upsample(upscale_res);
             }
+             */
 
-            auto sampler = std::make_shared<DEMVertexSampler>(dem);
-            soilPtr = std::make_shared<Soil>(sampler,FieldTrueDimensions { 0.5, 0.5 }, dem->field->scale);
+            auto dem_sampler = std::make_shared<DEMVertexSampler>(dem);
+            soilPtr = std::make_shared<Soil>(dem_sampler, FieldTrueDimensions { 0.5, 0.5 }, dem->field->scale);
         }
 
         void init_transport() {
@@ -301,7 +303,8 @@ namespace hina {
                             auto y = std::get<1>(vtx);
                             auto chunk = std::get<2>(vtx);
 
-                            auto field = chunk.field;
+                            auto field = chunk.get_field();
+                            auto loc = chunk.get_location();
 
                             auto vtx1 = field->get_vertex_at_index(x + 1, y);
                             auto vtx2 = field->get_vertex_at_index(x, y + 1);
@@ -309,48 +312,49 @@ namespace hina {
                             auto vtx4 = field->get_vertex_at_index(x, y - 1);
 
                             if (vtx1->v->footprint == 2 &&
-                                (deposit_footprint[chunk.location.i][chunk.location.j][x + 1][y] == 0)) {
-                                deposit_footprint[chunk.location.i][chunk.location.j][x + 1][y] = 2;
+                                (deposit_footprint[loc.i][loc.j][x + 1][y] == 0)) {
+                                deposit_footprint[loc.i][loc.j][x + 1][y] = 2;
                                 deposit_footprint_v.emplace_back(chunk, x + 1, y, vtx1);
                             }
                             if (vtx2->v->footprint == 2 &&
-                                (deposit_footprint[chunk.location.i][chunk.location.j][x][y + 1] == 0)) {
-                                deposit_footprint[chunk.location.i][chunk.location.j][x][y + 1] = 2;
+                                (deposit_footprint[loc.i][loc.j][x][y + 1] == 0)) {
+                                deposit_footprint[loc.i][loc.j][x][y + 1] = 2;
                                 deposit_footprint_v.emplace_back(chunk, x, y + 1, vtx2);
                             }
                             if (vtx3->v->footprint == 2 &&
-                                (deposit_footprint[chunk.location.i][chunk.location.j][x - 1][y] == 0)) {
-                                deposit_footprint[chunk.location.i][chunk.location.j][x - 1][y] = 2;
+                                (deposit_footprint[loc.i][loc.j][x - 1][y] == 0)) {
+                                deposit_footprint[loc.i][loc.j][x - 1][y] = 2;
                                 deposit_footprint_v.emplace_back(chunk, x - 1, y, vtx3);
                             }
                             if (vtx4->v->footprint == 2 &&
-                                (deposit_footprint[chunk.location.i][chunk.location.j][x][y - 1] == 0)) {
-                                deposit_footprint[chunk.location.i][chunk.location.j][x][y - 1] = 2;
+                                (deposit_footprint[loc.i][loc.j][x][y - 1] == 0)) {
+                                deposit_footprint[loc.i][loc.j][x][y - 1] = 2;
                                 deposit_footprint_v.emplace_back(chunk, x, y - 1, vtx4);
                             }
                         }
                     }
                     // 3. Deposit soil
-
-                    double deposit = 0;
-                    if (!footprint.empty()) {
-                        deposit = total_displaced_volume / (double) deposit_footprint_v.size();
-                    }
-
-
-                    for (const auto &v: deposit_footprint_v) {
-                        auto chunk = std::get<0>(v);
-                        auto vtx = std::get<3>(v);
-                        double w = chunk.field->scale;
-
-                        if (vtx->v->footprint == 2) {
-                            vtx->v3 += Vector3d(0, 0, deposit / (w * w));
-                            if(vtx->v3.Z() >= chunk.field->scale/(tan(0.5))) {
-                                vtx->v3 = Vector3d(vtx->v3.X(), vtx->v3.Y(), chunk.field->scale/tan(0.5));
-                            }
-                        }
-
-                    }
+//
+//                    double deposit = 0;
+//                    if (!footprint.empty()) {
+//                        deposit = total_displaced_volume / (double) deposit_footprint_v.size();
+//                    }
+//
+//
+//                    for (const auto &v: deposit_footprint_v) {
+//                        auto chunk = std::get<0>(v);
+//                        auto vtx = std::get<3>(v);
+//
+//                        double w = chunk.get_field()->scale;
+//
+//                        if (vtx->v->footprint == 2) {
+//                            vtx->v3 += Vector3d(0, 0, deposit / (w * w));
+//                            if(vtx->v3.Z() >= w/(tan(0.5))) {
+//                                vtx->v3 = Vector3d(vtx->v3.X(), vtx->v3.Y(), w/tan(0.5));
+//                            }
+//                        }
+//
+//                    }
 
                     // 4. Erode
 
@@ -482,7 +486,7 @@ namespace hina {
             for(auto& chunk : chunks) {
                 hina_ssi_msgs::msgs::SoilChunk chunk_update_msg;
 
-                auto field = chunk->container->field;
+                auto field = chunk->container->get_field();
                 auto x_w = field->x_vert_width;
                 auto y_w = field->y_vert_width;
 

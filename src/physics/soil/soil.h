@@ -4,7 +4,6 @@
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
 
-#include "../../common/geometry.h"
 #include <cmath>
 #include <gz/math/Vector3.hh>
 #include "../../../thirdparty/PerlinNoise.h"
@@ -12,9 +11,9 @@
 #include "soil_chunk.h"
 #include "soil_vertex.h"
 
-#include "../../common/field/uniform_field.h"
-#include "../../common/field/chunked_field.h"
-#include "../../common/field/base_vertex_sampler.h"
+#include "../../common/field/field.h"
+#include "../../common/geometry.h"
+
 #include "../sandbox/sandbox_vertex_sampler.h"
 #include "../dem/dem_vertex_sampler.h"
 #include "../dem/dem.h"
@@ -24,23 +23,24 @@ namespace hina {
     class Soil {
 
     private:
-        FieldVertexDimensions vtx_dims{};
-        std::shared_ptr<SoilVertexSampler> sampler = nullptr;
 
+        FieldVertexDimensions vtx_dims{};
         double scale = 0;
 
         Soil(FieldVertexDimensions dims, double scale);
         Soil(FieldTrueDimensions dims, double scale);
+        Soil();
 
         std::shared_ptr<ChunkedField<std::shared_ptr<SoilChunk>>> chunks;
+        std::shared_ptr<SoilVertexSampler> sampler = nullptr;
 
     public:
 
-        std::shared_ptr<ChunkedField<std::shared_ptr<SoilChunk>>> get_chunks();
-
         Soil(std::shared_ptr<SoilVertexSampler> sampler, FieldTrueDimensions dims, double scale);
 
-        Soil();
+        std::shared_ptr<ChunkedField<std::shared_ptr<SoilChunk>>> get_chunks();
+
+
 
 
         /*

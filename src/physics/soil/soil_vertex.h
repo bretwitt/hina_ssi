@@ -4,8 +4,8 @@
 #include <gazebo/common/common.hh>
 #include <memory>
 #include <utility>
-#include "../sandbox/sandbox_config.h"
-#include "../../common/field/uniform_field.h"
+
+#include "../../common/field/field.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
@@ -21,7 +21,7 @@ struct SoilVertex {
     double s_p{};
     double s_e{};
     double sigma{};
-    Vector3d normal_dA;
+    Vector3d normal_dA{};
 
     /*
      * 0 = not a node
@@ -29,7 +29,7 @@ struct SoilVertex {
      * 2 = soil deposit node
      * 3 = flow out node
      * */
-    int footprint;
+    int footprint = 0;
 
     explicit SoilVertex() = default;
 

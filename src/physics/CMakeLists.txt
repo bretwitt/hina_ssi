@@ -6,7 +6,6 @@ add_library(${PROJECT_NAME}_physics SHARED
                 dem/dem.h dem/dem_loader.h
                 soil/soil.cpp soil/soil.h
                 soil/soil_vertex.h
-                sandbox/sandbox_config.h
                 soil/soil_chunk.h soil/soil_chunk.cpp
                 soil/soil_chunk_location.h
         )

@@ -12,7 +12,7 @@
 
 #include "soil_vertex.h"
 #include "soil_chunk_location.h"
-#include "../soil/soil_vertex_sampler.h"
+#include "soil_vertex_sampler.h"
 
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
@@ -21,16 +21,17 @@ namespace hina {
 
 
     class SoilChunk {
-
-    public:
-        SoilChunkLocationMetadata location;
+    private:
 
         Vector2d max;
         Vector2d min;
 
         std::shared_ptr<SoilVertexSampler> sampler = nullptr;
 
+        SoilChunkLocationMetadata location;
         std::shared_ptr <UniformField<SoilVertex>> field = nullptr;
+
+    public:
 
         SoilChunk() = default;
 
@@ -41,17 +42,31 @@ namespace hina {
                         const std::shared_ptr<SoilVertexSampler>& sampler);
 
         /*
+         * Field getter
+         */
+        std::shared_ptr <UniformField<SoilVertex>> get_field() {
+            return field;
+        }
+
+        /*
+         * Location getter
+         */
+        SoilChunkLocationMetadata get_location() {
+            return location;
+        }
+
+        /*
          *   Applies force to link and deforms chunk's graph based on Bekker-derived physics
          */
         typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Footprint_V;
-        Footprint_V try_deform(const Triangle& meshTri, const physics::LinkPtr& link, double& displaced_vol, double dt);
+        Footprint_V try_deform(const Triangle& meshTri, const physics::LinkPtr& link, double& displaced_vol);
 
         /*
          * Applies force to link and deforms chunk's graph based on Bekker-derived physics
          */
         void terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &meshTri, uint32_t x, uint32_t y,
-                            const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w, double dt,
-                            double &displaced_volume);
+                            const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
+                            double &displaced_volume, SoilPhysicsParams vert_attr);
 
         /*
          * Reset chunk's vertex footprint data

@@ -4,12 +4,15 @@
 #include "soil_physics_params.h"
 #include "../../common/field/base_vertex_sampler.h"
 
-class SoilVertexSampler : public BaseVertexSampler {
+namespace hina {
+    class SoilVertexSampler : public BaseVertexSampler {
 
-public:
-    virtual SoilPhysicsParams get_params_at_index(double x, double y) {
-        return { 0, 0, 0, 0, 0};
+    public:
+        virtual SoilPhysicsParams get_params_at_index(double x, double y) {
+            return { 0, 0, 0, 0, 0};
+        };
     };
-};
+}
+
 
 #endif //HINA_SSI_SOIL_VERTEX_SAMPLER_H

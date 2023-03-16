@@ -11,16 +11,12 @@ namespace hina {
         std::shared_ptr<DEM> dem;
 
     public:
-        DEMVertexSampler(const std::shared_ptr<DEM>& dem) : DEMVertexSampler() {
+        DEMVertexSampler(const std::shared_ptr<DEM>& dem) {
             this->dem = dem;
         }
 
-        DEMVertexSampler() {
-
-        }
-
-        SoilPhysicsParams get_params_at_index(double x, double y) {
-            return { 814000.0f, 7.8e7, 20680.0f, 3500, 0.55 };
+        SoilPhysicsParams get_params_at_index(double x, double y) override {
+            return { 814000.0f, 7.8e7, 20680.0f, 3500, 0.55, 0.25 };
         }
 
         double get_z_at_index(double x, double y) override {

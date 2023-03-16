@@ -7,10 +7,6 @@ using namespace hina;
 
 using ignition::math::Vector3d;
 
-Soil::Soil(const std::shared_ptr<DEM>& dem) : Soil(FieldTrueDimensions { 0.5, 0.5 }, dem->field->scale) {
-    sampler = std::make_shared<DEMVertexSampler>(dem);
-}
-
 Soil::Soil(std::shared_ptr<SoilVertexSampler> sampler, FieldTrueDimensions dims, double scale) : Soil(dims, scale) {
     this->sampler = std::move(sampler);
 }
@@ -37,25 +33,24 @@ hina::Soil::Field_V Soil::try_deform(const Triangle& meshTri, const physics::Lin
     auto chunk = chunks->get_chunk({static_cast<int>(idx.X()),static_cast<int>(idx.Y())});
 
     if (chunk != nullptr && chunk->container != nullptr) {
-        return chunk->container->try_deform(meshTri, link, displaced_volume, dt);
+        return chunk->container->try_deform(meshTri, link, displaced_volume);
     }
 
     return {};
 }
 
 Vector2d Soil::chunk_idx_to_worldpos(int i, int j) const {
-    return Vector2d( i*((this->vtx_dims.verts_x-1)*this->scale), j*((this->vtx_dims.verts_y-1)*this->scale) );
+    return { i*((this->vtx_dims.verts_x-1)*this->scale), j*((this->vtx_dims.verts_y-1)*this->scale) };
 }
 
 Vector2d Soil::worldpos_to_chunk_idx(Vector3d pos) const {
-    return Vector2d( floor(pos.X() / (this->vtx_dims.verts_x*this->scale)), floor(pos.Y() / (this->vtx_dims.verts_y*this->scale)) );
+    return { floor(pos.X() / (this->vtx_dims.verts_x*this->scale)), floor(pos.Y() / (this->vtx_dims.verts_y*this->scale)) };
 }
 
 void Soil::query_chunk(const Vector3d& pos) {
     auto v2 = worldpos_to_chunk_idx(pos);
     chunks->poll_chunk({static_cast<int>(v2.X()),static_cast<int>(v2.Y())});
 }
-
 
 std::shared_ptr<SoilChunk> Soil::OnChunkCreation(int i, int j) {
     auto sc = std::make_shared<SoilChunk>();
@@ -66,7 +61,6 @@ std::shared_ptr<SoilChunk> Soil::OnChunkCreation(int i, int j) {
 std::shared_ptr<ChunkedField<std::shared_ptr<SoilChunk>>> Soil::get_chunks() {
     return this->chunks;
 }
-
 
 void Soil::pre_update() {
     chunks->pre_update();

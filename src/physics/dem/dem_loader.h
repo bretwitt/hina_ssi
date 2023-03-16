@@ -35,8 +35,8 @@ namespace hina {
             std::shared_ptr<DEM> dem = std::make_shared<DEM>(
                     FieldVertexDimensions
                     {
-                        static_cast<double>(nXSize),
-                        static_cast<double>(nYSize)
+                        nXSize,
+                        nYSize
                     },
                     res
             );
@@ -72,50 +72,6 @@ namespace hina {
             return dem;
         }
 
-        static std::shared_ptr<DEM> load_dem_from_csv(const std::string &file) {
-
-            std::vector<std::vector<double>> height_map;
-
-            std::ifstream f;
-            f.open(file);
-
-            if (!f.is_open()) {
-                std::cerr << "Error: File Open Failed" << std::endl;
-            }
-
-            std::stringstream ss;
-            std::string line;
-            double w_x;
-            double w_y;
-
-            double res;
-            double target_res;
-
-            std::getline(f, line, ',');
-            w_x = std::stod(line);              // true width
-            std::getline(f, line, ',');
-            w_y = std::stod(line);              // true width
-            std::getline(f, line, ',');
-            res = std::stod(line);
-            std::getline(f, line, ',');
-            target_res = std::stod(line);
-
-            std::shared_ptr<DEM> dem = std::make_shared<DEM>(FieldTrueDimensions { w_x, w_y },res);
-
-            int i = 0;
-
-            while (std::getline(f, line, ',')) {
-                double z = std::stod(line);
-                dem->load_vertex(i, z);
-                i++;
-            }
-
-            f.close();
-
-            dem->upsample(target_res);
-
-            return dem;
-        }
     };
 }
 #endif //HINA_SSI_PLUGIN_DEM_LOADER_H
