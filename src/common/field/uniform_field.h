@@ -74,12 +74,14 @@ namespace hina {
             return FieldVertexDimensions { verts_x, verts_y };
         }
 
-        void init_field(std::shared_ptr<BaseVertexSampler> sampler) {
+        double init_field(std::shared_ptr<BaseVertexSampler> sampler) {
             vertices = std::make_unique<UniformFieldMap>();
             indices = std::make_unique<uint32_t[]>((x_vert_width - 1) * (y_vert_width - 1) * 3 * 2);
 
-            generate_vertices(sampler);
+            double max = generate_vertices(sampler);
             generate_indices();
+
+            return max;
         }
 
         FieldVertexVPtr vertex_at_flattened_index(uint32_t idx) {
@@ -126,7 +128,10 @@ namespace hina {
             y = (int) (vtx.Y() / scale);
         }
 
-        void generate_vertices(std::shared_ptr<BaseVertexSampler> sampler) {
+        double generate_vertices(std::shared_ptr<BaseVertexSampler> sampler) {
+
+            double max = -9999;
+
             for (int j = 0; j < y_vert_width; j++) {
                 for (int i = 0; i < x_vert_width; i++) {
                     auto i_f = (float) i;
@@ -136,11 +141,17 @@ namespace hina {
                     auto y = (scale * j_f) + origin.y;
                     double z = sampler->get_z_at_index(x,y);
 
+                    if(z > max) {
+                        max = z;
+                    }
+
                     auto v3 = Vector3d(x, y, z);
 
                     set_vertex_at_index(i, j, std::make_shared<FieldVertex<V>>(v3));
                 }
             }
+
+            return max;
         }
 
         void generate_indices() const {

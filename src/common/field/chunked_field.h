@@ -20,8 +20,6 @@ namespace hina {
         chunks;
         std::vector <std::shared_ptr<Chunk<T>>> active_chunks;
 
-        std::vector<std::function<T(int, int)>> chunk_loaded_callbacks;
-
         std::function<T(int, int)> chunk_create_callback;
 
         void load_chunk(ChunkedFieldLocation loc) {
@@ -29,11 +27,6 @@ namespace hina {
             auto chunk = std::make_shared<Chunk<T>>(container, loc);
             chunks[loc.i][loc.j] = chunk;
             active_chunks.push_back(chunk);
-
-            for(auto& callback : chunk_loaded_callbacks) {
-                callback(loc.i, loc.j);
-            }
-
         }
 
         void unload_chunk(ChunkedFieldLocation loc) {
@@ -61,7 +54,7 @@ namespace hina {
         }
 
         void register_chunk_loaded_callback(std::function<T(int, int)> callback) {
-            chunk_loaded_callbacks.push_back(callback);
+            //chunk_loaded_callbacks.push_back(callback);
         }
 
         std::vector<std::shared_ptr<Chunk<T>>> get_active_chunks() {

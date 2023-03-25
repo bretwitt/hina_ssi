@@ -334,29 +334,49 @@ namespace hina {
                         }
                     }
                     // 3. Deposit soil
+/*
+                    double deposit = 0;
+                    if (!footprint.empty()) {
+                        deposit = total_displaced_volume / (double) deposit_footprint_v.size();
+                    }
 //
-//                    double deposit = 0;
-//                    if (!footprint.empty()) {
-//                        deposit = total_displaced_volume / (double) deposit_footprint_v.size();
-//                    }
+//                    Vector2d min;
+//                    Vector2d max;
+
+                    for (const auto &v: deposit_footprint_v) {
+                        auto chunk = std::get<0>(v);
+                        auto vtx = std::get<3>(v);
+                        auto v3 = vtx->v3;
+
+                        double w = chunk.get_field()->scale;
 //
-//
-//                    for (const auto &v: deposit_footprint_v) {
-//                        auto chunk = std::get<0>(v);
-//                        auto vtx = std::get<3>(v);
-//
-//                        double w = chunk.get_field()->scale;
-//
-//                        if (vtx->v->footprint == 2) {
-//                            vtx->v3 += Vector3d(0, 0, deposit / (w * w));
+//                        if(v3.X() > max.X()) {
+//                            max = Vector2d(v3.X(), max.Y());
+//                        }
+//                        else if(v3.X() < min.X()) {
+//                            min = Vector2d(v3.X(), min.Y());
+//                        }
+//                        if(v3.Y() > max.Y()) {
+//                            max = Vector2d(max.X(), v3.Y());
+//                        }
+//                        else if(v3.Y() < min.Y()) {
+//                            min = Vector2d(min.X(), v3.Y());
+//                        }
+
+                        if (vtx->v->footprint == 2) {
+                            vtx->v3 += Vector3d(0, 0, deposit / (w * w));
 //                            if(vtx->v3.Z() >= w/(tan(0.5))) {
 //                                vtx->v3 = Vector3d(vtx->v3.X(), vtx->v3.Y(), w/tan(0.5));
 //                            }
-//                        }
-//
-//                    }
+                        }
 
+                    }
+*/
                     // 4. Erode
+
+
+
+
 
 
 /*                    std::vector<std::tuple<SoilChunk, uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilVertex>>>> flow_graph_v;
@@ -498,6 +518,17 @@ namespace hina {
                     msg.set_y(v3.Y());
                     msg.set_z(v3.Z());
                     *update = msg;
+
+
+
+                    auto normal_msg = gazebo::msgs::Vector3d();
+                    auto normal = field->get_vertex_at_flattened_index(i)->v->normal;
+                    normal_msg.set_x(normal.X());
+                    normal_msg.set_y(normal.Y());
+                    normal_msg.set_z(normal.Z());
+
+                    auto update_normal = chunk_update_msg.add_normals_field();
+                    *update_normal = normal_msg;
 
                     chunk_update_msg.add_footprint_field(field->get_vertex_at_flattened_index(i)->v->footprint);
 

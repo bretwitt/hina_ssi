@@ -7,9 +7,10 @@ void SoilChunk::init_chunk(FieldVertexDimensions dims,
                 const std::shared_ptr<SoilVertexSampler>& sampler) {
     this->field = std::make_shared<UniformField<SoilVertex>>(dims, scale);
     this->field->set_origin({location.origin.X(), location.origin.Y()});
-    this->field->init_field(sampler);
+    this->max = Vector2d(0,this->field->init_field(sampler));
     this->sampler = sampler;
     this->location = location;
+
 }
 
 hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, const physics::LinkPtr& link,
@@ -50,9 +51,7 @@ hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, cons
     Footprint_V penetrating_coords;
 
     for(uint32_t k = 0; k < iter_x*iter_y; k++) {
-        //uint32_t y = floor(k / iter_y);                                 // Unpack for loop into (x,y) index
-        //uint32_t x = k - (iter_x*y);
-        uint32_t y = floor( k / iter_y);
+        uint32_t y = floor( k / iter_y);                            // Unpack for loop into (x,y) index
         uint32_t x = k % iter_y;
 
         auto v3 = this->field->get_vertex_at_index(x + x_start, y + y_start);
@@ -138,6 +137,8 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &
 
         normal_dA = -normal_sum * area;
 
+        vert_state->normal = -normal_sum;
+
         vert_state->normal_dA = normal_dA;
 
         auto sigma_star = sigma_t;
@@ -184,7 +185,6 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &
     vertex->v3 = Vector3d(v3.X(), v3.Y(), z);
 
     displaced_volume = vert_state->plastic_flow*w*w;
-    //std::cout << displaced_volume << std::endl;
 
     auto force_v = Vector3d(
             (vert_attr.c + (vert_state->sigma * tan(vert_attr.phi))) * vert_state->normal_dA.X(),

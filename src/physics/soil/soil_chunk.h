@@ -23,7 +23,6 @@ namespace hina {
     class SoilChunk {
     private:
 
-        Vector2d max;
         Vector2d min;
 
         std::shared_ptr<SoilVertexSampler> sampler = nullptr;
@@ -32,6 +31,7 @@ namespace hina {
         std::shared_ptr <UniformField<SoilVertex>> field = nullptr;
 
     public:
+        Vector2d max;
 
         SoilChunk() = default;
 
@@ -76,7 +76,7 @@ namespace hina {
         /*
          *  Return true if a soil vertex penetrates a triangle
          */
-        static bool penetrates(const Triangle& meshTri, const std::shared_ptr<FieldVertex<SoilVertex>>& vtx, double w);
+        bool penetrates(const Triangle& meshTri, const std::shared_ptr<FieldVertex<SoilVertex>>& vtx, double w);
 
         /*
          * Return true if triangle overlaps AABB

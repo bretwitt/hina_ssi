@@ -50,7 +50,17 @@ Vector2d Soil::worldpos_to_chunk_idx(Vector3d pos) const {
 void Soil::query_chunk(const Vector3d& pos) {
     auto v2 = worldpos_to_chunk_idx(pos);
     chunks->poll_chunk({static_cast<int>(v2.X()),static_cast<int>(v2.Y())});
+    chunks->poll_chunk({static_cast<int>(v2.X() + 1),static_cast<int>(v2.Y())});
+    chunks->poll_chunk({static_cast<int>(v2.X() - 1),static_cast<int>(v2.Y())});
+    chunks->poll_chunk({static_cast<int>(v2.X()),static_cast<int>(v2.Y()) + 1});
+    chunks->poll_chunk({static_cast<int>(v2.X()),static_cast<int>(v2.Y()) - 1 });
+
 }
+std::shared_ptr<SoilVertex> Soil::get_vertex_at_world_pos(Vector3d pos) {
+//    auto cidx = worldpos_to_chunk_idx(pos);
+//    chunks->get_chunk_cont()
+}
+
 
 std::shared_ptr<SoilChunk> Soil::OnChunkCreation(int i, int j) {
     auto sc = std::make_shared<SoilChunk>();

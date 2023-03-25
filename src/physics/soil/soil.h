@@ -5,7 +5,6 @@
 #include <gazebo/physics/physics.hh>
 
 #include <cmath>
-#include <gz/math/Vector3.hh>
 #include "../../../thirdparty/PerlinNoise.h"
 
 #include "soil_chunk.h"
@@ -72,6 +71,11 @@ namespace hina {
          *
          */
         Vector2d chunk_idx_to_worldpos(int i, int j) const;
+
+        /*
+         *
+         */
+        std::shared_ptr<SoilVertex> get_vertex_at_world_pos(Vector3d pos);
 
         /*
          *  Applies force to link and deforms appropriate chunk's graph based on Bekker-derived physics

@@ -8,6 +8,7 @@ namespace hina {
         float r;
         float g;
         float b;
+        Vector3d normal;
     };
 }
 

@@ -56,6 +56,12 @@ namespace hina {
             field->set_vertex_at_flattened_index(i, FieldVertex<ColorAttributes>(Vector3d(_v.x(), _v.y(), _v.z())));
         }
 
+        void update_field_normal(const gazebo::msgs::Vector3d& _v, uint32_t i) {
+            auto vtx = field->get_vertex_at_flattened_index(i);
+            vtx->v->normal = Vector3d(_v.x(),_v.y(),_v.z());
+            field->set_vertex_at_flattened_index(i, *vtx);
+        }
+
         void set_vtx_color(uint32_t i, float r, float g, float b) {
             std::shared_ptr<FieldVertex<ColorAttributes>> vtx = field->get_vertex_at_flattened_index(i);
             vtx->v->r = r;

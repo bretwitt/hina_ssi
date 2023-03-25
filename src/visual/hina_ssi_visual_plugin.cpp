@@ -94,22 +94,27 @@ namespace hina {
                 get_rgb_from_sp(vert,r,g,b);
                 c->container->set_vtx_color(count++,r,g,b);
             }
+
+            count = 0;
+            for(auto& vert : soil_update->normals_field()) {
+                c->container->update_field_normal(vert,count++);
+            }
         }
 
         void get_rgb_from_sp(int footprint, float& r, float& g, float& b) {
 //            std::cout << s_p << " " << frame_flow_max << std::endl;
             if(footprint == 1) {
-                r = 127;
+                r = 1;
                 g = 0;
                 b = 0;
             } else if (footprint == 2) {
                 r = 0;
-                g = 127;
+                g = 1;
                 b = 0;
             } else {
-                r = 0;
-                g = 0;
-                b = 127;
+                r = 1;
+                g = 1;
+                b = 1;
             }
             
             //std::cout << b << std::endl;

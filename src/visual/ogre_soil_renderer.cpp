@@ -29,8 +29,16 @@ namespace hina {
             for (uint32_t i = 0; i < nVerts; i++) {
                 auto vertex = field->vertex_at_flattened_index(i);
                 auto v3 = vertex->v3;
+                auto vtx = vertex->v;
+
+                uint32_t x,y;
+                field->unflatten_index(i,x,y);
 
                 manObj->position(v3.X(), v3.Y(), v3.Z());
+                manObj->textureCoord((double)x / x_size, (double)y / y_size);
+
+                manObj->normal(vtx->normal.X(),vtx->normal.Y(),vtx->normal.Z());
+
                 manObj->colour(vertex->v->r, vertex->v->g, vertex->v->b);
             }
 

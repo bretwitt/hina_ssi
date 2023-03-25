@@ -22,6 +22,7 @@ struct SoilVertex {
     double s_e{};
     double sigma{};
     Vector3d normal_dA{};
+    Vector3d normal = Vector3d(0,0,1);
 
     /*
      * 0 = not a node

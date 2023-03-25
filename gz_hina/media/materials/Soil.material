@@ -4,11 +4,23 @@ material Hina/Soil
 	{
 		pass
 		{
-			ambient vertexcolour
-			diffuse vertexcolour
-			emissive vertexcolour
-			lighting on
-			polygon_mode wireframe
+		    //ambient vertexcolour
+		    //diffuse vertexcolour
+		    //polygon_mode wireframe
+
+		    ambient 0.5 0.5 0.5
+		    diffuse 1.0 1.0 1.0
+		    specular 1.0 1.0 1.0 12.5
+
+		    lighting on
+
+
+
+		    texture_unit 
+		    {
+			texture soil.png
+		    }
+
 		}
 
 	}
