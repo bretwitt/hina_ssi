@@ -33,7 +33,7 @@ namespace hina {
         SoilChunk() = default;
 
         /*
-         *  Initializes SoilChunk's p_field and vertex samplers
+         *  Initializes SoilChunk's field and vertex samplers
          */
         void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocation location,
                         const std::shared_ptr<SoilVertexSampler>& sampler);

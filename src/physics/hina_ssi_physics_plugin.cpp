@@ -34,6 +34,8 @@ private:
 
     std::map<physics::LinkPtr, const common::Mesh *> mesh_lookup{};
 
+    transport::Node* trspt = nullptr;
+
     common::Time time;
     double sec{};
     double last_sec{};
@@ -60,6 +62,12 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    ~HinaSSIWorldPlugin() {
+        delete trspt;
+    }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     void init_threading() {
         if (sdf->HasElement("col_threads")) {
             col_threads = sdf->GetElement("col_threads")->Get<int>();
@@ -79,7 +87,8 @@ public:
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     void init_transport() {
-        this->node = transport::NodePtr(new transport::Node());
+        trspt = new transport::Node();
+        this->node = transport::NodePtr(trspt);
         node->Init();
         soilPub = node->Advertise<hina_ssi_msgs::msgs::SoilChunk>("~/soil");
     }

@@ -21,23 +21,31 @@ namespace hina {
         std::vector <std::shared_ptr<Chunk<T>>> active_chunks;
 
         std::function<T(int, int)> chunk_create_callback;
+        std::function<T(int, int)> chunk_loaded_callback;
+        std::function<T(int, int)> chunk_unloaded_callback;
 
         void load_chunk(ChunkedFieldLocation loc) {
             T container = chunk_create_callback(loc.i, loc.j);
             auto chunk = std::make_shared<Chunk<T>>(container, loc);
             chunks[loc.i][loc.j] = chunk;
             active_chunks.push_back(chunk);
+            if(chunk_loaded_callback != NULL) {
+                chunk_loaded_callback(loc.i,loc.j);
+            }
         }
 
         void unload_chunk(ChunkedFieldLocation loc) {
             chunks[loc.i][loc.j] = nullptr;
+            if(chunk_unloaded_callback != NULL) {
+                chunk_unloaded_callback(loc.i,loc.j);
+            }
         }
 
         void cull_dead_chunks() {
             for (uint32_t i = 0; i < active_chunks.size(); i++) {
                 if (!active_chunks[i]->keep_loaded_flag) {
                     auto loc = active_chunks[i]->location;
-                    chunks[loc.i][loc.j] = nullptr;
+                    unload_chunk(loc);
                     active_chunks.erase(active_chunks.begin() + i);
                 }
             }
@@ -49,6 +57,14 @@ namespace hina {
 
         void register_chunk_create_callback(std::function<T(int, int)> callback) {
             chunk_create_callback = callback;
+        }
+
+        void register_chunk_loaded_callback(std::function<T(int, int)> callback) {
+            chunk_loaded_callback = callback;
+        }
+
+        void register_chunk_unloaded_callback(std::function<T(int, int)> callback) {
+            chunk_unloaded_callback = callback;
         }
 
         std::vector<std::shared_ptr<Chunk<T>>> get_active_chunks() {
