@@ -175,6 +175,8 @@ std::shared_ptr<SoilVertex> Soil::get_vertex_at_world_pos(Vector3d pos) {
 
 std::shared_ptr<SoilChunk> Soil::OnChunkCreation(int i, int j) {
     auto sc = std::make_shared<SoilChunk>();
+
+    std::cout << "Chunk Created: " << i << " " << j << std::endl;
     sc->init_chunk(vtx_dims, scale, { i,j, chunk_idx_to_worldpos(i,j)}, sampler);
     return sc;
 }

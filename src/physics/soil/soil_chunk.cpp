@@ -7,8 +7,8 @@ void SoilChunk::init_chunk(FieldVertexDimensions dims,
                            double scale, SoilChunkLocation location,
                            const std::shared_ptr<SoilVertexSampler>& sampler) {
     this->p_field = std::make_shared<UniformField<SoilVertex>>(dims, scale);
-    this->p_field->init_field(sampler);
     this->p_field->set_origin({location.origin.X(), location.origin.Y()});
+    this->p_field->init_field(sampler);
     this->p_sampler = sampler;
     this->location = location;
 }

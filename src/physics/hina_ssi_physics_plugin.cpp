@@ -264,7 +264,7 @@ public:
                 double total_displaced_volume = 0.0f;
                 float total_footprint_size = 0.0f;
 
-                /*
+
                 // Vertex level computations
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_BEGIN("Collision Detection");
@@ -293,7 +293,7 @@ public:
 
                         double displaced_volume = 0.0f;
 
-                        /*
+
                         footprint_idx = soil->try_deform(meshTri, link, displaced_volume);
 
                         total_displaced_volume += displaced_volume;
@@ -302,13 +302,13 @@ public:
                         {
                             footprint.push_back(footprint_idx);
                         }
-                         */
+
                      }
                 }
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_END();
 #endif
-                */
+
 
                 //this->p_soil->compute_footprint_stage(footprint);
             }
