@@ -44,7 +44,7 @@ namespace hina {
 
 
         /*
-         *  Load chunk or de-schedule from culling
+         *  Load chunk or de-schedule from culling, takes world coordinates
          */
         void query_chunk(const Vector3d& pos);
 
@@ -82,7 +82,7 @@ namespace hina {
          *  Applies force to link and deforms appropriate chunk's graph based on Bekker-derived physics
          */
         typedef std::vector<std::tuple<uint32_t, uint32_t,SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Field_V;
-        Field_V try_deform(const Triangle &meshTri, const physics::LinkPtr &link, double& displaced_volume, double dt);
+        hina::Soil::Field_V try_deform(const Triangle &meshTri, const physics::LinkPtr &link, double &displaced_volume);
 
         /*
          *  Perform footprint level computations

@@ -2,7 +2,7 @@
 #define HINA_SSI_PLUGIN_VERTEX_DIMS_H
 
 /*
- *  Counts size of field as the number of vertices on each axis
+ *  Counts size of p_field as the number of vertices on each axis
  */
 struct FieldVertexDimensions {
     uint32_t verts_x;
@@ -10,7 +10,7 @@ struct FieldVertexDimensions {
 };
 
 /*
- * Counts size of field as the number of meters of each axis
+ * Counts size of p_field as the number of meters of each axis
  */
 
 struct FieldTrueDimensions {

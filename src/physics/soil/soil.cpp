@@ -36,8 +36,8 @@ Soil::Soil() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-hina::Soil::Field_V Soil::try_deform(const Triangle& meshTri, const physics::LinkPtr& link,
-                                     double& displaced_volume, double dt) {
+hina::Soil::Field_V Soil::try_deform(const Triangle &meshTri, const physics::LinkPtr &link, double &displaced_volume) {
+
 
     auto idx = worldpos_to_chunk_idx(meshTri.centroid());
     auto chunk = chunks->get_chunk({static_cast<int>(idx.X()),static_cast<int>(idx.Y())});
@@ -162,7 +162,6 @@ void Soil::query_chunk(const Vector3d& pos) {
     chunks->poll_chunk({static_cast<int>(v2.X() - 1),static_cast<int>(v2.Y())});
     chunks->poll_chunk({static_cast<int>(v2.X()),static_cast<int>(v2.Y()) + 1});
     chunks->poll_chunk({static_cast<int>(v2.X()),static_cast<int>(v2.Y()) - 1 });
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

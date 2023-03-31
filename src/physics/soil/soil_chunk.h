@@ -23,34 +23,20 @@ namespace hina {
     class SoilChunk {
     private:
 
-        std::shared_ptr<SoilVertexSampler> sampler = nullptr;
-
         SoilChunkLocation location;
-        std::shared_ptr <UniformField<SoilVertex>> field = nullptr;
+
+        std::shared_ptr<SoilVertexSampler> p_sampler = nullptr;
+        std::shared_ptr <UniformField<SoilVertex>> p_field = nullptr;
 
     public:
 
         SoilChunk() = default;
 
         /*
-         *  Initializes SoilChunk's field and vertex samplers
+         *  Initializes SoilChunk's p_field and vertex samplers
          */
         void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocation location,
                         const std::shared_ptr<SoilVertexSampler>& sampler);
-
-        /*
-         * Field getter
-         */
-        std::shared_ptr <UniformField<SoilVertex>> get_field() {
-            return field;
-        }
-
-        /*
-         * Location getter
-         */
-        SoilChunkLocation get_location() {
-            return location;
-        }
 
         /*
          *   Applies force to link and deforms chunk's graph based on Bekker-derived physics
@@ -64,6 +50,20 @@ namespace hina {
         void terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &meshTri, uint32_t x, uint32_t y,
                             const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
                             double &displaced_volume, SoilPhysicsParams vert_attr);
+
+        /*
+         * Field getter
+         */
+        std::shared_ptr <UniformField<SoilVertex>> get_field() {
+            return p_field;
+        }
+
+        /*
+         * Location getter
+         */
+        SoilChunkLocation get_location() {
+            return location;
+        }
 
         /*
          * Reset chunk's vertex footprint data

@@ -45,16 +45,10 @@ namespace hina {
 
     public:
 
-        ChunkedField() {
-
-        }
+        ChunkedField() = default;
 
         void register_chunk_create_callback(std::function<T(int, int)> callback) {
             chunk_create_callback = callback;
-        }
-
-        void register_chunk_loaded_callback(std::function<T(int, int)> callback) {
-            //chunk_loaded_callbacks.push_back(callback);
         }
 
         std::vector<std::shared_ptr<Chunk<T>>> get_active_chunks() {

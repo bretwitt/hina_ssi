@@ -6,11 +6,11 @@ using namespace hina;
 void SoilChunk::init_chunk(FieldVertexDimensions dims,
                            double scale, SoilChunkLocation location,
                            const std::shared_ptr<SoilVertexSampler>& sampler) {
-    this->field = std::make_shared<UniformField<SoilVertex>>(dims, scale);
-    this->field->set_origin({location.origin.X(), location.origin.Y()});
-    this->sampler = sampler;
+    this->p_field = std::make_shared<UniformField<SoilVertex>>(dims, scale);
+    this->p_field->init_field(sampler);
+    this->p_field->set_origin({location.origin.X(), location.origin.Y()});
+    this->p_sampler = sampler;
     this->location = location;
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -33,12 +33,12 @@ hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, cons
     min_y = fmin(meshTri.v1.Y(), fmin(meshTri.v2.Y(), meshTri.v3.Y())) - chunk_y;
 
     // Start constructing bounds to search soil field
-    scale = this->field->scale;
+    scale = this->p_field->scale;
 
     // Get first soil vertex coordinates (x_start, y_start)
     x_start = 0;
     y_start = 0;
-    this->field->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
+    this->p_field->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
     min_x = min_x - fmod(min_x, scale);
     max_x = (max_x+scale) - fmod(max_x, scale);
@@ -49,22 +49,25 @@ hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, cons
     iter_x = ceil( ((max_x - min_x) / scale) );
     iter_y = ceil( ((max_y - min_y) / scale) );
 
+
     // Search soil field within bounds under AABB
     Footprint_V penetrating_coords;
 
     for(uint32_t k = 0; k < iter_x*iter_y; k++) {
-        uint32_t y = floor( k / iter_y);                            // Unpack for loop into (x,y) index
+
+        uint32_t y = floor( k / iter_y);
         uint32_t x = k % iter_y;
 
-        auto v3 = this->field->get_vertex_at_index(x + x_start, y + y_start);
+        auto v3 = this->p_field->get_vertex_at_index(x + x_start, y + y_start);
 
         // If mesh tri penetrates vtx
         if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
             penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
             terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, displaced_vol,
-                           sampler->get_params_at_index(x + x_start, y + y_start));
+                           p_sampler->get_params_at_index(x + x_start, y + y_start));
         }
     }
+
     return penetrating_coords;
 }
 
@@ -98,15 +101,15 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &
 
     if(sigma_t > 0) {                            // Unilateral Contact
         /* Geometry Calculations */
-        auto vtx_ul = this->field->get_vertex_at_index(x - 1, y + 1)->v3;
-        auto vtx_dl = this->field->get_vertex_at_index(x - 1, y - 1)->v3;
-        auto vtx_ur = this->field->get_vertex_at_index(x + 1, y + 1)->v3;
-        auto vtx_dr = this->field->get_vertex_at_index(x + 1, y - 1)->v3;
+        auto vtx_ul = this->p_field->get_vertex_at_index(x - 1, y + 1)->v3;
+        auto vtx_dl = this->p_field->get_vertex_at_index(x - 1, y - 1)->v3;
+        auto vtx_ur = this->p_field->get_vertex_at_index(x + 1, y + 1)->v3;
+        auto vtx_dr = this->p_field->get_vertex_at_index(x + 1, y - 1)->v3;
 
-        auto vtx_u = this->field->get_vertex_at_index(x, y + 1)->v3;
-        auto vtx_d = this->field->get_vertex_at_index(x, y - 1)->v3;
-        auto vtx_l = this->field->get_vertex_at_index(x - 1, y)->v3;
-        auto vtx_r = this->field->get_vertex_at_index(x + 1, y)->v3;
+        auto vtx_u = this->p_field->get_vertex_at_index(x, y + 1)->v3;
+        auto vtx_d = this->p_field->get_vertex_at_index(x, y - 1)->v3;
+        auto vtx_l = this->p_field->get_vertex_at_index(x - 1, y)->v3;
+        auto vtx_r = this->p_field->get_vertex_at_index(x + 1, y)->v3;
         const auto &vtx = v3;
 
         auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
@@ -145,10 +148,10 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &
 
         /* update footprints */
 
-        auto v1 = this->field->get_vertex_at_index(x, y + 1)->v;
-        auto v2 = this->field->get_vertex_at_index(x, y - 1)->v;
-        auto v3 = this->field->get_vertex_at_index(x + 1, y)->v;
-        auto v4 = this->field->get_vertex_at_index(x - 1, y)->v;
+        auto v1 = this->p_field->get_vertex_at_index(x, y + 1)->v;
+        auto v2 = this->p_field->get_vertex_at_index(x, y - 1)->v;
+        auto v3 = this->p_field->get_vertex_at_index(x + 1, y)->v;
+        auto v4 = this->p_field->get_vertex_at_index(x - 1, y)->v;
 
         vertex->v->footprint = 1;
         if(v1->footprint != 1) {
@@ -189,10 +192,10 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &
 
 
 void SoilChunk::clear_footprint() {
-    auto x_w = field->x_vert_width;
-    auto y_w = field->y_vert_width;
+    auto x_w = this->p_field->x_vert_width;
+    auto y_w = this->p_field->y_vert_width;
     for(uint32_t i = 0; i < x_w*y_w; i++) {
-        auto v3 = field->get_vertex_at_flattened_index(i)->v;
+        auto v3 = this->p_field->get_vertex_at_flattened_index(i)->v;
         v3->footprint = 0;
     }
 }
