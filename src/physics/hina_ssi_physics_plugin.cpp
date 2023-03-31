@@ -60,8 +60,18 @@ namespace hina {
             }
         }
 
-        void OnEntityAdded(const std::string &str) {
-            init_links(str);
+        void init_soil() {
+            if (sdf->HasElement("dem")) {
+                init_dem();
+            } else if(sdf->HasElement("sandbox")){
+                init_sandbox();
+            }
+        }
+
+        void init_transport() {
+            this->node = transport::NodePtr(new transport::Node());
+            node->Init();
+            soilPub = node->Advertise<hina_ssi_msgs::msgs::SoilChunk>("~/soil");
         }
 
         void init_models() {
@@ -117,14 +127,6 @@ namespace hina {
             }
         }
 
-        void init_soil() {
-            if (sdf->HasElement("dem")) {
-                init_dem();
-            } else if(sdf->HasElement("sandbox")){
-                init_sandbox();
-            }
-        }
-
         void init_sandbox() {
             auto params = sdf->GetElement("params");
 
@@ -164,12 +166,6 @@ namespace hina {
             soilPtr = std::make_shared<Soil>(dem_sampler, FieldTrueDimensions { 0.5, 0.5 }, dem->field->scale);
         }
 
-        void init_transport() {
-            this->node = transport::NodePtr(new transport::Node());
-            node->Init();
-            soilPub = node->Advertise<hina_ssi_msgs::msgs::SoilChunk>("~/soil");
-        }
-
         void load_mesh(const physics::LinkPtr &link, const std::string &mesh_uri) {
             auto mesh = common::MeshManager::Instance()->Load(mesh_uri);
             mesh_lookup.insert(std::pair<physics::LinkPtr, const common::Mesh *>(link, mesh));
@@ -192,20 +188,16 @@ namespace hina {
             IGN_PROFILE_END();
             IGN_PROFILE_BEGIN("TAROSCM::Broadcast Soil");
 #endif
-
             last_sec = sec;
 
             if (dt_viz > (1. / 1.f)) {
                 broadcast_soil(soilPtr);
                 last_sec_viz = sec;
             }
-
 #ifdef PHYS_PROFILER
             IGN_PROFILE_END();
 #endif
-
         }
-
 
         void update_soil(std::shared_ptr<Soil> soil, double dt) {
 
@@ -228,11 +220,7 @@ namespace hina {
                     auto rot = pose.Rot();
                     auto pos = pose.Pos();
 
-                    auto aabb = link->GetCollision(0.)->BoundingBox();
-                    auto max = aabb.Max();
-                    auto min = aabb.Min();
-
-                    soil->query_chunk((aabb.Max() + aabb.Min()) / 2);
+                    soil->query_chunk(pos);
 
                     std::vector<std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>>> footprint;
                     std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> footprint_idx;
@@ -267,6 +255,7 @@ namespace hina {
                             auto meshTri = Triangle(c1v0, c1v1, c1v2);
 
                             double displaced_volume = 0.0f;
+
                             footprint_idx = soil->try_deform(meshTri, link, displaced_volume, dt);
 
                             total_displaced_volume += displaced_volume;
@@ -277,226 +266,14 @@ namespace hina {
                             }
                         }
                     }
-
-
 #ifdef PHYS_PROFILER
                     IGN_PROFILE_END();
 #endif
-
-
-                    // Footprint level computations
-
-                    // 1. Compute border and inner nodes
-                    // 2. Compute footprint size
-
-                    double footprint_size;
-
-                    std::unordered_map<uint32_t, std::unordered_map<uint32_t,
-                            std::unordered_map<uint32_t, std::unordered_map<uint32_t,
-                                    int>>>> deposit_footprint;
-
-                    std::vector<std::tuple<SoilChunk, uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilVertex>>>> deposit_footprint_v;
-
-                    for (const auto &tri_ftp: footprint) {
-                        for (const auto &vtx: tri_ftp) {
-                            auto x = std::get<0>(vtx);
-                            auto y = std::get<1>(vtx);
-                            auto chunk = std::get<2>(vtx);
-
-                            auto field = chunk.get_field();
-                            auto loc = chunk.get_location();
-
-                            auto vtx1 = field->get_vertex_at_index(x + 1, y);
-                            auto vtx2 = field->get_vertex_at_index(x, y + 1);
-                            auto vtx3 = field->get_vertex_at_index(x - 1, y);
-                            auto vtx4 = field->get_vertex_at_index(x, y - 1);
-
-                            if (vtx1->v->footprint == 2 &&
-                                (deposit_footprint[loc.i][loc.j][x + 1][y] == 0)) {
-                                deposit_footprint[loc.i][loc.j][x + 1][y] = 2;
-                                deposit_footprint_v.emplace_back(chunk, x + 1, y, vtx1);
-                            }
-                            if (vtx2->v->footprint == 2 &&
-                                (deposit_footprint[loc.i][loc.j][x][y + 1] == 0)) {
-                                deposit_footprint[loc.i][loc.j][x][y + 1] = 2;
-                                deposit_footprint_v.emplace_back(chunk, x, y + 1, vtx2);
-                            }
-                            if (vtx3->v->footprint == 2 &&
-                                (deposit_footprint[loc.i][loc.j][x - 1][y] == 0)) {
-                                deposit_footprint[loc.i][loc.j][x - 1][y] = 2;
-                                deposit_footprint_v.emplace_back(chunk, x - 1, y, vtx3);
-                            }
-                            if (vtx4->v->footprint == 2 &&
-                                (deposit_footprint[loc.i][loc.j][x][y - 1] == 0)) {
-                                deposit_footprint[loc.i][loc.j][x][y - 1] = 2;
-                                deposit_footprint_v.emplace_back(chunk, x, y - 1, vtx4);
-                            }
-                        }
-                    }
-                    // 3. Deposit soil
-/*
-                    double deposit = 0;
-                    if (!footprint.empty()) {
-                        deposit = total_displaced_volume / (double) deposit_footprint_v.size();
-                    }
-//
-//                    Vector2d min;
-//                    Vector2d max;
-
-                    for (const auto &v: deposit_footprint_v) {
-                        auto chunk = std::get<0>(v);
-                        auto vtx = std::get<3>(v);
-                        auto v3 = vtx->v3;
-
-                        double w = chunk.get_field()->scale;
-//
-//                        if(v3.X() > max.X()) {
-//                            max = Vector2d(v3.X(), max.Y());
-//                        }
-//                        else if(v3.X() < min.X()) {
-//                            min = Vector2d(v3.X(), min.Y());
-//                        }
-//                        if(v3.Y() > max.Y()) {
-//                            max = Vector2d(max.X(), v3.Y());
-//                        }
-//                        else if(v3.Y() < min.Y()) {
-//                            min = Vector2d(min.X(), v3.Y());
-//                        }
-
-                        if (vtx->v->footprint == 2) {
-                            vtx->v3 += Vector3d(0, 0, deposit / (w * w));
-//                            if(vtx->v3.Z() >= w/(tan(0.5))) {
-//                                vtx->v3 = Vector3d(vtx->v3.X(), vtx->v3.Y(), w/tan(0.5));
-//                            }
-                        }
-
-                    }
-*/
-                    // 4. Erode
-
-
-
-
-
-
-/*                    std::vector<std::tuple<SoilChunk, uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilVertex>>>> flow_graph_v;
-//
-//                    for (const auto &v: deposit_footprint_v) {
-//                        auto chunk = std::get<0>(v);
-//                        auto x = std::get<1>(v);
-//                        auto y = std::get<2>(v);
-//                        auto vtx = std::get<3>(v);
-//                        auto f = chunk.field;
-//
-//                        if (vtx->v->footprint == 2) {
-//                            auto v1 = f->get_vertex_at_index(x + 1, y);
-//                            auto v2 = f->get_vertex_at_index(x - 1, y);
-//
-//                            auto v3 = f->get_vertex_at_index(x, y + 1);
-//                            auto v4 = f->get_vertex_at_index(x, y - 1);
-//
-//                            if (v1->v->footprint == 2 || v1->v->footprint == 0) {
-//                                if (v1->v->footprint == 0) {
-//                                    v1->v->footprint = 3;
-//                                }
-//                                if (deposit_footprint[chunk.location.i][chunk.location.j][x + 1][y] == 0) {
-//                                    deposit_footprint[chunk.location.i][chunk.location.j][x + 1][y] = 1;
-//                                    deposit_footprint_v.emplace_back(chunk, x + 1, y, v1);
-//                                    flow_graph_v.emplace_back(chunk, x + 1, y, v1);
-//                                }
-//                                if (deposit_footprint[chunk.location.i][chunk.location.j][x - 1][y] == 0) {
-//                                    deposit_footprint[chunk.location.i][chunk.location.j][x - 1][y] = 1;
-//                                    deposit_footprint_v.emplace_back(chunk, x - 1, y, v1);
-//                                    flow_graph_v.emplace_back(chunk, x - 1, y, v1);
-//                                }
-//                                if (deposit_footprint[chunk.location.i][chunk.location.j][x][y + 1] == 0) {
-//                                    deposit_footprint[chunk.location.i][chunk.location.j][x][y + 1] = 1;
-//                                    deposit_footprint_v.emplace_back(chunk, x, y + 1, v1);
-//                                    flow_graph_v.emplace_back(chunk, x, y + 1, v1);
-//                                }
-//                                if (deposit_footprint[chunk.location.i][chunk.location.j][x][y - 1] == 0) {
-//                                    deposit_footprint[chunk.location.i][chunk.location.j][x][y - 1] = 1;
-//                                    deposit_footprint_v.emplace_back(chunk, x, y - 1, v1);
-//                                    flow_graph_v.emplace_back(chunk, x, y - 1, v1);
-//                                }
-//                            }
-//                        }
-//                  }
- */
-
-/*
-//                    for(uint32_t i = 0; i < 6; i++) {
-//                        for(const auto& v : deposit_footprint_v) {
-//                            auto chunk = std::get<0>(v);
-//                            auto x = std::get<1>(v);
-//                            auto y = std::get<2>(v);
-//                            auto vtx = std::get<3>(v);
-//                            auto z = vtx->v3.Z();
-//
-//                            auto f = chunk.field;
-//
-//                            if(vtx->v->footprint == 2) {
-//                                if(z >= f->scale/(tan(0.5))) {
-//                                    auto v1 = f->get_vertex_at_index(x+1,y);
-//                                    auto v2 = f->get_vertex_at_index(x,y+1);
-//                                    auto v3 = f->get_vertex_at_index(x-1,y);
-//                                    auto v4 = f->get_vertex_at_index(x,y-1);
-//
-//                                    uint32_t j = 0;
-//                                    if(v1->v->footprint == 2 || v1->v->footprint == 0) {
-//                                        j++;
-//                                    } else if (v2->v->footprint == 2 || v2->v->footprint == 0) {
-//                                        j++;
-//                                    } else if (v3->v->footprint == 2 || v3->v->footprint == 0) {
-//                                        j++;
-//                                    } else if (v4->v->footprint == 2 || v4->v->footprint == 0) {
-//                                        j++;
-//                                    }
-//
-//                                    auto flow_out = 0.5*z*(1/(float)j);
-//                                    if(v1->v->footprint == 2 || v1->v->footprint == 0) {
-//                                        v1->v3 += Vector3d(0 ,0, flow_out);
-//                                        v1->v->footprint = 2;
-//                                        if(deposit_footprint[chunk.location.i][chunk.location.j][x+1][y] == 0) {
-//                                            deposit_footprint[chunk.location.i][chunk.location.j][x+1][y] = 1;
-//                                            deposit_footprint_v.emplace_back(chunk, x, y-1, v1);
-//                                        }
-//                                    } else if (v2->v->footprint == 2 || v2->v->footprint == 0) {
-//                                        v2->v3 += Vector3d(0 ,0, flow_out);
-//                                        v2->v->footprint = 2;
-//                                        if(deposit_footprint[chunk.location.i][chunk.location.j][x][y+1] == 0) {
-//                                            deposit_footprint[chunk.location.i][chunk.location.j][x][y+1] = 1;
-//                                            deposit_footprint_v.emplace_back(chunk, x, y+1, v1);
-//                                        }
-//                                    } else if (v3->v->footprint == 2 || v3->v->footprint == 0) {
-//                                        v3->v3 += Vector3d(0 ,0, flow_out);
-//                                        v3->v->footprint = 2;
-//                                        if(deposit_footprint[chunk.location.i][chunk.location.j][x-1][y] == 0) {
-//                                            deposit_footprint[chunk.location.i][chunk.location.j][x-1][y] = 1;
-//                                            deposit_footprint_v.emplace_back(chunk, x-1, y, v1);
-//                                        }
-//                                    } else if (v4->v->footprint == 2 || v4->v->footprint == 0) {
-//                                        v4->v3 += Vector3d(0 ,0, flow_out);
-//                                        v4->v->footprint = 2;
-//                                        if(deposit_footprint[chunk.location.i][chunk.location.j][x][y-1] == 0) {
-//                                            deposit_footprint[chunk.location.i][chunk.location.j][x][y-1] = 1;
-//                                            deposit_footprint_v.emplace_back(chunk, x, y-1, v1);
-//                                        }
-//                                    }
-//                                    vtx->v3 -= Vector3d(0,0, z - flow_out);
-//                                }
-//
-//                            }
-//                        }
-//                    }
-                     */
-
+                    soilPtr->compute_footprint_stage(footprint);
                 }
-
             }
 
             soil->post_update();
-
         }
 
         void broadcast_soil(const std::shared_ptr<Soil>& soilPtr) {
@@ -544,7 +321,10 @@ namespace hina {
 
                 chunk->container->clear_footprint();
             }
+        }
 
+        void OnEntityAdded(const std::string &str) {
+            init_links(str);
         }
     };
     GZ_REGISTER_WORLD_PLUGIN(HinaSSIWorldPlugin)

@@ -23,22 +23,19 @@ namespace hina {
     class SoilChunk {
     private:
 
-        Vector2d min;
-
         std::shared_ptr<SoilVertexSampler> sampler = nullptr;
 
-        SoilChunkLocationMetadata location;
+        SoilChunkLocation location;
         std::shared_ptr <UniformField<SoilVertex>> field = nullptr;
 
     public:
-        Vector2d max;
 
         SoilChunk() = default;
 
         /*
          *  Initializes SoilChunk's field and vertex samplers
          */
-        void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocationMetadata location,
+        void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocation location,
                         const std::shared_ptr<SoilVertexSampler>& sampler);
 
         /*
@@ -51,7 +48,7 @@ namespace hina {
         /*
          * Location getter
          */
-        SoilChunkLocationMetadata get_location() {
+        SoilChunkLocation get_location() {
             return location;
         }
 

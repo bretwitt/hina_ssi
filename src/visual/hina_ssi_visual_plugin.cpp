@@ -29,17 +29,13 @@ namespace hina {
         common::Time time;
         double sec{};
         double last_sec{};
-        double last_sec_viz{};
 
         ChunkedField<std::shared_ptr<VisualChunk>> chunks;
-
-        bool soil_initialized = false;
 
         std::unordered_map<int,std::unordered_map<int,
             std::shared_ptr<UniformField<ColorAttributes>>>> map;
 
         std::vector<double> flow_v;
-        double frame_flow_max;
 
         uint32_t verts_x;
         uint32_t verts_y;
@@ -138,7 +134,7 @@ namespace hina {
                 chunks.pre_update();
                 last_sec = sec;
             }
-            for(auto chunk : chunks.get_active_chunks()) {
+            for(const auto& chunk : chunks.get_active_chunks()) {
                 chunk->container->update();
             }
         }

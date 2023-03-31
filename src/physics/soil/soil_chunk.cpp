@@ -1,17 +1,19 @@
 #include "soil_chunk.h"
 
 using namespace hina;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void SoilChunk::init_chunk(FieldVertexDimensions dims,
-                double scale, SoilChunkLocationMetadata location,
-                const std::shared_ptr<SoilVertexSampler>& sampler) {
+                           double scale, SoilChunkLocation location,
+                           const std::shared_ptr<SoilVertexSampler>& sampler) {
     this->field = std::make_shared<UniformField<SoilVertex>>(dims, scale);
     this->field->set_origin({location.origin.X(), location.origin.Y()});
-    this->max = Vector2d(0,this->field->init_field(sampler));
     this->sampler = sampler;
     this->location = location;
 
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, const physics::LinkPtr& link,
                                                    double& displaced_vol) {
@@ -36,7 +38,7 @@ hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, cons
     // Get first soil vertex coordinates (x_start, y_start)
     x_start = 0;
     y_start = 0;
-    field->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
+    this->field->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
     min_x = min_x - fmod(min_x, scale);
     max_x = (max_x+scale) - fmod(max_x, scale);
@@ -61,26 +63,12 @@ hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, cons
             penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
             terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, displaced_vol,
                            sampler->get_params_at_index(x + x_start, y + y_start));
-            //v3->v3 = Vector3d(v3->v3.X(), v3->v3.Y(), meshTri.centroid().Z());
         }
-
-        /*
-        if(k == 0) {
-            v3->v->footprint = 2;
-        } else if (k == (iter_x*iter_y-1)) {
-            v3->v->footprint = 2;
-        } else
-        {
-            v3->v->footprint = 1;
-        }
-
-        penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
-         */
-
     }
-
     return penetrating_coords;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &meshTri, uint32_t x, uint32_t y,
                                 const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
@@ -197,6 +185,8 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &
 
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 void SoilChunk::clear_footprint() {
     auto x_w = field->x_vert_width;
@@ -207,10 +197,14 @@ void SoilChunk::clear_footprint() {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 bool SoilChunk::penetrates(const Triangle& meshTri, const std::shared_ptr<FieldVertex<SoilVertex>>& vtx, double w) {
     auto point = vtx->v3;
     return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
 };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool SoilChunk::intersects_projected(const Triangle& meshTri, const AABB& vertexRect) {
     return Geometry::getInstance()->intersects_box_tri(meshTri, vertexRect) ;

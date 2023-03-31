@@ -46,7 +46,10 @@ namespace hina {
             uint32_t verts_x = field->x_vert_width;
             uint32_t verts_y = field->y_vert_width;
 
-            auto new_field = std::make_shared<UniformField<SoilVertex>>(FieldTrueDimensions {static_cast<double>(x_width), static_cast<double>(y_width) }, new_res);
+            auto new_field = std::make_shared<UniformField<SoilVertex>>(FieldTrueDimensions {
+                static_cast<double>(x_width), static_cast<double>(y_width)
+            }, new_res);
+
             new_field->init_field(std::make_shared<BaseVertexSampler>());
 
             uint32_t verts_x_p = new_field->x_vert_width;
