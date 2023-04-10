@@ -38,13 +38,11 @@ Soil::Soil() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hina::Soil::Field_V Soil::try_deform(const Triangle &meshTri, const physics::LinkPtr &link, double &displaced_volume) {
-
-
     auto idx = worldpos_to_chunk_idx(meshTri.centroid());
     auto chunk = chunks->get_chunk({static_cast<int>(idx.X()),static_cast<int>(idx.Y())});
 
     if (chunk != nullptr && chunk->container != nullptr) {
-        return deform_chunk(chunk->container,meshTri, link, displaced_volume);
+        return this->deform_chunk(chunk->container,meshTri, link, displaced_volume);
     }
 
     return {};
@@ -52,8 +50,8 @@ hina::Soil::Field_V Soil::try_deform(const Triangle &meshTri, const physics::Lin
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-hina::Soil::Field_V Soil::deform_chunk(const std::shared_ptr<SoilChunk>& chunk, const Triangle& meshTri, const physics::LinkPtr& link,
-                        double& displaced_vol) {
+hina::Soil::Field_V Soil::deform_chunk(const std::shared_ptr<SoilChunk>& chunk, const Triangle& meshTri,
+                                       const physics::LinkPtr& link,double& displaced_vol) {
 
     double max_x, max_y, min_x, min_y;
     double scale;
@@ -88,7 +86,8 @@ hina::Soil::Field_V Soil::deform_chunk(const std::shared_ptr<SoilChunk>& chunk, 
 
 
     // Search soil field within bounds under AABB
-    hina::Soil::Footprint penetrating_coords;
+    hina::Soil::Field_V penetrating_coords;
+
 
     for(uint32_t k = 0; k < iter_x*iter_y; k++) {
 

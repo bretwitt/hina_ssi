@@ -37,14 +37,7 @@ namespace hina {
          */
         void init_chunk(FieldVertexDimensions dims, double scale, SoilChunkLocation location,
                         const std::shared_ptr<SoilVertexSampler>& sampler);
-
-        /*
-         *   Applies force to link and deforms chunk's graph based on Bekker-derived physics
-         */
-        typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Footprint_V;
-        Footprint_V try_deform(const Triangle& meshTri, const physics::LinkPtr& link, double& displaced_vol);
-
-
+\
         /*
          * Field getter
          */
