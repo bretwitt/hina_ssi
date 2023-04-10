@@ -74,11 +74,6 @@ namespace hina {
         Vector2d chunk_idx_to_worldpos(int i, int j) const;
 
         /*
-         * Get soil vertex at world position, loads chunk if unloaded
-         */
-        std::shared_ptr<SoilVertex> get_vertex_at_world_pos(Vector3d pos);
-
-        /*
          *  Applies force to link and deforms appropriate chunk's graph based on Bekker-derived physics
          */
         typedef std::vector<std::tuple<uint32_t, uint32_t,SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Field_V;
@@ -90,6 +85,13 @@ namespace hina {
         typedef std::vector<std::vector<std::tuple<uint32_t, uint32_t, SoilChunk,std::shared_ptr<FieldVertex<SoilVertex>>>>> Footprint_V;
         void compute_footprint_stage(const Footprint_V& footprint);
 
+
+        /*
+         *  Compute deformation on graph at certain chunk
+         */
+
+        hina::Soil::Field_V deform_chunk(const std::shared_ptr<SoilChunk>& chunk, const Triangle& meshTri, const physics::LinkPtr& link,
+                                double& displaced_vol);
     };
 }
 #endif

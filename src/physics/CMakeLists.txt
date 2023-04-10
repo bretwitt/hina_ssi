@@ -8,6 +8,7 @@ add_library(${PROJECT_NAME}_physics SHARED
                 soil/soil_vertex.h
                 soil/soil_chunk.h soil/soil_chunk.cpp
                 soil/soil_chunk_location.h
+                scm/terramechanics.h scm/terramechanics.cpp
         )
 
 target_link_libraries(${PROJECT_NAME}_physics PUBLIC ${GAZEBO_LIBRARIES} ${PROJECT_NAME}_msgs ${PROJECT_NAME}_common ${LIB_OPENMP} libInterpolate::Interpolate ignition-common3::profiler)

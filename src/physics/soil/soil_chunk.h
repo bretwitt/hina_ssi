@@ -44,18 +44,19 @@ namespace hina {
         typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Footprint_V;
         Footprint_V try_deform(const Triangle& meshTri, const physics::LinkPtr& link, double& displaced_vol);
 
-        /*
-         * Applies force to link and deforms chunk's graph based on Bekker-derived physics
-         */
-        void terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &meshTri, uint32_t x, uint32_t y,
-                            const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
-                            double &displaced_volume, SoilPhysicsParams vert_attr);
 
         /*
          * Field getter
          */
         std::shared_ptr <UniformField<SoilVertex>> get_field() {
             return p_field;
+        }
+
+        /*
+         * Sampler getter
+         */
+        std::shared_ptr<SoilVertexSampler> get_sampler() {
+            return p_sampler;
         }
 
         /*
@@ -69,16 +70,6 @@ namespace hina {
          * Reset chunk's vertex footprint data
          */
         void clear_footprint();
-
-        /*
-         *  Return true if a soil vertex penetrates a triangle
-         */
-        bool penetrates(const Triangle& meshTri, const std::shared_ptr<FieldVertex<SoilVertex>>& vtx, double w);
-
-        /*
-         * Return true if triangle overlaps AABB
-         */
-        static bool intersects_projected(const Triangle& meshTri, const AABB& vertexRect);
 
     };
 }
