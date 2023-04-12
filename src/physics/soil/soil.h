@@ -19,6 +19,7 @@
 
 
 namespace hina {
+
     class Soil {
 
     private:
@@ -30,7 +31,7 @@ namespace hina {
         Soil(FieldTrueDimensions dims, double scale);
         Soil();
 
-        std::shared_ptr<ChunkedField<std::shared_ptr<SoilChunk>>> chunks;
+        std::shared_ptr<ChunkedField<std::shared_ptr<SoilChunk>>> chunks = nullptr;
         std::shared_ptr<SoilVertexSampler> sampler = nullptr;
 
     public:
@@ -74,24 +75,39 @@ namespace hina {
         Vector2d chunk_idx_to_worldpos(int i, int j) const;
 
         /*
+         *      Get vertex from global vertex index
+         */
+        std::shared_ptr<FieldVertex<SoilVertex>> get_vertex_from_global(int g_x, int g_y);
+
+        /*
+         *      Get global vertex index from vertex index in chunk frame
+         */
+        void get_global_idx(SoilChunkLocation loc, int x, int y, int& g_x, int& g_y);
+
+        /*
+          *      Get global vertex index from world position
+          */
+        void get_nearest_gidx(Vector3d pos, int& g_x, int& g_y);
+
+        /*
          *  Applies force to link and deforms appropriate chunk's graph based on Bekker-derived physics
          */
-        typedef std::vector<std::tuple<uint32_t, uint32_t,SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Field_V;
+        typedef std::vector<std::tuple<uint32_t, uint32_t,SoilChunk&, std::shared_ptr<FieldVertex<SoilVertex>>>> Field_V;
         hina::Soil::Field_V try_deform(const Triangle &meshTri, const physics::LinkPtr &link, double &displaced_volume);
 
         /*
          *  Perform footprint level computations
          */
-        typedef std::vector<std::vector<std::tuple<uint32_t, uint32_t, SoilChunk,std::shared_ptr<FieldVertex<SoilVertex>>>>> Footprint_V;
-        void compute_footprint_stage(const Footprint_V& footprint);
+        typedef std::vector<std::vector<std::tuple<uint32_t, uint32_t, SoilChunk& ,std::shared_ptr<FieldVertex<SoilVertex>>>>> Footprint_V;
+        void compute_footprint_stage(const Footprint_V& footprint, double total_displaced_volume);
 
 
         /*
          *  Compute deformation on graph at certain chunk
          */
+        hina::Soil::Field_V deform_chunk(const std::shared_ptr<SoilChunk>& chunk, const Triangle& meshTri,
+                                         const physics::LinkPtr& link,double& displaced_vol);
 
-        hina::Soil::Field_V deform_chunk(const std::shared_ptr<SoilChunk>& chunk, const Triangle& meshTri, const physics::LinkPtr& link,
-                                double& displaced_vol);
     };
 }
 #endif

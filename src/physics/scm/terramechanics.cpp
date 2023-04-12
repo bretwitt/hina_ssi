@@ -2,11 +2,11 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void hina::Terramechanics::terramx_deform(const Triangle &meshTri, uint32_t x, uint32_t y,
-                               const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
-                               double &displaced_volume, SoilPhysicsParams vert_attr,
-                               const std::shared_ptr<UniformField<SoilVertex>>& p_field,
-                               Vector3d& force_v, Vector3d& force_origin)
+void hina::Terramechanics::terramx_deform(const Triangle &meshTri,
+                                          const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
+                                          double &displaced_volume, SoilPhysicsParams vert_attr,
+                                          VtxNeighbors normals,
+                                          Vector3d& force_v, Vector3d& force_origin)
 {
 
     auto v3 = vertex->v3;
@@ -32,15 +32,16 @@ void hina::Terramechanics::terramx_deform(const Triangle &meshTri, uint32_t x, u
 
     if(sigma_t > 0) {                            // Unilateral Contact
         /* Geometry Calculations */
-        auto vtx_ul = p_field->get_vertex_at_index(x - 1, y + 1)->v3;
-        auto vtx_dl = p_field->get_vertex_at_index(x - 1, y - 1)->v3;
-        auto vtx_ur = p_field->get_vertex_at_index(x + 1, y + 1)->v3;
-        auto vtx_dr = p_field->get_vertex_at_index(x + 1, y - 1)->v3;
+        auto vtx_ul = normals.vtx_ul->v3;
+        auto vtx_dl = normals.vtx_dl->v3;
+        auto vtx_ur = normals.vtx_ur->v3;
+        auto vtx_dr = normals.vtx_dr->v3;
 
-        auto vtx_u = p_field->get_vertex_at_index(x, y + 1)->v3;
-        auto vtx_d = p_field->get_vertex_at_index(x, y - 1)->v3;
-        auto vtx_l = p_field->get_vertex_at_index(x - 1, y)->v3;
-        auto vtx_r = p_field->get_vertex_at_index(x + 1, y)->v3;
+        auto vtx_u = normals.vtx_u->v3;
+        auto vtx_d = normals.vtx_d->v3;
+        auto vtx_l = normals.vtx_l->v3;
+        auto vtx_r = normals.vtx_r->v3;
+
         const auto &vtx = v3;
 
         auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
@@ -79,10 +80,10 @@ void hina::Terramechanics::terramx_deform(const Triangle &meshTri, uint32_t x, u
 
         /* update footprints */
 
-        auto v1 = p_field->get_vertex_at_index(x, y + 1)->v;
-        auto v2 = p_field->get_vertex_at_index(x, y - 1)->v;
-        auto v3 = p_field->get_vertex_at_index(x + 1, y)->v;
-        auto v4 = p_field->get_vertex_at_index(x - 1, y)->v;
+        auto v1 = normals.vtx_ul->v;
+        auto v2 = normals.vtx_d->v;
+        auto v3 = normals.vtx_l->v;
+        auto v4 = normals.vtx_r->v;
 
         vertex->v->footprint = 1;
         if(v1->footprint != 1) {

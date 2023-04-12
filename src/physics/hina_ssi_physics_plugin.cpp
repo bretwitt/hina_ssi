@@ -266,9 +266,9 @@ public:
                 //soil->query_chunk(pos);
 
                 std::vector<std::vector<std::tuple<uint32_t, uint32_t,
-                                        SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>>> footprint;
+                                        SoilChunk&, std::shared_ptr<FieldVertex<SoilVertex>>>>> footprint;
                 std::vector<std::tuple<uint32_t, uint32_t,
-                                        SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> footprint_idx;
+                                        SoilChunk&, std::shared_ptr<FieldVertex<SoilVertex>>>> footprint_idx;
 
                 double total_displaced_volume = 0.0f;
                 float total_footprint_size = 0.0f;
@@ -302,8 +302,7 @@ public:
 
                         double displaced_volume = 0.0f;
 
-
-                        footprint_idx = soil->try_deform(meshTri, link, displaced_volume);
+                        footprint_idx = this->p_soil->try_deform(meshTri, link, displaced_volume);
 
                         total_displaced_volume += displaced_volume;
 
@@ -319,7 +318,7 @@ public:
 #endif
 
 
-                //this->p_soil->compute_footprint_stage(footprint);
+                //this->p_soil->compute_footprint_stage(footprint, total_displaced_volume);
             }
         }
 

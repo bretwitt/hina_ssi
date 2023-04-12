@@ -39,6 +39,7 @@ Soil::Soil() {
 
 hina::Soil::Field_V Soil::try_deform(const Triangle &meshTri, const physics::LinkPtr &link, double &displaced_volume) {
     auto idx = worldpos_to_chunk_idx(meshTri.centroid());
+
     auto chunk = chunks->get_chunk({static_cast<int>(idx.X()),static_cast<int>(idx.Y())});
 
     if (chunk != nullptr && chunk->container != nullptr) {
@@ -53,28 +54,34 @@ hina::Soil::Field_V Soil::try_deform(const Triangle &meshTri, const physics::Lin
 hina::Soil::Field_V Soil::deform_chunk(const std::shared_ptr<SoilChunk>& chunk, const Triangle& meshTri,
                                        const physics::LinkPtr& link,double& displaced_vol) {
 
+    hina::Soil::Field_V penetrating_coords;
+
     double max_x, max_y, min_x, min_y;
     double scale;
-    uint32_t iter_x, iter_y;
-    uint32_t x_start, y_start;
-
-    double chunk_x = chunk->get_location().origin.X();
-    double chunk_y = chunk->get_location().origin.Y();
+    int iter_x, iter_y;
+    int x_start, y_start;
 
     // AABB bounds under mesh triangle
-    max_x = fmax(meshTri.v1.X(), fmax(meshTri.v2.X(), meshTri.v3.X())) - chunk_x;
-    max_y = fmax(meshTri.v1.Y(), fmax(meshTri.v2.Y(), meshTri.v3.Y())) - chunk_y;
-    min_x = fmin(meshTri.v1.X(), fmin(meshTri.v2.X(), meshTri.v3.X())) - chunk_x;
-    min_y = fmin(meshTri.v1.Y(), fmin(meshTri.v2.Y(), meshTri.v3.Y())) - chunk_y;
+    max_x = fmax(meshTri.v1.X(), fmax(meshTri.v2.X(), meshTri.v3.X()));
+    max_y = fmax(meshTri.v1.Y(), fmax(meshTri.v2.Y(), meshTri.v3.Y()));
+    min_x = fmin(meshTri.v1.X(), fmin(meshTri.v2.X(), meshTri.v3.X()));
+    min_y = fmin(meshTri.v1.Y(), fmin(meshTri.v2.Y(), meshTri.v3.Y()));
 
     // Start constructing bounds to search soil field
-    scale = chunk->get_field()->scale;
+    scale = this->scale;
 
     // Get first soil vertex coordinates (x_start, y_start)
     x_start = 0;
     y_start = 0;
-    chunk->get_field()->get_nearest_index(Vector2d(min_x, min_y), x_start, y_start);
 
+    //auto test_vtx = get_vertex_from_global(x_start, y_start);
+    //if(test_vtx != nullptr) test_vtx->v->footprint = 1;
+
+    for(int i = 0; i < 200; i++) {
+        get_vertex_from_global(-i,-i)->v->footprint = 1;
+    }
+
+/*
     min_x = min_x - fmod(min_x, scale);
     max_x = (max_x+scale) - fmod(max_x, scale);
 
@@ -94,30 +101,47 @@ hina::Soil::Field_V Soil::deform_chunk(const std::shared_ptr<SoilChunk>& chunk, 
         uint32_t y = floor( k / iter_y);
         uint32_t x = k % iter_y;
 
-        auto v3 = chunk->get_field()->get_vertex_at_index(x + x_start, y + y_start);
+        auto v3 = get_vertex_from_global(x + x_start,y + y_start);
 
         // If mesh tri penetrates vtx
-        if(!v3->v->isAir && Terramechanics::penetrates(meshTri, v3, scale)) {
-            Vector3d force_v,v3_0,force_origin;
-            penetrating_coords.emplace_back(x + x_start, y + y_start, *chunk, v3);
-            Terramechanics::terramx_deform(meshTri, x + x_start, y + y_start, v3, scale, displaced_vol,
-                                           chunk->get_sampler()->get_params_at_index(x + x_start, y + y_start), chunk->get_field(), force_v,force_origin);
-            // Apply f/t
-            link->AddForceAtWorldPosition(force_v, force_origin);
-        }
+//        if(!v3->v->isAir && Terramechanics::penetrates(meshTri, v3, scale)) {
+//            Vector3d force_v,v3_0,force_origin;
+//            //penetrating_coords.emplace_back(x + x_start, y + y_start, *chunk, v3);
+//            auto x_ = x+x_start;
+//            auto y_ = y+y_start;
+//
+//            auto vtx_ul = get_vertex_from_global(x_ - 1, y_ + 1);
+//            auto vtx_dl = get_vertex_from_global(x_ - 1, y_ - 1);
+//            auto vtx_ur = get_vertex_from_global(x_ + 1, y_ + 1);
+//            auto vtx_dr = get_vertex_from_global(x_ + 1, y_ - 1);
+//
+//            auto vtx_u = get_vertex_from_global(x_, y_ + 1);
+//            auto vtx_d = get_vertex_from_global(x_, y_ - 1);
+//            auto vtx_l = get_vertex_from_global(x_ - 1, y_);
+//            auto vtx_r = get_vertex_from_global(x_ + 1, y_);
+//
+//            hina::VtxNeighbors neighbors = { vtx_ul, vtx_dl, vtx_ur, vtx_dr, vtx_u, vtx_d, vtx_l, vtx_r };
+//
+//            Terramechanics::terramx_deform(meshTri, v3, scale, displaced_vol,
+//                                           chunk->get_sampler()->get_params_at_index(x + x_start, y + y_start),
+//                                           neighbors, force_v,force_origin);
+//            // Apply f/t
+//            link->AddForceAtWorldPosition(force_v, force_origin);
+//        }
     }
-
+*/
     return penetrating_coords;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Soil::compute_footprint_stage(const Footprint_V& footprint) {
+void Soil::compute_footprint_stage(const Footprint_V& footprint, double total_displaced_volume) {
 
     std::unordered_map<uint32_t, std::unordered_map<uint32_t,
                         std::unordered_map<uint32_t, std::unordered_map<uint32_t,int>>>> deposit_footprint;
 
-    std::vector<std::tuple<SoilChunk, uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilVertex>>>> deposit_footprint_v;
+    std::vector<std::tuple<SoilChunk, uint32_t, uint32_t,
+                        std::shared_ptr<FieldVertex<SoilVertex>>>> deposit_footprint_v;
     // Footprint level computations
 
     // 1. Compute border and inner nodes
@@ -161,7 +185,7 @@ void Soil::compute_footprint_stage(const Footprint_V& footprint) {
     }
 
     // 3. Deposit soil
-/*
+
     double deposit = 0;
     if (!footprint.empty()) {
         deposit = total_displaced_volume / (double) deposit_footprint_v.size();
@@ -192,12 +216,12 @@ void Soil::compute_footprint_stage(const Footprint_V& footprint) {
 
         if (vtx->v->footprint == 2) {
             vtx->v3 += Vector3d(0, 0, deposit / (w * w));
-               if(vtx->v3.Z() >= w/(tan(0.5))) {
-                    vtx->v3 = Vector3d(vtx->v3.X(), vtx->v3.Y(), w/tan(0.5));
-                }
+//               if(vtx->v3.Z() >= w/(tan(0.5))) {
+//                    vtx->v3 = Vector3d(vtx->v3.X(), vtx->v3.Y(), w/tan(0.5));
+//               }
         }
     }
-*/
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -212,6 +236,34 @@ Vector2d Soil::worldpos_to_chunk_idx(Vector3d pos) const {
     return { floor(pos.X() / (this->vtx_dims.verts_x*this->scale)),
              floor(pos.Y() / (this->vtx_dims.verts_y*this->scale))
     };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Soil::get_global_idx(SoilChunkLocation loc, int x, int y, int& g_x, int& g_y) {
+    g_x = x + (loc.origin.X()/scale);
+    g_y = y + (loc.origin.Y()/scale);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Soil::get_nearest_gidx(Vector3d pos, int& g_x, int& g_y) {
+    g_x = floor(pos.X()/scale);
+    g_y = floor(pos.Y()/scale);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+std::shared_ptr<FieldVertex<SoilVertex>> Soil::get_vertex_from_global(int g_x, int g_y) {
+    uint32_t l_x = abs(g_x % (int)(1/scale));
+    uint32_t l_y = abs(g_y % (int)(1/scale));
+    int c_origin_x = floor(g_x * scale);
+    int c_origin_y = floor(g_y * scale);
+    auto chunk = chunks->get_chunk(ChunkedFieldLocation{ c_origin_x, c_origin_y });
+    if(chunk != nullptr && chunk->container != nullptr) {
+        return chunk->container->get_field()->get_vertex_at_index(l_x,l_y);
+    }
+    return nullptr;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -250,7 +302,7 @@ void Soil::pre_update() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Soil::post_update() {
-    //chunks->post_update();
+    chunks->post_update();
 }
 
 

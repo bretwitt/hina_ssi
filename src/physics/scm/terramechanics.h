@@ -7,14 +7,24 @@
 #include "../soil/soil_physics_params.h"
 
 namespace hina {
+    typedef struct {
+        std::shared_ptr<FieldVertex<SoilVertex>> vtx_ul;
+        std::shared_ptr<FieldVertex<SoilVertex>> vtx_dl;
+        std::shared_ptr<FieldVertex<SoilVertex>> vtx_ur;
+        std::shared_ptr<FieldVertex<SoilVertex>> vtx_dr;
+
+        std::shared_ptr<FieldVertex<SoilVertex>> vtx_u;
+        std::shared_ptr<FieldVertex<SoilVertex>> vtx_d;
+        std::shared_ptr<FieldVertex<SoilVertex>> vtx_l;
+        std::shared_ptr<FieldVertex<SoilVertex>> vtx_r;
+    } VtxNeighbors;
+
     class Terramechanics {
     public:
-        static void terramx_deform(const Triangle &meshTri, uint32_t x, uint32_t y,
-                            const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
-                            double &displaced_volume, SoilPhysicsParams vert_attr,
-                            const std::shared_ptr<UniformField<SoilVertex>>& p_field,
-                            Vector3d& force_v, Vector3d& force_origin
-                            );
+        static void terramx_deform(const Triangle &meshTri, const std::shared_ptr<FieldVertex<SoilVertex>> &vertex,
+                                   double w,double &displaced_volume, SoilPhysicsParams vert_attr, VtxNeighbors neighbors,
+                                   Vector3d& force_v, Vector3d& force_origin
+                                 );
 
         static bool penetrates(const Triangle& meshTri, const std::shared_ptr<FieldVertex<SoilVertex>>& vtx, double w) {
             auto point = vtx->v3;
