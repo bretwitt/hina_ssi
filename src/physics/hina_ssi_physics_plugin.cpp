@@ -62,7 +62,7 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    ~HinaSSIWorldPlugin() {
+    ~HinaSSIWorldPlugin() override {
         delete trspt;
     }
 
@@ -264,6 +264,7 @@ public:
 
                 soil->query_chunk((max+min) / 2);
                 //soil->query_chunk(pos);
+
 
                 std::vector<std::vector<std::tuple<uint32_t, uint32_t,
                                         SoilChunk&, std::shared_ptr<FieldVertex<SoilVertex>>>>> footprint;

@@ -5,7 +5,7 @@
 
 template<class T>
 struct Chunk {
-    ChunkedFieldLocation location;
+    ChunkedFieldLocation location{};
     T container;
     bool keep_loaded_flag = false;
     Chunk(T container, ChunkedFieldLocation location) {

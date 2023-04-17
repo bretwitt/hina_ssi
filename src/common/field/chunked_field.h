@@ -18,6 +18,7 @@ namespace hina {
     private:
         std::unordered_map<int, std::unordered_map<int, std::shared_ptr <Chunk<T>>>>
         chunks;
+
         std::vector <std::shared_ptr<Chunk<T>>> active_chunks;
 
         std::function<T(int, int)> chunk_create_callback;

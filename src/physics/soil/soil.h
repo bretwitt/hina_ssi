@@ -87,7 +87,7 @@ namespace hina {
         /*
           *      Get global vertex index from world position
           */
-        void get_nearest_gidx(Vector3d pos, int& g_x, int& g_y);
+        void get_nearest_gidx(Vector3d pos, int& g_x, int& g_y) const;
 
         /*
          *  Applies force to link and deforms appropriate chunk's graph based on Bekker-derived physics
@@ -105,8 +105,7 @@ namespace hina {
         /*
          *  Compute deformation on graph at certain chunk
          */
-        hina::Soil::Field_V deform_chunk(const std::shared_ptr<SoilChunk>& chunk, const Triangle& meshTri,
-                                         const physics::LinkPtr& link,double& displaced_vol);
+        hina::Soil::Field_V deform(const Triangle& meshTri, const physics::LinkPtr& link,double& displaced_vol);
 
     };
 }
