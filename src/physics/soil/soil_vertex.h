@@ -16,10 +16,7 @@ struct SoilVertex {
     bool isAir = false;
 
     /* Frame physics states */
-    double plastic_flow{};
-    double sigma_yield{};
-    double s_p{};
-    double s_e{};
+    double sinkage{};
     double sigma{};
     Vector3d normal_dA{};
     Vector3d normal = Vector3d(0,0,1);

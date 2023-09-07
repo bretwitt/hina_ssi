@@ -2,12 +2,14 @@ find_package(libInterpolate REQUIRED)
 find_package(ignition-common3 REQUIRED COMPONENTS profiler)
 
 add_library(${PROJECT_NAME}_physics SHARED
+                soil/footprint.h
                 hina_ssi_physics_plugin.cpp
                 dem/dem.h dem/dem_loader.h
                 soil/soil.cpp soil/soil.h
                 soil/soil_vertex.h
                 soil/soil_chunk.h soil/soil_chunk.cpp
                 soil/soil_chunk_location.h
+                soil/triangle_context.h
         )
 
 target_link_libraries(${PROJECT_NAME}_physics PUBLIC ${GAZEBO_LIBRARIES} ${PROJECT_NAME}_msgs ${PROJECT_NAME}_common ${LIB_OPENMP} libInterpolate::Interpolate ignition-common3::profiler)

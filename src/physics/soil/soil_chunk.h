@@ -14,6 +14,9 @@
 #include "soil_chunk_location.h"
 #include "soil_vertex_sampler.h"
 
+#include "footprint.h"
+#include "triangle_context.h"
+
 using ignition::math::Vector3d;
 using ignition::math::Vector2d;
 
@@ -41,15 +44,25 @@ namespace hina {
         /*
          *   Applies force to link and deforms chunk's graph based on Bekker-derived physics
          */
-        typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Footprint_V;
-        Footprint_V try_deform(const Triangle& meshTri, const physics::LinkPtr& link, double& displaced_vol);
+//        typedef std::vector<std::tuple<uint32_t, uint32_t, SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Footprint_V;
+        hina::Footprint try_deform(const TriangleContext& meshTri, const physics::LinkPtr& link);
 
         /*
          * Applies force to link and deforms chunk's graph based on Bekker-derived physics
          */
-        void terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &meshTri, uint32_t x, uint32_t y,
+        void terramx_deform(const physics::LinkPtr &linkPtr, const TriangleContext &meshTri, uint32_t x, uint32_t y,
                             const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
-                            double &displaced_volume, SoilPhysicsParams vert_attr);
+                            SoilPhysicsParams vert_attr);
+
+        /*
+         *  Calculate terramechanical forces based on a triangle-point contact
+         */
+        void terramx_contact(const SoilPhysicsParams& vert_attr,
+                             const TriangleContext& contact_tri,
+                             const std::shared_ptr<FieldVertex<SoilVertex>>& soil_vertex,
+                             const double& abb_point_area,
+                             Vector3d& contact_force,
+                             double& sinkage);
 
         /*
          * Field getter

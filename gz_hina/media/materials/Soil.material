@@ -4,9 +4,9 @@ material Hina/Soil
 	{
 		pass
 		{
-		    //ambient vertexcolour
-		    //diffuse vertexcolour
-		    //polygon_mode wireframe
+		    ambient vertexcolour
+		    diffuse vertexcolour
+		    polygon_mode wireframe
 
 		    ambient 0.5 0.5 0.5
 		    diffuse 1.0 1.0 1.0

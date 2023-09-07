@@ -2,6 +2,7 @@
 #define HINA_SSI_PHYSICS_PLUGIN_CPP
 
 #define PHYS_PROFILER 0
+#include "soil/footprint.h"
 
 #include <gazebo/common/common.hh>
 #include <gazebo/rendering/rendering.hh>
@@ -13,6 +14,7 @@
 #include "soil/soil.h"
 #include "dem/dem_loader.h"
 #include "../common/field/uniform_field.h"
+#include "soil/triangle_context.h"
 
 #include "SoilChunk.pb.h"
 
@@ -35,6 +37,20 @@ private:
     std::map<physics::LinkPtr, const common::Mesh *> mesh_lookup{};
 
     transport::Node* trspt = nullptr;
+
+    // TODO: Temporary... move after grind is over
+    struct tuple_hash {
+        template <class T1, class T2, class T3>
+        std::size_t operator() (const std::tuple<T1, T2, T3>& tuple) const {
+            const auto& [a, b, c] = tuple;
+            std::size_t h1 = std::hash<T1>{}(a);
+            std::size_t h2 = std::hash<T2>{}(b);
+            std::size_t h3 = std::hash<T3>{}(c);
+
+            return h1 ^ h2 ^ (h3 << 1);
+        }
+    };
+    std::unordered_map<std::tuple<int, int, int>, std::pair<double,double>, tuple_hash> shear_displacement_map; // Hashmap to store shear displacement per triangle
 
     common::Time time;
     double sec{};
@@ -234,6 +250,7 @@ public:
         IGN_PROFILE_END();
 #endif
     }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -241,11 +258,14 @@ public:
 
         soil->pre_update();
 
+        // Loop through each mesh in the table
         for (auto &iter: mesh_lookup) {
             auto link = iter.first;
             auto mesh = iter.second;
 
-            for (uint32_t i = 0; i < mesh->GetSubMeshCount(); i++) {
+            // Iterate through each submesh
+            int no_submeshes = 1; // mesh->GetSubMeshCount()
+            for (uint32_t i = 0; i < no_submeshes; i++) {
 
                 auto submesh = mesh->GetSubMesh(i);
                 auto indices = submesh->GetIndexCount();
@@ -265,23 +285,21 @@ public:
                 soil->query_chunk((max+min) / 2);
                 //soil->query_chunk(pos);
 
-                std::vector<std::vector<std::tuple<uint32_t, uint32_t,
-                                        SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>>> footprint;
-                std::vector<std::tuple<uint32_t, uint32_t,
-                                        SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> footprint_idx;
+                std::vector<Footprint> mesh_footprint;
 
-                double total_displaced_volume = 0.0f;
-                float total_footprint_size = 0.0f;
+                double total_footprint_size = 0.0;
 
-
+                auto j = shear_displacement_map[std::make_tuple(0,1,2)].second; // Shear displacment in previous frame
+                auto s = shear_displacement_map[std::make_tuple(0,1,2)].first;  // Slip in previous frame
                 // Vertex level computations
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_BEGIN("Collision Detection");
 #endif
-                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout,footprint, total_footprint_size, total_displaced_volume) firstprivate(footprint_idx, submesh, soil, crot, cpos, pos, rot, indices, dt, link)
+                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(s,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                 {
-                    #pragma omp for nowait schedule(guided) reduction(+:total_displaced_volume)
+                    #pragma omp for nowait schedule(guided) //reduction(+:total_footprint_size)
 
+                     // Iterate through triangles in the submesh
                      for (uint32_t idx_unrolled = 0; idx_unrolled < (indices / 3); idx_unrolled++) {
 
                         auto idx = idx_unrolled * 3;
@@ -289,6 +307,8 @@ public:
                         auto v0 = submesh->Vertex(submesh->GetIndex(idx));
                         auto v1 = submesh->Vertex(submesh->GetIndex(idx + 1));
                         auto v2 = submesh->Vertex(submesh->GetIndex(idx + 2));
+
+                        auto tuple = std::make_tuple(idx,idx + 1,idx + 2);
 
                         auto cv0 = crot.RotateVector(v0) + cpos;
                         auto cv1 = crot.RotateVector(v1) + cpos;
@@ -300,27 +320,56 @@ public:
 
                         auto meshTri = Triangle(c1v0, c1v1, c1v2);
 
-                        double displaced_volume = 0.0f;
+                        // TODO: Slip velocity
+                        auto center = meshTri.centroid();
+                        auto r_vec = center - link->WorldInertialPose().Pos();
+                        auto angular_vel = -link->RelativeAngularVel();
+                        auto slip_velocity = -r_vec.Cross(angular_vel);
+                        auto body_velocity = link->RelativeLinearVel();
 
+                        auto slip = std::min(std::max(1.0 - (body_velocity.Length()/slip_velocity.Length()),-1.0),1.0);
 
-                        footprint_idx = soil->try_deform(meshTri, link, displaced_volume);
+                        // Signs switched?
+//                        if((slip/abs(slip)) != (s/abs(s))) {
+//                            j = 0;
+//                        }
 
-                        total_displaced_volume += displaced_volume;
+                        auto j_p_o = j + (slip_velocity.Length()*dt);
+
+//                        std::cout << j_p_o << std::endl;
+
+                        auto tri_ctx = TriangleContext { meshTri, j_p_o, body_velocity, slip_velocity, slip, angular_vel };
+
+                        Footprint tri_ftp;
+                        tri_ftp = soil->try_deform(tri_ctx, link);
+
+                        if(tri_ftp.getSize() == 0) {
+                            j_p_o = 0;
+                        }
 
                         #pragma omp critical
                         {
-                            footprint.push_back(footprint_idx);
+                             mesh_footprint.push_back(tri_ftp);
+                             shear_displacement_map[tuple] = std::make_pair(slip,j_p_o);
+                             j = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].second;
+                             s = slip;
                         }
+    //                        std::cout << "C" << std::endl;
 
                      }
                 }
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_END();
 #endif
-
-
-                //this->p_soil->compute_footprint_stage(footprint);
+                // Compute footprint stage for entire mesh
+                double B = 0;
+                soil->compute_footprint_stage(mesh_footprint,total_footprint_size,B);
+//                std::cout << B << std::endl;
             }
+
+            double y_velocity = link->RelativeLinearVel().Y();
+            double dampingForce = -2.0 * y_velocity; // Adjust the factor (-1.0) as needed
+            link->AddRelativeForce(ignition::math::Vector3d(0, dampingForce, 0));
         }
 
         soil->post_update();

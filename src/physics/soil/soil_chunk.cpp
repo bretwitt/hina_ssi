@@ -15,9 +15,7 @@ void SoilChunk::init_chunk(FieldVertexDimensions dims,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, const physics::LinkPtr& link,
-                                                   double& displaced_vol) {
-
+hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physics::LinkPtr& link) {
     double max_x, max_y, min_x, min_y;
     double scale;
     uint32_t iter_x, iter_y;
@@ -25,6 +23,8 @@ hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, cons
 
     double chunk_x = location.origin.X();
     double chunk_y = location.origin.Y();
+
+    auto meshTri = triCtx.tri;
 
     // AABB bounds under mesh triangle
     max_x = fmax(meshTri.v1.X(), fmax(meshTri.v2.X(), meshTri.v3.X())) - chunk_x;
@@ -51,7 +51,8 @@ hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, cons
 
 
     // Search soil field within bounds under AABB
-    Footprint_V penetrating_coords;
+    Footprint footprint;
+//    int i = 0;
 
     for(uint32_t k = 0; k < iter_x*iter_y; k++) {
 
@@ -62,44 +63,29 @@ hina::SoilChunk::Footprint_V SoilChunk::try_deform(const Triangle& meshTri, cons
 
         // If mesh tri penetrates vtx
         if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
-            penetrating_coords.emplace_back(x + x_start, y + y_start, *this, v3);
-            terramx_deform(link, meshTri, x + x_start, y + y_start, v3, scale, displaced_vol,
+            terramx_deform(link, triCtx, x + x_start, y + y_start, v3, scale,
                            p_sampler->get_params_at_index(x + x_start, y + y_start));
+
+            hina::Contact contact { x+x_start,y+y_start, chunk_x, chunk_y, v3 };
+            footprint.footprint.push_back(contact);
+//            i++;
         }
     }
-
-    return penetrating_coords;
+    return footprint;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &meshTri, uint32_t x, uint32_t y,
+void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleContext &tri_ctx, uint32_t x, uint32_t y,
                                 const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
-                                double &displaced_volume, SoilPhysicsParams vert_attr)
+                                SoilPhysicsParams vert_attr)
 {
-
-    auto v3 = vertex->v3;
-    auto v3_0 = vertex->v3_0;
-
-    auto vert_state = vertex->v;
-
-    double k_phi = vert_attr.k_phi;
-    double k_e = vert_attr.k_e;
-
-    double y_h = meshTri.centroid().Z();
-    double y_r = v3_0.Z();
-
-    double s_y = y_r - y_h;
-    double s_p = vert_state->s_p;
-
-    double sigma_t = k_e*(s_y - s_p);
-    double sigma_p = 0.0;
 
     Vector3d normal_dA(0,0,0);
 
-    auto s_sink = 0.0;
+    auto& meshTri = tri_ctx.tri;
 
-    if(sigma_t > 0) {                            // Unilateral Contact
+    if(vertex->v3.Z() > meshTri.centroid().Z()) {                            // Unilateral Contact
         /* Geometry Calculations */
         auto vtx_ul = this->p_field->get_vertex_at_index(x - 1, y + 1)->v3;
         auto vtx_dl = this->p_field->get_vertex_at_index(x - 1, y - 1)->v3;
@@ -110,84 +96,105 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const Triangle &
         auto vtx_d = this->p_field->get_vertex_at_index(x, y - 1)->v3;
         auto vtx_l = this->p_field->get_vertex_at_index(x - 1, y)->v3;
         auto vtx_r = this->p_field->get_vertex_at_index(x + 1, y)->v3;
-        const auto &vtx = v3;
-
+        const auto &vtx = vertex->v3;
+        // Construct triangles around the vertex
         auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
         auto tri2 = Triangle(vtx, vtx_l, vtx_ul);
         auto tri3 = Triangle(vtx, vtx_u, vtx_r);
-
         auto tri4 = Triangle(vtx, vtx_r, vtx_d);
         auto tri5 = Triangle(vtx, vtx_dr, vtx_d);
-
         auto tri6 = Triangle(vtx, vtx_d, vtx_l);
 
+        // Find the average normal
         auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() +
                            tri6.normal()).Normalized();
 
-        auto area = w * w;
+        // Area of AABB
+//        auto area = w * w;
+        auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area())*0.5;
 
+        // Calculate attributes of the vertex
         normal_dA = -normal_sum * area;
+        vertex->v->normal = -normal_sum;
+        vertex->v->normal_dA = normal_dA;
 
-        vert_state->normal = -normal_sum;
+        // Compute contact force and sinkage
+        Vector3d force{};
+        double sinkage{};
+        this->terramx_contact(vert_attr,tri_ctx, vertex, area, force, sinkage);
 
-        vert_state->normal_dA = normal_dA;
+        // Update sinkage of vertex
+        const auto v3 = vertex->v3;
+        const auto v3_0 = vertex->v3_0;
+        vertex->v3 = Vector3d(v3_0.X(), v3_0.Y(), sinkage);
 
-        auto sigma_star = sigma_t;
-        s_sink = s_y;
-
-        if(sigma_star < vert_state->sigma_yield) {
-            sigma_p = sigma_star;
-        } else {
-            sigma_p = (k_phi /* + (k_c/B)*/)*(s_y);
-            vert_state->sigma_yield = sigma_p;
-            auto s_p_o = vert_state->s_p;
-            vert_state->s_p = s_sink - (sigma_p / k_e);
-            vert_state->s_e = s_sink - vert_state->s_p;
-            vert_state->plastic_flow = (vert_state->s_p - s_p_o)*vert_attr.mfr;
-        }
+        // Apply f/t
+        linkPtr->AddForceAtWorldPosition(force, Vector3d(v3_0.X(), v3_0.Y(), sinkage));
 
         /* update footprints */
 
-        auto v1 = this->p_field->get_vertex_at_index(x, y + 1)->v;
-        auto v2 = this->p_field->get_vertex_at_index(x, y - 1)->v;
-        auto v3 = this->p_field->get_vertex_at_index(x + 1, y)->v;
-        auto v4 = this->p_field->get_vertex_at_index(x - 1, y)->v;
+        auto _v1 = this->p_field->get_vertex_at_index(x, y + 1)->v;
+        auto _v2 = this->p_field->get_vertex_at_index(x, y - 1)->v;
+        auto _v3 = this->p_field->get_vertex_at_index(x + 1, y)->v;
+        auto _v4 = this->p_field->get_vertex_at_index(x - 1, y)->v;
 
         vertex->v->footprint = 1;
-        if(v1->footprint != 1) {
-            v1->footprint = 2;
+        if(_v1->footprint != 1) {
+            _v1->footprint = 2;
         }
-        if(v2->footprint != 1) {
-            v2->footprint = 2;
+        if(_v2->footprint != 1) {
+            _v2->footprint = 2;
         }
-        if(v3->footprint != 1) {
-            v3->footprint = 2;
+        if(_v3->footprint != 1) {
+            _v3->footprint = 2;
         }
-        if(v4->footprint != 1) {
-            v4->footprint = 2;
+        if(_v4->footprint != 1) {
+            _v4->footprint = 2;
         }
     }
-
-    auto z = v3_0.Z() - s_p;
-    auto force_origin = v3_0.Z() - s_sink;
-
-    vert_state->sigma = sigma_p;
-
-    vertex->v3 = Vector3d(v3.X(), v3.Y(), z);
-
-    displaced_volume = vert_state->plastic_flow*w*w;
-
-    auto force_v = Vector3d(
-            (vert_attr.c + (vert_state->sigma * tan(vert_attr.phi))) * vert_state->normal_dA.X(),
-            (vert_attr.c + (vert_state->sigma * tan(vert_attr.phi))) * vert_state->normal_dA.Y(),
-            (vert_state->sigma) * vert_state->normal_dA.Z()
-    );
-
-    // Apply f/t
-    linkPtr->AddForceAtWorldPosition(force_v, Vector3d(v3_0.X(), v3_0.Y(), force_origin));
-
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Input: Contact triangle, contact point, contact point normal, contact aabb area
+// Output: Force on contact triangle
+void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
+                                const TriangleContext& tri_ctx,
+                                const std::shared_ptr<FieldVertex<SoilVertex>>& soil_vertex,
+                                const double& aabb_point_area,
+                                Vector3d& contact_force,
+                                double& sinkage) {
+
+    auto contact_tri = tri_ctx.tri;
+    double penetration = soil_vertex->v3_0.Z() - contact_tri.centroid().Z();
+
+    // Compute Bekker pressure
+    double sigma = ((2400/0.03)+814000)*penetration;
+
+    double j = tri_ctx.shear_displacement;
+
+    double tau_max = vert_attr.c + (sigma*tan(vert_attr.phi));
+    double tau = tau_max*(1-exp(-j/vert_attr.K));
+
+    double force_z = sigma*aabb_point_area;
+    double force_x = tau*aabb_point_area;
+
+    Vector3d contact_normal = contact_tri.normal().Normalize();
+    auto lin_vel = tri_ctx.linear_velocity;
+    auto contact_tangent = -lin_vel.Normalize();
+
+
+//    std::cout << contact_tangent << std::endl;
+
+    auto sigma_v = -force_z*contact_normal;
+    auto tau_v = force_x*contact_tangent;
+
+//    std::cout << " T: " << tau  << std::endl;
+
+    contact_force = sigma_v + tau_v;
+
+    sinkage = contact_tri.centroid().Z();           // Assume plastic deformation at point of contact
+
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 

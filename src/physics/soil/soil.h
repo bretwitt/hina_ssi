@@ -12,11 +12,12 @@
 
 #include "../../common/field/field.h"
 #include "../../common/geometry.h"
+#include "triangle_context.h"
 
 #include "../sandbox/sandbox_vertex_sampler.h"
 #include "../dem/dem_vertex_sampler.h"
 #include "../dem/dem.h"
-
+#include "footprint.h"
 
 namespace hina {
     class Soil {
@@ -81,14 +82,14 @@ namespace hina {
         /*
          *  Applies force to link and deforms appropriate chunk's graph based on Bekker-derived physics
          */
-        typedef std::vector<std::tuple<uint32_t, uint32_t,SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Field_V;
-        hina::Soil::Field_V try_deform(const Triangle &meshTri, const physics::LinkPtr &link, double &displaced_volume);
+//        typedef std::vector<std::tuple<uint32_t, uint32_t,SoilChunk, std::shared_ptr<FieldVertex<SoilVertex>>>> Field_V;
+        hina::Footprint try_deform(const TriangleContext &meshTri, const physics::LinkPtr &link);
 
         /*
          *  Perform footprint level computations
          */
-        typedef std::vector<std::vector<std::tuple<uint32_t, uint32_t, SoilChunk,std::shared_ptr<FieldVertex<SoilVertex>>>>> Footprint_V;
-        void compute_footprint_stage(const Footprint_V& footprint);
+//        typedef std::vector<std::vector<std::tuple<uint32_t, uint32_t, SoilChunk,std::shared_ptr<FieldVertex<SoilVertex>>>>> Footprint_V;
+        void compute_footprint_stage(const std::vector<Footprint>& footprint, const double& total_footprint_size, double& B);
 
     };
 }

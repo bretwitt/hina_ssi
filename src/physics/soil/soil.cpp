@@ -36,14 +36,14 @@ Soil::Soil() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-hina::Soil::Field_V Soil::try_deform(const Triangle &meshTri, const physics::LinkPtr &link, double &displaced_volume) {
+hina::Footprint Soil::try_deform(const TriangleContext &meshTri, const physics::LinkPtr &link) {
 
 
-    auto idx = worldpos_to_chunk_idx(meshTri.centroid());
+    auto idx = worldpos_to_chunk_idx(meshTri.tri.centroid());
     auto chunk = chunks->get_chunk({static_cast<int>(idx.X()),static_cast<int>(idx.Y())});
 
     if (chunk != nullptr && chunk->container != nullptr) {
-        return chunk->container->try_deform(meshTri, link, displaced_volume);
+        return chunk->container->try_deform(meshTri, link);
     }
 
     return {};
@@ -51,92 +51,84 @@ hina::Soil::Field_V Soil::try_deform(const Triangle &meshTri, const physics::Lin
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Soil::compute_footprint_stage(const Footprint_V& footprint) {
+void Soil::compute_footprint_stage(const std::vector<Footprint>& footprint, const double& total_footprint_size, double& B) {
 
-    std::unordered_map<uint32_t, std::unordered_map<uint32_t,
-                        std::unordered_map<uint32_t, std::unordered_map<uint32_t,int>>>> deposit_footprint;
+    double area = 0;
+    double length = 0;
+    int i = 0;
+    int count = 0;
 
-    std::vector<std::tuple<SoilChunk, uint32_t, uint32_t, std::shared_ptr<FieldVertex<SoilVertex>>>> deposit_footprint_v;
-    // Footprint level computations
+    struct pair {
+        int i;
+        int j;
+        int x;
+        int y;
 
-    // 1. Compute border and inner nodes
-    // 2. Compute footprint size
-
-    for (const auto &tri_ftp: footprint) {
-        for (const auto &vtx: tri_ftp) {
-            auto x = std::get<0>(vtx);
-            auto y = std::get<1>(vtx);
-            auto chunk = std::get<2>(vtx);
-
-            auto field = chunk.get_field();
-            auto loc = chunk.get_location();
-
-            auto vtx1 = field->get_vertex_at_index(x + 1, y);
-            auto vtx2 = field->get_vertex_at_index(x, y + 1);
-            auto vtx3 = field->get_vertex_at_index(x - 1, y);
-            auto vtx4 = field->get_vertex_at_index(x, y - 1);
-
-            if (vtx1->v->footprint == 2 &&
-                (deposit_footprint[loc.i][loc.j][x + 1][y] == 0)) {
-                deposit_footprint[loc.i][loc.j][x + 1][y] = 2;
-                deposit_footprint_v.emplace_back(chunk, x + 1, y, vtx1);
-            }
-            if (vtx2->v->footprint == 2 &&
-                (deposit_footprint[loc.i][loc.j][x][y + 1] == 0)) {
-                deposit_footprint[loc.i][loc.j][x][y + 1] = 2;
-                deposit_footprint_v.emplace_back(chunk, x, y + 1, vtx2);
-            }
-            if (vtx3->v->footprint == 2 &&
-                (deposit_footprint[loc.i][loc.j][x - 1][y] == 0)) {
-                deposit_footprint[loc.i][loc.j][x - 1][y] = 2;
-                deposit_footprint_v.emplace_back(chunk, x - 1, y, vtx3);
-            }
-            if (vtx4->v->footprint == 2 &&
-                (deposit_footprint[loc.i][loc.j][x][y - 1] == 0)) {
-                deposit_footprint[loc.i][loc.j][x][y - 1] = 2;
-                deposit_footprint_v.emplace_back(chunk, x, y - 1, vtx4);
-            }
+        bool operator==(const pair& other) const {
+            return i == other.i && j == other.j &&
+                        x == other.x && y == other.y;
         }
-    }
+    };
 
-    // 3. Deposit soil
-/*
-    double deposit = 0;
-    if (!footprint.empty()) {
-        deposit = total_displaced_volume / (double) deposit_footprint_v.size();
-    }
-
-    Vector2d min;
-    Vector2d max;
-
-    for (const auto &v: deposit_footprint_v) {
-        auto chunk = std::get<0>(v);
-        auto vtx = std::get<3>(v);
-        auto v3 = vtx->v3;
-
-        double w = chunk.get_field()->scale;
-
-        if(v3.X() > max.X()) {
-            max = Vector2d(v3.X(), max.Y());
+    struct pair_hash {
+        std::size_t operator()(const pair& p) const {
+            auto h1 = std::hash<int>{}(p.x);
+            auto h2 = std::hash<int>{}(p.y);
+            auto h3 = std::hash<int>{}(p.i);
+            auto h4 = std::hash<int>{}(p.j);
+            return h1 ^ h2 ^ h3 ^ h4;
         }
-        else if(v3.X() < min.X()) {
-            min = Vector2d(v3.X(), min.Y());
-        }
-        if(v3.Y() > max.Y()) {
-            max = Vector2d(max.X(), v3.Y());
-        }
-        else if(v3.Y() < min.Y()) {
-            min = Vector2d(min.X(), v3.Y());
-        }
+    };
+    std::unordered_set<pair, pair_hash> visited;
 
-        if (vtx->v->footprint == 2) {
-            vtx->v3 += Vector3d(0, 0, deposit / (w * w));
-               if(vtx->v3.Z() >= w/(tan(0.5))) {
-                    vtx->v3 = Vector3d(vtx->v3.X(), vtx->v3.Y(), w/tan(0.5));
+    // Per mesh triangle in the footprint
+    for (auto& triangle_ftp : footprint) {
+        // Per vertex contact
+        for(auto& contact : triangle_ftp.footprint) {
+
+
+            // Count area by figuring out bordering nodes
+            auto& x = contact.x;
+            auto& y = contact.y;
+            auto& ci = contact.i;
+            auto& cj = contact.j;
+
+            auto soil_chunk = chunks->get_chunk_cont(
+                    ChunkedFieldLocation{contact.i,contact.j});
+            auto field = soil_chunk->get_field();
+            // Check for empty neighbors
+
+            std::vector<pair> neighbors =
+                    { { ci,cj, x + 1, y },
+                      { ci,cj, x, y + 1 },
+                      {ci,cj, x - 1, y},
+                      {ci,cj, x, y - 1}
+                    };
+
+            for(auto& pair : neighbors) {
+                auto& x = pair.x;
+                auto& y = pair.y;
+
+                if(visited.find(pair) != visited.end()) {
+                    // this neighbor has already been visited
+                    continue;
                 }
+
+                visited.insert(pair);
+
+                auto vtx = field->get_vertex_at_index(x,y)->v;
+                if(vtx->footprint == 2) { // Empty neighbor
+                    count++;
+                }
+            }
+            i++;
         }
     }
-*/
+
+    length = count*0.005;
+    area = 0.005*0.005*i;
+
+    B = 2*length/area;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
