@@ -128,7 +128,7 @@ void Soil::compute_footprint_stage(const std::vector<Footprint>& footprint, cons
     length = count*0.005;
     area = 0.005*0.005*i;
 
-    B = 2*length/area;
+    B = 2*area/length;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

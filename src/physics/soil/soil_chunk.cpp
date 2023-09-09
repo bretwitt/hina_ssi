@@ -51,7 +51,7 @@ hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physi
 
 
     // Search soil field within bounds under AABB
-    Footprint footprint;
+    Footprint footprint {};
 //    int i = 0;
 
     for(uint32_t k = 0; k < iter_x*iter_y; k++) {
@@ -60,15 +60,16 @@ hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physi
         uint32_t x = k % iter_y;
 
         auto v3 = this->p_field->get_vertex_at_index(x + x_start, y + y_start);
+        Vector3d contact_force{};
 
         // If mesh tri penetrates vtx
         if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
             terramx_deform(link, triCtx, x + x_start, y + y_start, v3, scale,
-                           p_sampler->get_params_at_index(x + x_start, y + y_start));
+                           p_sampler->get_params_at_index(x + x_start, y + y_start), contact_force);
 
             hina::Contact contact { x+x_start,y+y_start, chunk_x, chunk_y, v3 };
             footprint.footprint.push_back(contact);
-//            i++;
+            footprint.force += contact_force;
         }
     }
     return footprint;
@@ -78,7 +79,7 @@ hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physi
 
 void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleContext &tri_ctx, uint32_t x, uint32_t y,
                                 const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
-                                SoilPhysicsParams vert_attr)
+                                SoilPhysicsParams vert_attr, Vector3d& contact_force)
 {
 
     Vector3d normal_dA(0,0,0);
@@ -119,17 +120,33 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleCo
         vertex->v->normal_dA = normal_dA;
 
         // Compute contact force and sinkage
-        Vector3d force{};
+        Vector3d normal{};
+        Vector3d traction{};
         double sinkage{};
-        this->terramx_contact(vert_attr,tri_ctx, vertex, area, force, sinkage);
+        this->terramx_contact(vert_attr,tri_ctx, vertex, area, normal, traction, sinkage);
 
         // Update sinkage of vertex
         const auto v3 = vertex->v3;
         const auto v3_0 = vertex->v3_0;
         vertex->v3 = Vector3d(v3_0.X(), v3_0.Y(), sinkage);
 
+
+//        // Horizontal scaling
+//        if(sqrt(pow(tri_ctx.linear_velocity.X(),2)+(pow(tri_ctx.linear_velocity.Y(),2)) < 0.001)) {
+//            traction *= 0.1;
+//        }
+
         // Apply f/t
-        linkPtr->AddForceAtWorldPosition(force, Vector3d(v3_0.X(), v3_0.Y(), sinkage));
+        linkPtr->AddForceAtWorldPosition(normal, Vector3d(v3_0.X(), v3_0.Y(), v3_0.Z() - vertex->v->s_sink));
+        linkPtr->AddForceAtWorldPosition(traction, Vector3d(v3_0.X(), v3_0.Y(), v3.Z()));
+//
+//        // Vertical damping
+//        if(tri_ctx.linear_velocity.Z() < 0.01) {
+//            auto zfrc = -tri_ctx.linear_velocity.Z()*0.8;
+//            linkPtr->AddRelativeForce(Vector3d(0,0,zfrc));
+//        }
+
+        contact_force = normal; // What's visualized
 
         /* update footprints */
 
@@ -162,37 +179,69 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
                                 const std::shared_ptr<FieldVertex<SoilVertex>>& soil_vertex,
                                 const double& aabb_point_area,
                                 Vector3d& contact_force,
+                                Vector3d& traction_force,
                                 double& sinkage) {
 
     auto contact_tri = tri_ctx.tri;
     double penetration = soil_vertex->v3_0.Z() - contact_tri.centroid().Z();
 
     // Compute Bekker pressure
-    double sigma = ((2400/0.03)+814000)*penetration;
+//    double sigma = ((990/0.03)+152430)*penetration;
 
+/////// Tasora
+
+    auto vert_state = soil_vertex->v;
+    auto v3_0 = soil_vertex->v3_0;
+    auto k_e = 7.8e7;
+    auto s_sink = 0.0;
+
+    double y_h = tri_ctx.tri.centroid().Z();
+    double y_r = v3_0.Z();
+    double s_y = y_r - y_h;
+    double s_p = vert_state->s_p;
+    double sigma_t = k_e*(s_y - s_p);
+
+    auto sigma_star = sigma_t;
+    auto sigma_p = 0.0;
+    s_sink = s_y;
+
+    if(sigma_star < vert_state->sigma_yield) {
+        sigma_p = sigma_star;
+    } else {
+        sigma_p = (514000 /* + (k_c/B)*/)*(s_y);
+        vert_state->sigma_yield = sigma_p;
+        auto s_p_o = vert_state->s_p;
+        vert_state->s_p = s_sink - (sigma_p / k_e);
+        vert_state->s_e = s_sink - vert_state->s_p;
+    }
+
+    sinkage = v3_0.Z() - vert_state->s_p;
+    auto sigma = -abs(sigma_p);
+//////
+    double force_z = sigma*aabb_point_area;
+    Vector3d contact_normal = contact_tri.normal().Normalize();
+    auto sigma_v = force_z*contact_normal;
+
+//    auto sigma_v = force_z *Vector3d(0,0,contact_normal.Z());//
+
+////// Shear forces
     double j = tri_ctx.shear_displacement;
 
-    double tau_max = vert_attr.c + (sigma*tan(vert_attr.phi));
-    double tau = tau_max*(1-exp(-j/vert_attr.K));
+    double tau_max = 3500 + (sigma*tan(0.55));
+    double tau = tau_max*(1-exp(-j/0.2));
 
-    double force_z = sigma*aabb_point_area;
     double force_x = tau*aabb_point_area;
 
-    Vector3d contact_normal = contact_tri.normal().Normalize();
-    auto lin_vel = tri_ctx.linear_velocity;
-    auto contact_tangent = -lin_vel.Normalize();
+    auto lin_vel = tri_ctx.slip_velocity;
+    auto contact_tangent = lin_vel.Normalize();
+    auto tau_v = force_x* Vector3d(contact_tangent.X(),contact_tangent.Y(),0);
+//    auto tau_v = force_x*contact_tangent;
+////// Lateral forces
 
-
-//    std::cout << contact_tangent << std::endl;
-
-    auto sigma_v = -force_z*contact_normal;
-    auto tau_v = force_x*contact_tangent;
-
-//    std::cout << " T: " << tau  << std::endl;
-
-    contact_force = sigma_v + tau_v;
-
-    sinkage = contact_tri.centroid().Z();           // Assume plastic deformation at point of contact
+////// Apply forces
+    soil_vertex->v->s_sink = s_sink;
+    contact_force = sigma_v;
+    traction_force = Vector3d(0,0,0) + tau_v;
 
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

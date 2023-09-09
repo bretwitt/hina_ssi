@@ -21,6 +21,11 @@ struct SoilVertex {
     Vector3d normal_dA{};
     Vector3d normal = Vector3d(0,0,1);
 
+    /* Tasora */
+    double s_p{};
+    double s_e{};
+    double sigma_yield{};
+    double s_sink{};
     /*
      * 0 = not a node
      * 1 = footprint node

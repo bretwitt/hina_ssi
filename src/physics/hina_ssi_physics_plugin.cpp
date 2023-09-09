@@ -16,6 +16,7 @@
 #include "../common/field/uniform_field.h"
 #include "soil/triangle_context.h"
 
+#include "Triangles.pb.h"
 #include "SoilChunk.pb.h"
 
 namespace hina {
@@ -29,12 +30,16 @@ private:
 
     transport::NodePtr node = nullptr;
     transport::PublisherPtr soilPub = nullptr;
+    transport::PublisherPtr triPub = nullptr;
     event::ConnectionPtr updateEventPtr = nullptr;
     event::ConnectionPtr onEntityAddedEventPtr = nullptr;
     physics::WorldPtr world = nullptr;
     sdf::ElementPtr sdf = nullptr;
 
     std::map<physics::LinkPtr, const common::Mesh *> mesh_lookup{};
+    std::unordered_map<const common::Mesh*,double> footprint_lookup{};
+
+    std::vector<std::pair<TriangleContext,Footprint>> triangle_states;
 
     transport::Node* trspt = nullptr;
 
@@ -56,6 +61,7 @@ private:
     double sec{};
     double last_sec{};
     double last_sec_viz{};
+    double last_sec_tri{};
     int col_threads = 3;
 
 public:
@@ -107,6 +113,7 @@ public:
         this->node = transport::NodePtr(trspt);
         node->Init();
         soilPub = node->Advertise<hina_ssi_msgs::msgs::SoilChunk>("~/soil");
+        triPub = node->Advertise<hina_ssi_msgs::msgs::Triangles>("~/triangles");
     }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -233,6 +240,7 @@ public:
 #endif
         double dt = sec - last_sec;
         double dt_viz = sec - last_sec_viz;
+        double dt_tri = sec - last_sec_tri;
 
         update_soil(p_soil, dt);
 
@@ -246,6 +254,12 @@ public:
             broadcast_soil(p_soil);
             last_sec_viz = sec;
         }
+
+        if(dt_tri > (1./ 5.f)) {
+            broadcast_triangles(triangle_states);
+            last_sec_tri = sec;
+        }
+
 #ifdef PHYS_PROFILER
         IGN_PROFILE_END();
 #endif
@@ -256,12 +270,14 @@ public:
 
     void update_soil(const std::shared_ptr<Soil>& soil, double dt) {
 
+        triangle_states.clear(); // For transport
         soil->pre_update();
 
         // Loop through each mesh in the table
         for (auto &iter: mesh_lookup) {
             auto link = iter.first;
             auto mesh = iter.second;
+            auto& B = footprint_lookup[mesh];
 
             // Iterate through each submesh
             int no_submeshes = 1; // mesh->GetSubMeshCount()
@@ -290,12 +306,13 @@ public:
                 double total_footprint_size = 0.0;
 
                 auto j = shear_displacement_map[std::make_tuple(0,1,2)].second; // Shear displacment in previous frame
-                auto s = shear_displacement_map[std::make_tuple(0,1,2)].first;  // Slip in previous frame
+                auto s = shear_displacement_map[std::make_tuple(0,1,2)].first; // Slip in previous frame
+
                 // Vertex level computations
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_BEGIN("Collision Detection");
 #endif
-                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(s,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
+                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(B,s,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                 {
                     #pragma omp for nowait schedule(guided) //reduction(+:total_footprint_size)
 
@@ -322,54 +339,59 @@ public:
 
                         // TODO: Slip velocity
                         auto center = meshTri.centroid();
-                        auto r_vec = center - link->WorldInertialPose().Pos();
-                        auto angular_vel = -link->RelativeAngularVel();
-                        auto slip_velocity = -r_vec.Cross(angular_vel);
+                        auto angular_vel = link->RelativeAngularVel();
+
+                        auto r_vec = center - link->WorldCoGPose().Pos();
+                        auto slip_velocity = -angular_vel.Cross(r_vec);
+
+                        auto V_j = slip_velocity.Length();
+
                         auto body_velocity = link->RelativeLinearVel();
 
                         auto slip = std::min(std::max(1.0 - (body_velocity.Length()/slip_velocity.Length()),-1.0),1.0);
+                        auto dir = angular_vel.Y()/abs(angular_vel.Y());
 
-                        // Signs switched?
-//                        if((slip/abs(slip)) != (s/abs(s))) {
-//                            j = 0;
-//                        }
+                        auto j_p_o = j + (V_j*dt);
 
-                        auto j_p_o = j + (slip_velocity.Length()*dt);
-
-//                        std::cout << j_p_o << std::endl;
-
-                        auto tri_ctx = TriangleContext { meshTri, j_p_o, body_velocity, slip_velocity, slip, angular_vel };
+                        auto tri_ctx = TriangleContext { meshTri, j_p_o, body_velocity, slip_velocity, slip, angular_vel, B };
 
                         Footprint tri_ftp;
                         tri_ftp = soil->try_deform(tri_ctx, link);
 
                         if(tri_ftp.getSize() == 0) {
-                            j_p_o = 0;
+                            j_p_o *= 0;
                         }
+
+//                         if(dir != s/abs(s)) {
+//                             j_p_o *= 0;
+//                         }
+
 
                         #pragma omp critical
                         {
-                             mesh_footprint.push_back(tri_ftp);
-                             shear_displacement_map[tuple] = std::make_pair(slip,j_p_o);
-                             j = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].second;
-                             s = slip;
+                            triangle_states.push_back({tri_ctx,tri_ftp});
+                            mesh_footprint.push_back(tri_ftp);
+                            shear_displacement_map[tuple] = std::make_pair(dir,j_p_o);
+                            j = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].second;
+                            s = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].first;
                         }
-    //                        std::cout << "C" << std::endl;
-
                      }
                 }
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_END();
 #endif
                 // Compute footprint stage for entire mesh
-                double B = 0;
-                soil->compute_footprint_stage(mesh_footprint,total_footprint_size,B);
-//                std::cout << B << std::endl;
+//                soil->compute_footprint_stage(mesh_footprint,total_footprint_size,B);
+
             }
 
-            double y_velocity = link->RelativeLinearVel().Y();
-            double dampingForce = -2.0 * y_velocity; // Adjust the factor (-1.0) as needed
-            link->AddRelativeForce(ignition::math::Vector3d(0, dampingForce, 0));
+            double z_velocity = link->RelativeLinearVel().Z();
+            double x_velocity = link->RelativeLinearVel().X();
+//
+            double dampingForceZ = -3. * z_velocity; // Adjust the factor (-1.0) as needed
+            double dampingForceY = -0. * z_velocity; // Adjust the factor (-1.0) as needed
+            double dampingForceX = -20. * x_velocity;
+            link->AddRelativeForce(ignition::math::Vector3d(dampingForceX, dampingForceY, dampingForceZ));
         }
 
         soil->post_update();
@@ -397,8 +419,6 @@ public:
                 msg.set_z(v3.Z());
                 *update = msg;
 
-
-
                 auto normal_msg = gazebo::msgs::Vector3d();
                 auto normal = field->get_vertex_at_flattened_index(i)->v->normal;
                 normal_msg.set_x(normal.X());
@@ -424,6 +444,60 @@ public:
         }
     }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    void broadcast_triangles(const std::vector<std::pair<TriangleContext,Footprint>>& context_v) {
+        hina_ssi_msgs::msgs::Triangles triangle_update_msg;
+
+        triangle_update_msg.set_len_triangles(context_v.size());
+
+        for(auto& triangle : context_v) {
+            auto centroid = triangle.first.tri.centroid();
+            auto slip_vel = triangle.first.slip_velocity;
+            auto force = triangle.second.force;
+            auto normal = triangle.first.tri.normal().Normalize();
+            auto t = triangle.second;
+            auto contact = t.getSize() > 0;
+            auto shear_displ = triangle.first.shear_displacement;
+
+            auto update_centroids = triangle_update_msg.add_centroids();
+            auto msg_centroids = gazebo::msgs::Vector3d();
+            msg_centroids.set_x(centroid.X());
+            msg_centroids.set_y(centroid.Y());
+            msg_centroids.set_z(centroid.Z());
+            *update_centroids = msg_centroids;
+
+            auto update_slip = triangle_update_msg.add_slip_velocity();
+            auto slip_msg = gazebo::msgs::Vector3d();
+            slip_msg.set_x(slip_vel.X());
+            slip_msg.set_y(slip_vel.Y());
+            slip_msg.set_z(slip_vel.Z());
+            *update_slip = slip_msg;
+
+            auto update_forces = triangle_update_msg.add_forces();
+            auto forces_msg = gazebo::msgs::Vector3d();
+            forces_msg.set_x(force.X());
+            forces_msg.set_y(force.Y());
+            forces_msg.set_z(force.Z());
+            *update_forces = forces_msg;
+
+            auto update_normals = triangle_update_msg.add_normal();
+            auto normals_msg = gazebo::msgs::Vector3d();
+            normals_msg.set_x(normal.X());
+            normals_msg.set_y(normal.Y());
+            normals_msg.set_z(normal.Z());
+            *update_normals = normals_msg;
+
+            triangle_update_msg.add_shear_displacement(shear_displ);
+
+            triangle_update_msg.add_contact(contact);
+
+
+        }
+
+        triPub->Publish(triangle_update_msg);
+
+    }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     };

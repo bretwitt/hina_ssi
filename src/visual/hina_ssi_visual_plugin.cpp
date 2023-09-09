@@ -8,8 +8,11 @@
 #include <utility>
 #include "ogre_soil_renderer.cpp"
 #include "SoilChunk.pb.h"
+#include "Triangles.pb.h"
 #include "../common/field/chunked_field.h"
 #include "visual_chunk.h"
+#include "visual_triangles.h"
+#include "triangle_info_renderer.cpp"
 
 using namespace gazebo;
 using ignition::math::Vector2d;
@@ -24,13 +27,18 @@ namespace hina {
         rendering::VisualPtr terrainViz = nullptr;
         transport::NodePtr node = nullptr;
         transport::SubscriberPtr sub = nullptr;
+        transport::SubscriberPtr tri_sub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
+        event::ConnectionPtr preRenderPtr = nullptr;
 
         common::Time time;
         double sec{};
         double last_sec{};
 
         ChunkedField<std::shared_ptr<VisualChunk>> chunks;
+
+        VisualTriangles triangles{};
+        TriangleInfoRenderer renderer;
 
         std::unordered_map<int,std::unordered_map<int,
             std::shared_ptr<UniformField<ColorAttributes>>>> map;
@@ -46,6 +54,7 @@ namespace hina {
 
         void Load(rendering::VisualPtr _visual, sdf::ElementPtr _sdf) override {
             connectionPtr = event::Events::ConnectRender(boost::bind(&HinaSSIVisualPlugin::update, this));
+            preRenderPtr = event::Events::ConnectPreRender(boost::bind(&HinaSSIVisualPlugin::prerender, this));
             init_transport();
             init_chunk_field();
             visual = _visual;
@@ -56,11 +65,16 @@ namespace hina {
             this->node = transport::NodePtr(new transport::Node());
             node->Init();
             sub = node->Subscribe("~/soil", &HinaSSIVisualPlugin::OnSoilUpdate, this);
+            tri_sub = node->Subscribe("~/triangles", &HinaSSIVisualPlugin::OnTrianglesUpdate, this);
         }
 
         void init_chunk_field() {
             chunks.register_chunk_create_callback(boost::bind(&HinaSSIVisualPlugin::OnChunkCreated, this, _1, _2));
         }
+
+//        void init_triangles_renderer() {
+//            renderer.init(visual);
+//        }
 
         void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::SoilChunk> &soil_update) {
             uint32_t x_verts = soil_update->len_col();
@@ -97,6 +111,39 @@ namespace hina {
             }
         }
 
+        void OnTrianglesUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::Triangles> &tri_update) {
+            uint32_t n = tri_update->len_triangles();
+
+            VisualTriangles tris{};
+            auto centroids = tri_update->centroids();
+            auto forces = tri_update->forces();
+            auto slip_velocity = tri_update->slip_velocity();
+            auto normals = tri_update->normal();
+            auto contacts = tri_update->contact();
+            auto shear_displ = tri_update->shear_displacement();
+
+            for(auto& center : centroids) {
+                tris.centroid.push_back(center);
+            }
+            for(auto& force : forces) {
+                tris.forces.push_back(force);
+            }
+            for(auto& vel : slip_velocity) {
+                tris.slip_velocity.push_back(vel);
+            }
+            for(auto& normal : normals) {
+                tris.normal.push_back(normal);
+            }
+            for(auto& contact : contacts){
+                tris.contact.push_back(contact);
+            }
+            for(auto& displ : shear_displ) {
+                tris.shear_displacement.push_back(displ);
+            }
+
+            triangles = tris;
+        }
+
         void get_rgb_from_sp(int footprint, float& r, float& g, float& b) {
 //            std::cout << s_p << " " << frame_flow_max << std::endl;
             if(footprint == 1) {
@@ -120,6 +167,11 @@ namespace hina {
             auto vc = std::make_shared<VisualChunk>();
             vc->init_visual_chunk(visual, this->verts_x, this->verts_y, i, j);
             return vc;
+        }
+
+        void prerender() {
+            renderer.init(visual);
+            renderer.update_triangles(triangles);
         }
 
         void update() {

@@ -52,7 +52,7 @@ namespace hina {
          */
         void terramx_deform(const physics::LinkPtr &linkPtr, const TriangleContext &meshTri, uint32_t x, uint32_t y,
                             const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
-                            SoilPhysicsParams vert_attr);
+                            SoilPhysicsParams vert_attr, Vector3d& contact_force);
 
         /*
          *  Calculate terramechanical forces based on a triangle-point contact
@@ -62,6 +62,7 @@ namespace hina {
                              const std::shared_ptr<FieldVertex<SoilVertex>>& soil_vertex,
                              const double& abb_point_area,
                              Vector3d& contact_force,
+                             Vector3d& traction_force,
                              double& sinkage);
 
         /*

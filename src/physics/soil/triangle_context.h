@@ -11,6 +11,7 @@ namespace hina {
         Vector3d slip_velocity;
         double slip = 0;
         Vector3d angular_velocity;
+        double B = 0;
     };
 }
 

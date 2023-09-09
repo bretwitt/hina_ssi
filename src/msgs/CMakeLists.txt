@@ -8,6 +8,7 @@ endforeach()
 
 set (msgs
         SoilChunk.proto
+        Triangles.proto
         ${PROTOBUF_IMPORT_DIRS}/vector3d.proto
         ${PROTOBUF_IMPORT_DIRS}/vector2d.proto
         ${PROTOBUF_IMPORT_DIRS}/header.proto

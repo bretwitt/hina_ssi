@@ -8,7 +8,7 @@ struct SoilPhysicsParams {
     double c = 3500;
     double phi = 0.55;
     double mfr = 0.25;
-    double K = 0.2;
+    double K = 0.018;
 };
 
 #endif //HINA_SSI_SOIL_PHYS_PARAMS_H
