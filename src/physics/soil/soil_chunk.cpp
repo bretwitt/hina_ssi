@@ -60,16 +60,18 @@ hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physi
         uint32_t x = k % iter_y;
 
         auto v3 = this->p_field->get_vertex_at_index(x + x_start, y + y_start);
-        Vector3d contact_force{};
+        Vector3d force_x{};
+        Vector3d force_z{};
 
         // If mesh tri penetrates vtx
         if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
             terramx_deform(link, triCtx, x + x_start, y + y_start, v3, scale,
-                           p_sampler->get_params_at_index(x + x_start, y + y_start), contact_force);
+                           p_sampler->get_params_at_index(x + x_start, y + y_start), force_z, force_x);
 
             hina::Contact contact { x+x_start,y+y_start, chunk_x, chunk_y, v3 };
             footprint.footprint.push_back(contact);
-            footprint.force += contact_force;
+            footprint.force_x += force_x;
+            footprint.force_z += force_z;
         }
     }
     return footprint;
@@ -79,7 +81,7 @@ hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physi
 
 void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleContext &tri_ctx, uint32_t x, uint32_t y,
                                 const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
-                                SoilPhysicsParams vert_attr, Vector3d& contact_force)
+                                SoilPhysicsParams vert_attr, Vector3d& normal_force, Vector3d& traction_force)
 {
 
     Vector3d normal_dA(0,0,0);
@@ -130,23 +132,10 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleCo
         const auto v3_0 = vertex->v3_0;
         vertex->v3 = Vector3d(v3_0.X(), v3_0.Y(), sinkage);
 
-
-//        // Horizontal scaling
-//        if(sqrt(pow(tri_ctx.linear_velocity.X(),2)+(pow(tri_ctx.linear_velocity.Y(),2)) < 0.001)) {
-//            traction *= 0.1;
-//        }
-
         // Apply f/t
-        linkPtr->AddForceAtWorldPosition(normal, Vector3d(v3_0.X(), v3_0.Y(), v3_0.Z() - vertex->v->s_sink));
-        linkPtr->AddForceAtWorldPosition(traction, Vector3d(v3_0.X(), v3_0.Y(), v3.Z()));
-//
-//        // Vertical damping
-//        if(tri_ctx.linear_velocity.Z() < 0.01) {
-//            auto zfrc = -tri_ctx.linear_velocity.Z()*0.8;
-//            linkPtr->AddRelativeForce(Vector3d(0,0,zfrc));
-//        }
 
-        contact_force = normal; // What's visualized
+        normal_force = normal; // What's visualized
+        traction_force = traction;
 
         /* update footprints */
 
@@ -178,15 +167,12 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
                                 const TriangleContext& tri_ctx,
                                 const std::shared_ptr<FieldVertex<SoilVertex>>& soil_vertex,
                                 const double& aabb_point_area,
-                                Vector3d& contact_force,
+                                Vector3d& normal_force,
                                 Vector3d& traction_force,
                                 double& sinkage) {
 
     auto contact_tri = tri_ctx.tri;
     double penetration = soil_vertex->v3_0.Z() - contact_tri.centroid().Z();
-
-    // Compute Bekker pressure
-//    double sigma = ((990/0.03)+152430)*penetration;
 
 /////// Tasora
 
@@ -217,31 +203,35 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
 
     sinkage = v3_0.Z() - vert_state->s_p;
     auto sigma = -abs(sigma_p);
-//////
     double force_z = sigma*aabb_point_area;
     Vector3d contact_normal = contact_tri.normal().Normalize();
     auto sigma_v = force_z*contact_normal;
 
-//    auto sigma_v = force_z *Vector3d(0,0,contact_normal.Z());//
+    // Update return values
+    normal_force = sigma_v;
+    soil_vertex->v->s_sink = s_sink;
 
 ////// Shear forces
-    double j = tri_ctx.shear_displacement;
-
-    double tau_max = 3500 + (sigma*tan(0.55));
-    double tau = tau_max*(1-exp(-j/0.2));
-
-    double force_x = tau*aabb_point_area;
-
-    auto lin_vel = tri_ctx.slip_velocity;
-    auto contact_tangent = lin_vel.Normalize();
-    auto tau_v = force_x* Vector3d(contact_tangent.X(),contact_tangent.Y(),0);
+//    double j = tri_ctx.shear_displacement;
+//
+//    double tau_max = 3500 + (sigma*tan(0.55));
+//    double tau = tau_max*(1-exp(-j/0.2));
+//
+//    double force_x = tau*aabb_point_area;
+//
+//    auto lin_vel = tri_ctx.slip_velocity;
+//    auto contact_tangent = lin_vel.Normalize();
 //    auto tau_v = force_x*contact_tangent;
+////    auto tau_v = force_x* Vector3d(contact_tangent.X(),contact_tangent.Y(),0);
 ////// Lateral forces
 
 ////// Apply forces
-    soil_vertex->v->s_sink = s_sink;
-    contact_force = sigma_v;
-    traction_force = Vector3d(0,0,0) + tau_v;
+//
+//    if(tri_ctx.linear_velocity.Y() < 0.001) {
+//        tau_v *= 1*tri_ctx.linear_velocity.Y();
+//    }
+
+    traction_force = Vector3d(0,0,0); // + tau_v;
 
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

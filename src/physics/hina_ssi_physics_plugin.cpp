@@ -58,7 +58,10 @@ private:
     std::unordered_map<std::tuple<int, int, int>, std::pair<double,double>, tuple_hash> shear_displacement_map; // Hashmap to store shear displacement per triangle
 
     common::Time time;
+    common::Time vizTime;
+
     double sec{};
+    double vsec{};
     double last_sec{};
     double last_sec_viz{};
     double last_sec_tri{};
@@ -232,15 +235,18 @@ public:
 
     void update() {
 
-        time = common::Time::GetWallTime();
+        time = this->world->SimTime();
+        vizTime = common::Time::GetWallTime();
+
         sec = time.Double();
+        vsec = vizTime.Double();
 
 #ifdef PHYS_PROFILER
         IGN_PROFILE_BEGIN("TAROSCM::Soil Physics Update");
 #endif
         double dt = sec - last_sec;
-        double dt_viz = sec - last_sec_viz;
-        double dt_tri = sec - last_sec_tri;
+        double dt_viz = vsec - last_sec_viz;
+        double dt_tri = vsec - last_sec_tri;
 
         update_soil(p_soil, dt);
 
@@ -252,12 +258,12 @@ public:
 
         if (dt_viz > (1. / 1.f)) {
             broadcast_soil(p_soil);
-            last_sec_viz = sec;
+            last_sec_viz = vsec;
         }
 
         if(dt_tri > (1./ 5.f)) {
             broadcast_triangles(triangle_states);
-            last_sec_tri = sec;
+            last_sec_tri = vsec;
         }
 
 #ifdef PHYS_PROFILER
@@ -270,6 +276,7 @@ public:
 
     void update_soil(const std::shared_ptr<Soil>& soil, double dt) {
 
+
         triangle_states.clear(); // For transport
         soil->pre_update();
 
@@ -278,6 +285,9 @@ public:
             auto link = iter.first;
             auto mesh = iter.second;
             auto& B = footprint_lookup[mesh];
+
+            Vector3d traction_force;
+            Vector3d normal_force;
 
             // Iterate through each submesh
             int no_submeshes = 1; // mesh->GetSubMeshCount()
@@ -308,11 +318,12 @@ public:
                 auto j = shear_displacement_map[std::make_tuple(0,1,2)].second; // Shear displacment in previous frame
                 auto s = shear_displacement_map[std::make_tuple(0,1,2)].first; // Slip in previous frame
 
+
                 // Vertex level computations
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_BEGIN("Collision Detection");
 #endif
-                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(B,s,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
+                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, traction_force, normal_force, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(B,s,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                 {
                     #pragma omp for nowait schedule(guided) //reduction(+:total_footprint_size)
 
@@ -362,6 +373,11 @@ public:
                             j_p_o *= 0;
                         }
 
+
+//                        if(abs(slip_velocity.Y()) < 0.01) {
+//                            j_p_o *= 100*slip_velocity.Y();
+//                        }
+
 //                         if(dir != s/abs(s)) {
 //                             j_p_o *= 0;
 //                         }
@@ -374,6 +390,8 @@ public:
                             shear_displacement_map[tuple] = std::make_pair(dir,j_p_o);
                             j = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].second;
                             s = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].first;
+                            traction_force += tri_ftp.force_x;
+                            normal_force += tri_ftp.force_z;
                         }
                      }
                 }
@@ -387,11 +405,16 @@ public:
 
             double z_velocity = link->RelativeLinearVel().Z();
             double x_velocity = link->RelativeLinearVel().X();
-//
-            double dampingForceZ = -3. * z_velocity; // Adjust the factor (-1.0) as needed
-            double dampingForceY = -0. * z_velocity; // Adjust the factor (-1.0) as needed
-            double dampingForceX = -20. * x_velocity;
+            double y_velocity = link->RelativeLinearVel().Y();
+
+            double dampingForceZ = -10. * z_velocity; // Adjust the factor (-1.0) as needed
+            double dampingForceY = -150. * y_velocity; // Adjust the factor (-1.0) as needed
+            double dampingForceX = -0. * x_velocity;
             link->AddRelativeForce(ignition::math::Vector3d(dampingForceX, dampingForceY, dampingForceZ));
+
+            Vector3d z = Vector3d(0,0,normal_force.Z() + traction_force.Z());
+            Vector3d y = Vector3d(0,normal_force.Y() + traction_force.Y(),0);
+            link->AddRelativeForce(z);
         }
 
         soil->post_update();
@@ -454,7 +477,7 @@ public:
         for(auto& triangle : context_v) {
             auto centroid = triangle.first.tri.centroid();
             auto slip_vel = triangle.first.slip_velocity;
-            auto force = triangle.second.force;
+            auto force = triangle.second.force_z;
             auto normal = triangle.first.tri.normal().Normalize();
             auto t = triangle.second;
             auto contact = t.getSize() > 0;

@@ -17,15 +17,23 @@ namespace hina {
         Ogre::SceneNode *child = nullptr;
         rendering::ScenePtr scenePtr = nullptr;
         rendering::VisualPtr _visual = nullptr;
-        std::vector<Ogre::ManualObject*> lines;
+//        std::vector<Ogre::ManualObject*> lines;
 
         bool init_viz = 0;
 
     public:
+
+        ~TriangleInfoRenderer() {
+            if(line != nullptr) {
+                auto sceneManager = scenePtr->OgreSceneManager();
+                sceneManager->getRootSceneNode()->removeChild(child);
+                sceneManager->destroyManualObject(line);
+            }
+
+        }
         void init(rendering::VisualPtr visual) {
             _visual = visual;
         }
-
 
         void update_triangles(const VisualTriangles& triangles) {
             _triangles = triangles;
@@ -38,7 +46,7 @@ namespace hina {
 
             if(!init_viz) {
                 std::cout <<"Initializing " << size << std::endl;
-                init_buffers(size, lines);
+                init_buffers(size);
                 init_viz = true;
                 std::cout << "Finished initializing" << std::endl;
                 return;
@@ -60,12 +68,12 @@ namespace hina {
 //                    line->position(normal.x()+center.x(),normal.y()+center.y(),normal.z()+center.z());
 
 //                     Force
-//                    line->position(center.x(),center.y(),center.z());
-//                    line->position(force.x()+center.x(),force.y()+center.y(),force.z()+center.z());
+                    line->position(center.x(),center.y(),center.z());
+                    line->position(force.x()+center.x(),force.y()+center.y(),force.z()+center.z());
 
 //                    Shear Displacement
-                    line->position(center.x(),center.y(),center.z());
-                    line->position(shear_displ*normal.x()+center.x(),shear_displ*normal.y()+center.y(),shear_displ*normal.z()+center.z());
+//                    line->position(center.x(),center.y(),center.z());
+//                    line->position(shear_displ*normal.x()+center.x(),shear_displ*normal.y()+center.y(),shear_displ*normal.z()+center.z());
 
 //                    Slip Velocity
 //                    line->position(center.x(),center.y(),center.z());
@@ -75,7 +83,7 @@ namespace hina {
             line->end();
         }
 
-        void init_buffers(int triangles, std::vector<Ogre::ManualObject*>& lines) {
+        void init_buffers(int triangles) {
 
             Ogre::Vector3 start(0, 0, 0);
             Ogre::Vector3 end(1, 0, 1);

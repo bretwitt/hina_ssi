@@ -17,7 +17,8 @@ namespace hina {
     };
     class Footprint {
     public:
-        Vector3d force {};
+        Vector3d force_x {};
+        Vector3d force_z{};
         std::vector<Contact> footprint;
         int getSize() {
             return footprint.size();
