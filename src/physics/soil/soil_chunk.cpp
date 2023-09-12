@@ -114,7 +114,8 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleCo
 
         // Area of AABB
 //        auto area = w * w;
-        auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area())*0.5;
+//        auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area())*0.5;
+        auto area = 0.01*0.01;
 
         // Calculate attributes of the vertex
         normal_dA = -normal_sum * area;
@@ -194,7 +195,7 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     if(sigma_star < vert_state->sigma_yield) {
         sigma_p = sigma_star;
     } else {
-        sigma_p = (514000 /* + (k_c/B)*/)*(s_y);
+        sigma_p = (814000 /* + (k_c/B)*/)*(s_y);
         vert_state->sigma_yield = sigma_p;
         auto s_p_o = vert_state->s_p;
         vert_state->s_p = s_sink - (sigma_p / k_e);
@@ -212,16 +213,16 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     soil_vertex->v->s_sink = s_sink;
 
 ////// Shear forces
-//    double j = tri_ctx.shear_displacement;
-//
-//    double tau_max = 3500 + (sigma*tan(0.55));
-//    double tau = tau_max*(1-exp(-j/0.2));
-//
-//    double force_x = tau*aabb_point_area;
-//
-//    auto lin_vel = tri_ctx.slip_velocity;
-//    auto contact_tangent = lin_vel.Normalize();
-//    auto tau_v = force_x*contact_tangent;
+    double j = tri_ctx.shear_displacement;
+
+    double tau_max = 3500 + (sigma*tan(0.55));
+    double tau = tau_max*(1-exp(-j/0.2));
+
+    double force_x = tau*aabb_point_area;
+
+    auto lin_vel = tri_ctx.slip_velocity;
+    auto contact_tangent = lin_vel.Normalize();
+    auto tau_v = force_x*contact_tangent;
 ////    auto tau_v = force_x* Vector3d(contact_tangent.X(),contact_tangent.Y(),0);
 ////// Lateral forces
 
@@ -231,7 +232,7 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
 //        tau_v *= 1*tri_ctx.linear_velocity.Y();
 //    }
 
-    traction_force = Vector3d(0,0,0); // + tau_v;
+    traction_force = Vector3d(0,0,0) + tau_v;
 
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

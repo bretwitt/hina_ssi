@@ -373,14 +373,13 @@ public:
                             j_p_o *= 0;
                         }
 
-
-//                        if(abs(slip_velocity.Y()) < 0.01) {
+//                        if(abs(slip_velocity.Y()) < 0.001) {
 //                            j_p_o *= 100*slip_velocity.Y();
 //                        }
 
-//                         if(dir != s/abs(s)) {
-//                             j_p_o *= 0;
-//                         }
+                         if(dir != s/abs(s)) {
+                             j_p_o *= 0;
+                         }
 
 
                         #pragma omp critical
@@ -407,14 +406,15 @@ public:
             double x_velocity = link->RelativeLinearVel().X();
             double y_velocity = link->RelativeLinearVel().Y();
 
-            double dampingForceZ = -10. * z_velocity; // Adjust the factor (-1.0) as needed
-            double dampingForceY = -150. * y_velocity; // Adjust the factor (-1.0) as needed
-            double dampingForceX = -0. * x_velocity;
-            link->AddRelativeForce(ignition::math::Vector3d(dampingForceX, dampingForceY, dampingForceZ));
+            double dampingForceZ = -5. * z_velocity; // Adjust the factor (-1.0) as needed
+            double dampingForceY = -0. * y_velocity; // Adjust the factor (-1.0) as needed
+            double dampingForceX = -10. * x_velocity;
+            link->AddForce(ignition::math::Vector3d(dampingForceX, dampingForceY, dampingForceZ));
 
-            Vector3d z = Vector3d(0,0,normal_force.Z() + traction_force.Z());
-            Vector3d y = Vector3d(0,normal_force.Y() + traction_force.Y(),0);
-            link->AddRelativeForce(z);
+//            Vector3d z = Vector3d(0,0,normal_force.Z() + traction_force.Z());
+            Vector3d z = Vector3d(0,0,normal_force.Z());
+            Vector3d y = Vector3d(0, normal_force.Y() + traction_force.Y(),0);
+            link->AddForce(y+z);
         }
 
         soil->post_update();
@@ -477,7 +477,7 @@ public:
         for(auto& triangle : context_v) {
             auto centroid = triangle.first.tri.centroid();
             auto slip_vel = triangle.first.slip_velocity;
-            auto force = triangle.second.force_z;
+            auto force = triangle.second.force_x;
             auto normal = triangle.first.tri.normal().Normalize();
             auto t = triangle.second;
             auto contact = t.getSize() > 0;
