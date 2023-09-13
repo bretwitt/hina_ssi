@@ -12,6 +12,7 @@ namespace hina {
         double slip = 0;
         Vector3d angular_velocity;
         double B = 0;
+        int dir = 0;
     };
 }
 

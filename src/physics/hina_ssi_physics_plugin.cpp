@@ -316,14 +316,14 @@ public:
                 double total_footprint_size = 0.0;
 
                 auto j = shear_displacement_map[std::make_tuple(0,1,2)].second; // Shear displacment in previous frame
-                auto s = shear_displacement_map[std::make_tuple(0,1,2)].first; // Slip in previous frame
+                auto d = shear_displacement_map[std::make_tuple(0,1,2)].first; // Slip in previous frame
 
 
                 // Vertex level computations
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_BEGIN("Collision Detection");
 #endif
-                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, traction_force, normal_force, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(B,s,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
+                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, traction_force, normal_force, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(B,d,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                 {
                     #pragma omp for nowait schedule(guided) //reduction(+:total_footprint_size)
 
@@ -360,11 +360,13 @@ public:
                         auto body_velocity = link->RelativeLinearVel();
 
                         auto slip = std::min(std::max(1.0 - (body_velocity.Length()/slip_velocity.Length()),-1.0),1.0);
-                        auto dir = angular_vel.Y()/abs(angular_vel.Y());
+                        auto dir = -angular_vel.X()/abs(angular_vel.X());
 
                         auto j_p_o = j + (V_j*dt);
 
-                        auto tri_ctx = TriangleContext { meshTri, j_p_o, body_velocity, slip_velocity, slip, angular_vel, B };
+                        auto tri_ctx = TriangleContext { meshTri, j_p_o, body_velocity, slip_velocity, slip,
+                                                         angular_vel, B, dir };
+
 
                         Footprint tri_ftp;
                         tri_ftp = soil->try_deform(tri_ctx, link);
@@ -373,11 +375,7 @@ public:
                             j_p_o *= 0;
                         }
 
-//                        if(abs(slip_velocity.Y()) < 0.001) {
-//                            j_p_o *= 100*slip_velocity.Y();
-//                        }
-
-                         if(dir != s/abs(s)) {
+                         if(dir != d/abs(d)) {
                              j_p_o *= 0;
                          }
 
@@ -388,7 +386,7 @@ public:
                             mesh_footprint.push_back(tri_ftp);
                             shear_displacement_map[tuple] = std::make_pair(dir,j_p_o);
                             j = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].second;
-                            s = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].first;
+                            d = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].first;
                             traction_force += tri_ftp.force_x;
                             normal_force += tri_ftp.force_z;
                         }
@@ -404,17 +402,13 @@ public:
 
             double z_velocity = link->RelativeLinearVel().Z();
             double x_velocity = link->RelativeLinearVel().X();
-            double y_velocity = link->RelativeLinearVel().Y();
 
             double dampingForceZ = -5. * z_velocity; // Adjust the factor (-1.0) as needed
-            double dampingForceY = -0. * y_velocity; // Adjust the factor (-1.0) as needed
             double dampingForceX = -10. * x_velocity;
-            link->AddForce(ignition::math::Vector3d(dampingForceX, dampingForceY, dampingForceZ));
+            link->AddForce(ignition::math::Vector3d(dampingForceX, 0, dampingForceZ));
 
-//            Vector3d z = Vector3d(0,0,normal_force.Z() + traction_force.Z());
-            Vector3d z = Vector3d(0,0,normal_force.Z());
-            Vector3d y = Vector3d(0, normal_force.Y() + traction_force.Y(),0);
-            link->AddForce(y+z);
+            Vector3d contact_force = normal_force;//+traction_force;
+            link->AddForce(contact_force);
         }
 
         soil->post_update();

@@ -64,20 +64,20 @@ namespace hina {
                 auto shear_displ = _triangles.shear_displacement[i];
                 if(contact) {
 //                    Normal
-//                    line->position(center.x(),center.y(),center.z());
-//                    line->position(normal.x()+center.x(),normal.y()+center.y(),normal.z()+center.z());
+                    line->position(center.x(),center.y(),center.z());
+                    line->position(normal.x()+center.x(),normal.y()+center.y(),normal.z()+center.z());
 
 //                     Force
 //                    line->position(center.x(),center.y(),center.z());
 //                    line->position(force.x()+center.x(),force.y()+center.y(),force.z()+center.z());
 
 //                    Shear Displacement
-                    line->position(center.x(),center.y(),center.z());
-                    line->position(shear_displ*normal.x()+center.x(),shear_displ*normal.y()+center.y(),shear_displ*normal.z()+center.z());
+//                    line->position(center.x(),center.y(),center.z());
+//                    line->position(shear_displ*normal.x()+center.x(),shear_displ*normal.y()+center.y(),shear_displ*normal.z()+center.z());
 
 //                    Slip Velocity
-//                    line->position(center.x(),center.y(),center.z());
-//                    line->position(slip_velocity.x()+center.x(),slip_velocity.y()+center.y(),slip_velocity.z()+center.z());
+                    line->position(center.x(),center.y(),center.z());
+                    line->position(slip_velocity.x()+center.x(),slip_velocity.y()+center.y(),slip_velocity.z()+center.z());
                 }
             }
             line->end();

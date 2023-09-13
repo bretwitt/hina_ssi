@@ -115,7 +115,7 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleCo
         // Area of AABB
 //        auto area = w * w;
 //        auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area())*0.5;
-        auto area = 0.01*0.01;
+        auto area = 0.005*0.005;
 
         // Calculate attributes of the vertex
         normal_dA = -normal_sum * area;
@@ -203,36 +203,42 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     }
 
     sinkage = v3_0.Z() - vert_state->s_p;
-    auto sigma = -abs(sigma_p);
-    double force_z = sigma*aabb_point_area;
+    double force_z = sigma_p*aabb_point_area;
     Vector3d contact_normal = contact_tri.normal().Normalize();
-    auto sigma_v = force_z*contact_normal;
 
-    // Update return values
-    normal_force = sigma_v;
+    // Transform into inertial frame
+    // Form bases
+    normal_force = -contact_normal*force_z;
+
     soil_vertex->v->s_sink = s_sink;
 
 ////// Shear forces
     double j = tri_ctx.shear_displacement;
+    auto slip_vel = tri_ctx.slip_velocity;
 
-    double tau_max = 3500 + (sigma*tan(0.55));
+    double tau_max = 3500 + (sigma_p*tan(0.55));
     double tau = tau_max*(1-exp(-j/0.2));
 
     double force_x = tau*aabb_point_area;
 
-    auto lin_vel = tri_ctx.slip_velocity;
-    auto contact_tangent = lin_vel.Normalize();
-    auto tau_v = force_x*contact_tangent;
-////    auto tau_v = force_x* Vector3d(contact_tangent.X(),contact_tangent.Y(),0);
+    auto contact_tangent = slip_vel.Normalize();
+
+    // Transform into inertial frame
+    // Form bases
+    Vector3d shear = Vector3d(force_x,0,0);
+    Vector3d ib = slip_vel.Normalize();
+    Vector3d jb = contact_normal.Cross(ib).Normalize();
+    Vector3d kb = contact_normal.Normalize();
+    auto T_x = shear.X()*ib.X() + shear.Y()*ib.Y() + shear.Z()*ib.Z();
+    auto T_y =  shear.X()*jb.X() + shear.Y()*jb.Y() + shear.Z()*jb.Z();
+    auto T_z =  shear.X()*kb.X() + shear.Y()*kb.Y() + shear.Z()*kb.Z();
+
+    traction_force = -Vector3d(T_x,T_y,0); //force_x*contact_tangent;
+
 ////// Lateral forces
 
 ////// Apply forces
-//
-//    if(tri_ctx.linear_velocity.Y() < 0.001) {
-//        tau_v *= 1*tri_ctx.linear_velocity.Y();
-//    }
 
-    traction_force = Vector3d(0,0,0) + tau_v;
 
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
