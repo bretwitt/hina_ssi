@@ -347,6 +347,7 @@ public:
                         auto c1v2 = rot.RotateVector(cv2) + pos;
 
                         auto meshTri = Triangle(c1v0, c1v1, c1v2);
+                        auto meshTriBody = Triangle(cv0,cv1,cv2);
 
                         // TODO: Slip velocity
                         auto center = meshTri.centroid();
@@ -357,15 +358,12 @@ public:
 
                         auto V_j = slip_velocity.Length();
 
-                        auto body_velocity = link->RelativeLinearVel();
-
-                        auto slip = std::min(std::max(1.0 - (body_velocity.Length()/slip_velocity.Length()),-1.0),1.0);
                         auto dir = -angular_vel.X()/abs(angular_vel.X());
 
                         auto j_p_o = j + (V_j*dt);
 
-                        auto tri_ctx = TriangleContext { meshTri, j_p_o, body_velocity, slip_velocity, slip,
-                                                         angular_vel, B, dir };
+                        auto tri_ctx = TriangleContext { meshTri, j_p_o,  slip_velocity,
+                                                         angular_vel, B };
 
 
                         Footprint tri_ftp;
@@ -378,7 +376,6 @@ public:
                          if(dir != d/abs(d)) {
                              j_p_o *= 0;
                          }
-
 
                         #pragma omp critical
                         {
@@ -400,15 +397,23 @@ public:
 
             }
 
-            double z_velocity = link->RelativeLinearVel().Z();
             double x_velocity = link->RelativeLinearVel().X();
+            double z_velocity = link->WorldCoGLinearVel().Z();
+            double dampingForceZ = -5. * z_velocity;
+            double dampingForceX = -1. * x_velocity;
+            link->AddForce(ignition::math::Vector3d(0, 0, dampingForceZ));
+            link->AddRelativeForce(ignition::math::Vector3d(dampingForceX,0,0));
 
-            double dampingForceZ = -5. * z_velocity; // Adjust the factor (-1.0) as needed
-            double dampingForceX = -10. * x_velocity;
-            link->AddForce(ignition::math::Vector3d(dampingForceX, 0, dampingForceZ));
-
-            Vector3d contact_force = normal_force;//+traction_force;
+            Vector3d contact_force = normal_force+traction_force;
             link->AddForce(contact_force);
+
+            // Get the orientation of the wheel link in the world frame
+            ignition::math::Quaternion orientation = link->WorldPose().Rot();
+            Vector3d ib = Vector3d(0,0,1);
+            Vector3d jb = orientation.RotateVector(Vector3d(1,0,0));
+            Vector3d kb = ib.Cross(jb).Normalize();
+
+//            link->AddForce(kb*0.4);
         }
 
         soil->post_update();
@@ -471,7 +476,7 @@ public:
         for(auto& triangle : context_v) {
             auto centroid = triangle.first.tri.centroid();
             auto slip_vel = triangle.first.slip_velocity;
-            auto force = triangle.second.force_x;
+            auto force = triangle.second.force_z;
             auto normal = triangle.first.tri.normal().Normalize();
             auto t = triangle.second;
             auto contact = t.getSize() > 0;
