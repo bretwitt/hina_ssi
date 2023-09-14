@@ -285,6 +285,7 @@ public:
             auto link = iter.first;
             auto mesh = iter.second;
             auto& B = footprint_lookup[mesh];
+            double max_sinkage = 1;
 
             Vector3d traction_force;
             Vector3d normal_force;
@@ -323,7 +324,7 @@ public:
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_BEGIN("Collision Detection");
 #endif
-                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, traction_force, normal_force, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(B,d,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
+                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, max_sinkage, traction_force, normal_force, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(B,d,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                 {
                     #pragma omp for nowait schedule(guided) //reduction(+:total_footprint_size)
 
@@ -386,6 +387,10 @@ public:
                             d = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].first;
                             traction_force += tri_ftp.force_x;
                             normal_force += tri_ftp.force_z;
+
+                            if(max_sinkage > tri_ftp.max_sinkage) {
+                                max_sinkage = tri_ftp.max_sinkage;
+                            }
                         }
                      }
                 }
@@ -397,14 +402,14 @@ public:
 
             }
 
-            double x_velocity = link->RelativeLinearVel().X();
-            double z_velocity = link->WorldCoGLinearVel().Z();
-            double dampingForceZ = -5. * z_velocity;
-            double dampingForceX = -1. * x_velocity;
-            link->AddForce(ignition::math::Vector3d(0, 0, dampingForceZ));
-            link->AddRelativeForce(ignition::math::Vector3d(dampingForceX,0,0));
+//            double x_velocity = link->RelativeLinearVel().X();
+//            double z_velocity = link->WorldCoGLinearVel().Z();
+//            double dampingForceZ = -5. * z_velocity;
+//            double dampingForceX = -2. * x_velocity;
+//            link->AddForce(ignition::math::Vector3d(0, 0, dampingForceZ));
+//            link->AddRelativeForce(ignition::math::Vector3d(dampingForceX,0,0));
 
-            Vector3d contact_force = normal_force+traction_force;
+            Vector3d contact_force = Vector3d(0,0,normal_force.Z())+traction_force;
             link->AddForce(contact_force);
 
             // Get the orientation of the wheel link in the world frame
@@ -413,7 +418,18 @@ public:
             Vector3d jb = orientation.RotateVector(Vector3d(1,0,0));
             Vector3d kb = ib.Cross(jb).Normalize();
 
-//            link->AddForce(kb*0.4);
+            Vector3d vel = link->WorldCoGLinearVel();
+            bool fwd = (vel.Dot(kb) < 0);
+            int dir = (fwd) ? 1 : -1;
+            double R = (8.14e5*0.3+1.37e3)*(pow(max_sinkage,2)*0.5);
+            if(max_sinkage <= 0) {
+                link->AddForce(R*kb*dir*0.1);
+            }
+
+//            double vj = vel.Dot(jb);
+//            Vector3d dampingForce_jb = -5 * vj * jb;
+//            link->AddForce(dampingForce_jb);
+//            Vector3d dampingForce_kb = -dampingCoefficient * v_kb * kb;
         }
 
         soil->post_update();

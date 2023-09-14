@@ -19,6 +19,7 @@ namespace hina {
     public:
         Vector3d force_x {};
         Vector3d force_z{};
+        double max_sinkage = 1;
         std::vector<Contact> footprint;
         int getSize() {
             return footprint.size();

@@ -65,13 +65,19 @@ hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physi
 
         // If mesh tri penetrates vtx
         if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
+            double sinkage = 1;
             terramx_deform(link, triCtx, x + x_start, y + y_start, v3, scale,
-                           p_sampler->get_params_at_index(x + x_start, y + y_start), force_z, force_x);
+                           p_sampler->get_params_at_index(x + x_start, y + y_start), force_z, force_x,
+                           sinkage);
 
             hina::Contact contact { x+x_start,y+y_start, chunk_x, chunk_y, v3 };
             footprint.footprint.push_back(contact);
             footprint.force_x += force_x;
             footprint.force_z += force_z;
+
+            if(sinkage < footprint.max_sinkage) {
+                footprint.max_sinkage = sinkage;
+            }
         }
     }
     return footprint;
@@ -81,7 +87,8 @@ hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physi
 
 void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleContext &tri_ctx, uint32_t x, uint32_t y,
                                 const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
-                                SoilPhysicsParams vert_attr, Vector3d& normal_force, Vector3d& traction_force)
+                                SoilPhysicsParams vert_attr, Vector3d& normal_force, Vector3d& traction_force,
+                                double& sinkage)
 {
 
     Vector3d normal_dA(0,0,0);
@@ -115,7 +122,7 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleCo
         // Area of AABB
 //        auto area = w * w;
 //        auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area())*0.5;
-        auto area = 0.005*0.005;
+        auto area = w*w;
 
         // Calculate attributes of the vertex
         normal_dA = -normal_sum * area;
@@ -125,7 +132,7 @@ void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleCo
         // Compute contact force and sinkage
         Vector3d normal{};
         Vector3d traction{};
-        double sinkage{};
+        sinkage = 0;
         this->terramx_contact(vert_attr,tri_ctx, vertex, area, normal, traction, sinkage);
 
         // Update sinkage of vertex
@@ -217,8 +224,8 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     double j = tri_ctx.shear_displacement;
     auto slip_vel = tri_ctx.slip_velocity;
 
-    double tau_max = 800 + (sigma*tan(0.55));
-    double tau = tau_max*(1-exp(-j/0.043));
+    double tau_max = 170 + (sigma*tan(0.55));
+    double tau = tau_max*(1-exp(-j/0.018));
 
     double force_x = tau*aabb_point_area;
 
