@@ -359,7 +359,7 @@ public:
 
                         auto V_j = slip_velocity.Length();
 
-                        auto dir = -angular_vel.X()/abs(angular_vel.X());
+                        auto dir = -angular_vel.Y()/abs(angular_vel.Y());
 
                         auto j_p_o = j + (V_j*dt);
 
@@ -402,13 +402,6 @@ public:
 
             }
 
-//            double x_velocity = link->RelativeLinearVel().X();
-//            double z_velocity = link->WorldCoGLinearVel().Z();
-//            double dampingForceZ = -5. * z_velocity;
-//            double dampingForceX = -2. * x_velocity;
-//            link->AddForce(ignition::math::Vector3d(0, 0, dampingForceZ));
-//            link->AddRelativeForce(ignition::math::Vector3d(dampingForceX,0,0));
-
             Vector3d contact_force = Vector3d(0,0,normal_force.Z())+traction_force;
             link->AddForce(contact_force);
 
@@ -417,19 +410,27 @@ public:
             Vector3d ib = Vector3d(0,0,1);
             Vector3d jb = orientation.RotateVector(Vector3d(1,0,0));
             Vector3d kb = ib.Cross(jb).Normalize();
-
             Vector3d vel = link->WorldCoGLinearVel();
+
+            double vi = vel.Dot(ib);
+            double vj = vel.Dot(jb);
+            double vk = vel.Dot(kb);
+
+
             bool fwd = (vel.Dot(kb) < 0);
             int dir = (fwd) ? 1 : -1;
             double R = (8.14e5*0.3+1.37e3)*(pow(max_sinkage,2)*0.5);
-            if(max_sinkage <= 0) {
-                link->AddForce(R*kb*dir*0.1);
+            if(abs(vi) < 0.01) {
+                R *= vi*10;
             }
 
-//            double vj = vel.Dot(jb);
-//            Vector3d dampingForce_jb = -5 * vj * jb;
-//            link->AddForce(dampingForce_jb);
-//            Vector3d dampingForce_kb = -dampingCoefficient * v_kb * kb;
+            if(max_sinkage <= 0) {
+                link->AddForce(R*kb*dir*0.25);
+            }
+
+            Vector3d dampingForce_jb = -5 * vj * jb;
+            Vector3d dampingForce_ib = -5 * vi * ib;
+            link->AddForce(dampingForce_jb+dampingForce_ib);
         }
 
         soil->post_update();
