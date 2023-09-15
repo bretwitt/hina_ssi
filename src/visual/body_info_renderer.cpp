@@ -57,7 +57,7 @@ namespace hina {
 
             for(int i = 0; i < size; i++) {
                 auto origin = _physics.origin[i];
-                auto force = _physics.normal[i];
+                auto force = _physics.traction[i];
 
                 line->colour(1.0,0,0,1.0);
                 line->position(origin.x(),origin.y(),origin.z());

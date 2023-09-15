@@ -66,14 +66,19 @@ hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physi
         // If mesh tri penetrates vtx
         if(!v3->v->isAir && penetrates(meshTri, v3, scale)) {
             double sinkage = 1;
+            bool contact = false;
             terramx_deform(link, triCtx, x + x_start, y + y_start, v3, scale,
                            p_sampler->get_params_at_index(x + x_start, y + y_start), force_z, force_x,
-                           sinkage);
+                           sinkage,contact);
 
-            hina::Contact contact { x+x_start,y+y_start, chunk_x, chunk_y, v3 };
-            footprint.footprint.push_back(contact);
-            footprint.force_x += force_x;
-            footprint.force_z += force_z;
+//            if(meshTri.centroid.Z()< v3->v->s_sink)
+
+            if(contact) {
+                hina::Contact contact { x+x_start,y+y_start, chunk_x, chunk_y, v3 };
+                footprint.footprint.push_back(contact);
+                footprint.force_x += force_x;
+                footprint.force_z += force_z;
+            }
 
             if(sinkage < footprint.max_sinkage) {
                 footprint.max_sinkage = sinkage;
@@ -88,83 +93,82 @@ hina::Footprint SoilChunk::try_deform(const TriangleContext& triCtx, const physi
 void SoilChunk::terramx_deform(const physics::LinkPtr &linkPtr, const TriangleContext &tri_ctx, uint32_t x, uint32_t y,
                                 const std::shared_ptr<FieldVertex<SoilVertex>> &vertex, double w,
                                 SoilPhysicsParams vert_attr, Vector3d& normal_force, Vector3d& traction_force,
-                                double& sinkage)
+                                double& sinkage, bool& contact)
 {
 
     Vector3d normal_dA(0,0,0);
 
     auto& meshTri = tri_ctx.tri;
 
-    if(vertex->v3.Z() > meshTri.centroid().Z()) {                            // Unilateral Contact
-        /* Geometry Calculations */
-        auto vtx_ul = this->p_field->get_vertex_at_index(x - 1, y + 1)->v3;
-        auto vtx_dl = this->p_field->get_vertex_at_index(x - 1, y - 1)->v3;
-        auto vtx_ur = this->p_field->get_vertex_at_index(x + 1, y + 1)->v3;
-        auto vtx_dr = this->p_field->get_vertex_at_index(x + 1, y - 1)->v3;
+    /* Geometry Calculations */
+    auto vtx_ul = this->p_field->get_vertex_at_index(x - 1, y + 1)->v3;
+    auto vtx_dl = this->p_field->get_vertex_at_index(x - 1, y - 1)->v3;
+    auto vtx_ur = this->p_field->get_vertex_at_index(x + 1, y + 1)->v3;
+    auto vtx_dr = this->p_field->get_vertex_at_index(x + 1, y - 1)->v3;
 
-        auto vtx_u = this->p_field->get_vertex_at_index(x, y + 1)->v3;
-        auto vtx_d = this->p_field->get_vertex_at_index(x, y - 1)->v3;
-        auto vtx_l = this->p_field->get_vertex_at_index(x - 1, y)->v3;
-        auto vtx_r = this->p_field->get_vertex_at_index(x + 1, y)->v3;
-        const auto &vtx = vertex->v3;
-        // Construct triangles around the vertex
-        auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
-        auto tri2 = Triangle(vtx, vtx_l, vtx_ul);
-        auto tri3 = Triangle(vtx, vtx_u, vtx_r);
-        auto tri4 = Triangle(vtx, vtx_r, vtx_d);
-        auto tri5 = Triangle(vtx, vtx_dr, vtx_d);
-        auto tri6 = Triangle(vtx, vtx_d, vtx_l);
+    auto vtx_u = this->p_field->get_vertex_at_index(x, y + 1)->v3;
+    auto vtx_d = this->p_field->get_vertex_at_index(x, y - 1)->v3;
+    auto vtx_l = this->p_field->get_vertex_at_index(x - 1, y)->v3;
+    auto vtx_r = this->p_field->get_vertex_at_index(x + 1, y)->v3;
+    const auto &vtx = vertex->v3;
+    // Construct triangles around the vertex
+    auto tri1 = Triangle(vtx, vtx_ul, vtx_u);
+    auto tri2 = Triangle(vtx, vtx_l, vtx_ul);
+    auto tri3 = Triangle(vtx, vtx_u, vtx_r);
+    auto tri4 = Triangle(vtx, vtx_r, vtx_d);
+    auto tri5 = Triangle(vtx, vtx_dr, vtx_d);
+    auto tri6 = Triangle(vtx, vtx_d, vtx_l);
 
-        // Find the average normal
-        auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() +
-                           tri6.normal()).Normalized();
+    // Find the average normal
+    auto normal_sum = (tri1.normal() + tri2.normal() + tri3.normal() + tri4.normal() + tri5.normal() +
+                       tri6.normal()).Normalized();
 
-        // Area of AABB
+    // Area of AABB
 //        auto area = w * w;
 //        auto area = (tri1.area() + tri2.area() + tri3.area() + tri4.area() + tri5.area() + tri6.area())*0.5;
-        auto area = w*w;
+    auto area = w*w;
 
-        // Calculate attributes of the vertex
-        normal_dA = -normal_sum * area;
-        vertex->v->normal = -normal_sum;
-        vertex->v->normal_dA = normal_dA;
+    // Calculate attributes of the vertex
+    normal_dA = -normal_sum * area;
+    vertex->v->normal = -normal_sum;
+    vertex->v->normal_dA = normal_dA;
 
-        // Compute contact force and sinkage
-        Vector3d normal{};
-        Vector3d traction{};
-        sinkage = 0;
-        this->terramx_contact(vert_attr,tri_ctx, vertex, area, normal, traction, sinkage);
+    // Compute contact force and sinkage
+    Vector3d normal{};
+    Vector3d traction{};
+    sinkage = 0;
 
-        // Update sinkage of vertex
-        const auto v3 = vertex->v3;
-        const auto v3_0 = vertex->v3_0;
-        vertex->v3 = Vector3d(v3_0.X(), v3_0.Y(), sinkage);
+    this->terramx_contact(vert_attr,tri_ctx, vertex, area, normal, traction, sinkage, contact);
 
-        // Apply f/t
+    // Update sinkage of vertex
+    const auto v3 = vertex->v3;
+    const auto v3_0 = vertex->v3_0;
+    vertex->v3 = Vector3d(v3_0.X(), v3_0.Y(), sinkage);
 
-        normal_force = normal; // What's visualized
-        traction_force = traction;
+    // Apply f/t
 
-        /* update footprints */
+    normal_force = normal; // What's visualized
+    traction_force = traction;
 
-        auto _v1 = this->p_field->get_vertex_at_index(x, y + 1)->v;
-        auto _v2 = this->p_field->get_vertex_at_index(x, y - 1)->v;
-        auto _v3 = this->p_field->get_vertex_at_index(x + 1, y)->v;
-        auto _v4 = this->p_field->get_vertex_at_index(x - 1, y)->v;
+    /* update footprints */
 
-        vertex->v->footprint = 1;
-        if(_v1->footprint != 1) {
-            _v1->footprint = 2;
-        }
-        if(_v2->footprint != 1) {
-            _v2->footprint = 2;
-        }
-        if(_v3->footprint != 1) {
-            _v3->footprint = 2;
-        }
-        if(_v4->footprint != 1) {
-            _v4->footprint = 2;
-        }
+    auto _v1 = this->p_field->get_vertex_at_index(x, y + 1)->v;
+    auto _v2 = this->p_field->get_vertex_at_index(x, y - 1)->v;
+    auto _v3 = this->p_field->get_vertex_at_index(x + 1, y)->v;
+    auto _v4 = this->p_field->get_vertex_at_index(x - 1, y)->v;
+
+    vertex->v->footprint = 1;
+    if(_v1->footprint != 1) {
+        _v1->footprint = 2;
+    }
+    if(_v2->footprint != 1) {
+        _v2->footprint = 2;
+    }
+    if(_v3->footprint != 1) {
+        _v3->footprint = 2;
+    }
+    if(_v4->footprint != 1) {
+        _v4->footprint = 2;
     }
 }
 
@@ -177,13 +181,12 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
                                 const double& aabb_point_area,
                                 Vector3d& normal_force,
                                 Vector3d& traction_force,
-                                double& sinkage) {
+                                double& sinkage,
+                                bool& contact) {
 
     auto contact_tri = tri_ctx.tri;
-    double penetration = soil_vertex->v3_0.Z() - contact_tri.centroid().Z();
 
 /////// Tasora
-
     auto vert_state = soil_vertex->v;
     auto v3_0 = soil_vertex->v3_0;
     auto k_e = 4e7;
@@ -224,12 +227,55 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     normal_force = -contact_normal*force_z*Vector3d(1,1,1);
 
     soil_vertex->v->s_sink = s_sink;
+//
+//    auto vert_state = soil_vertex->v;
+//    auto v3_0 = soil_vertex->v3_0;
+//    auto k_e = 7.8e7;
+//    auto s_sink = 0.0;
+//
+//    double y_h = tri_ctx.tri.centroid().Z();
+//    double y_r = v3_0.Z();
+//    double s_y = y_r - y_h;
+//    double s_p = vert_state->s_p;
+//    double sigma_t = k_e*(s_y - s_p);
+//
+//    auto sigma_star = 0.0;
+//    auto sigma_p = 0.0;
+//
+//    if(sigma_t > 0) {
+//        contact = true;
+//        sigma_star = sigma_t;
+//        s_sink = s_y;
+//        if(sigma_star < vert_state->sigma_yield) {
+//            vert_state->sigma = sigma_star;
+//        } else {
+//            auto B = tri_ctx.B;
+//            vert_state->sigma = (814000 + (1.37e3/0.3))*(s_y);
+//            vert_state->sigma_yield = vert_state->sigma;
+//            vert_state->s_p = s_sink - (vert_state->sigma / k_e);
+//            vert_state->s_e = s_sink - vert_state->s_p;
+//        }
+//    } else {
+//        vert_state->sigma = 0;
+//    }
+//    sinkage = v3_0.Z() - vert_state->s_p;
+//
+//    double sigma = -abs(vert_state->sigma);
+//    double force_z = sigma*aabb_point_area;
+//    Vector3d contact_normal = contact_tri.normal().Normalize();
+//
+//    // Transform into inertial frame
+//    // Form bases
+//    normal_force = -contact_normal*force_z*Vector3d(0,0,1);
+//    soil_vertex->v->s_sink = s_sink;
 
 ////// Shear forces
+
+
     double j = tri_ctx.shear_displacement;
     auto slip_vel = tri_ctx.slip_velocity;
 
-    double tau_max = 3500 + (sigma*tan(0.524));
+    double tau_max = 800 + (sigma*tan(0.524));
     double tau = tau_max*(1-exp(-j/0.01));
 
     double force_x = tau*aabb_point_area;
@@ -238,7 +284,15 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
 
     // Transform into inertial frame
     // Form bases
-    traction_force = slip_vel.Normalize()*force_x;
+    traction_force = slip_vel.Normalize()*force_x*Vector3d(1,1,1);
+
+//    if(slip_vel.Length() < 0.01) {
+//        traction_force *= slip_vel/0.01;
+//    }
+
+    if(!contact) {
+        traction_force = Vector3d(0,0,0);
+    }
 ////// Lateral forces
 
 ////// Apply forces
@@ -260,7 +314,7 @@ void SoilChunk::clear_footprint() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool SoilChunk::penetrates(const Triangle& meshTri, const std::shared_ptr<FieldVertex<SoilVertex>>& vtx, double w) {
-    auto point = vtx->v3;
+    auto point = vtx->v3_0;
     return (meshTri.centroid().Z() <= point.Z() && intersects_projected(meshTri, AABB(point, w )));
 };
 

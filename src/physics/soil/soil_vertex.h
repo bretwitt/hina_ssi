@@ -26,6 +26,7 @@ struct SoilVertex {
     double s_e{};
     double sigma_yield{};
     double s_sink{};
+    double sigma_p{};
     /*
      * 0 = not a node
      * 1 = footprint node

@@ -375,45 +375,62 @@ public:
                         auto slip_velocity = -angular_vel.Cross(r_vec);
                         auto slip_vel_f = rot_pres_fwd.RotateVector(slip_velocity);
                         auto V_j = slip_velocity.Length();
-
+                        auto dir = -angular_vel.X()/abs(angular_vel.X());
                         // Update shear displacement by one timestep
                         auto j_p_o = j + (V_j*dt);
+                        Footprint tri_ftp {};
 
                         //
                         auto tri_ctx = TriangleContext { meshTri, j_p_o,  slip_vel_f,
                                                      angular_vel, B };
 
 
+                        double theta = acos(meshTri.normal().Normalize().Dot(Vector3d(0,0,-1)));
+                        double alpha = 1.57 - theta; // Angle of normal to world -z
+
                         // Compute contact forces and update soil graph
-                        Footprint tri_ftp;
-                        tri_ftp = soil->try_deform(tri_ctx, link);
+                         tri_ftp = soil->try_deform(tri_ctx, link);
 
-                        // Reset shear displacement if not in contact
-                        if(tri_ftp.getSize() == 0) {
-                            j_p_o *= 0;
-                        }
+                         // Reset shear displacement if not in contact
+                         if (tri_ftp.getSize() == 0) {
+                             j_p_o *= 0;
+                         }
 
-                        // Reset shear displacement if switching dir
-                        auto dir = -angular_vel.X()/abs(angular_vel.X());
-                        if(dir != d/abs(d)) {
-                            j_p_o *= 0;
-                        }
+                         // Reset shear displacement if switching dir
+                         auto dir = -angular_vel.X() / abs(angular_vel.X());
+                         if (dir != d / abs(d)) {
+                             j_p_o *= 0;
+                         }
 
-                        #pragma omp critical
-                        {
-                            triangle_states.push_back({tri_ctx,tri_ftp});
-                            mesh_footprint.push_back(tri_ftp);
-                            shear_displacement_map[tuple] = std::make_pair(dir,j_p_o);
-                            j = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].second;
-                            d = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].first;
+                        if(alpha > 0.8) {      // AoA exceeds 45 deg, regular plate
 
-                            traction_force += tri_ftp.force_x;
-                            normal_force += tri_ftp.force_z;
 
-                            if(max_sinkage > tri_ftp.max_sinkage) {
-                                max_sinkage = tri_ftp.max_sinkage;
+                        } else {        // AoA within 45 deg, grouser
+                            auto norm = meshTri.normal().Normalize();
+                            auto V_n = slip_vel_f;
+                            auto n = Vector3d(0,0,0);
+                            if(V_n.Dot(norm) >= 1) {
+                                n = norm;
                             }
+                            auto F_g = 0.005*n;
+//                            link->AddForceAtWorldPosition(F_g, meshTri.centroid());
                         }
+
+                         #pragma omp critical
+                         {
+                             triangle_states.push_back({tri_ctx, tri_ftp});
+                             mesh_footprint.push_back(tri_ftp);
+                             shear_displacement_map[tuple] = std::make_pair(dir, j_p_o);
+                             j = shear_displacement_map[std::make_tuple(idx + 3, idx + 4, idx + 5)].second;
+                             d = shear_displacement_map[std::make_tuple(idx + 3, idx + 4, idx + 5)].first;
+
+                             traction_force += tri_ftp.force_x;
+                             normal_force += tri_ftp.force_z;
+
+                             if (max_sinkage > tri_ftp.max_sinkage) {
+                                 max_sinkage = tri_ftp.max_sinkage;
+                             }
+                         }
                      }
                 }
 #ifdef PHYS_PROFILER
