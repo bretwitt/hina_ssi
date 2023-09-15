@@ -420,12 +420,14 @@ public:
             bool fwd = (vel.Dot(kb) < 0);
             int dir = (fwd) ? 1 : -1;
             double R = (8.14e5*0.3+1.37e3)*(pow(max_sinkage,2)*0.5);
-            if(abs(vi) < 0.01) {
-                R *= vi*10;
-            }
-
+//            if(abs(vi) < 0.01) {
+//                R *= vi*10;
+//            }
+//
+//            R *= 0.1;
+//
             if(max_sinkage <= 0) {
-                link->AddForce(R*kb*dir*0.25);
+                link->AddForce(0.4*kb*dir*0.25);
             }
 
             Vector3d dampingForce_jb = -5 * vj * jb;

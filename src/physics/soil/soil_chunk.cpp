@@ -224,7 +224,7 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     double j = tri_ctx.shear_displacement;
     auto slip_vel = tri_ctx.slip_velocity;
 
-    double tau_max = 800 + (sigma*tan(0.55));
+    double tau_max = 170 + (sigma*tan(0.55));
     double tau = tau_max*(1-exp(-j/0.018));
 
     double force_x = tau*aabb_point_area;
