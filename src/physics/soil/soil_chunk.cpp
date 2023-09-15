@@ -186,7 +186,7 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
 
     auto vert_state = soil_vertex->v;
     auto v3_0 = soil_vertex->v3_0;
-    auto k_e = 7.8e7;
+    auto k_e = 4e7;
     auto s_sink = 0.0;
 
     double y_h = tri_ctx.tri.centroid().Z();
@@ -224,8 +224,8 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     double j = tri_ctx.shear_displacement;
     auto slip_vel = tri_ctx.slip_velocity;
 
-    double tau_max = 170 + (sigma*tan(0.55));
-    double tau = tau_max*(1-exp(-j/0.018));
+    double tau_max = 3500 + (sigma*tan(0.524));
+    double tau = tau_max*(1-exp(-j/0.01));
 
     double force_x = tau*aabb_point_area;
 
@@ -233,16 +233,7 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
 
     // Transform into inertial frame
     // Form bases
-    Vector3d shear = -Vector3d(force_x,0,0);
-    Vector3d ib = slip_vel.Normalize();
-    Vector3d jb = contact_normal.Cross(ib).Normalize();
-    Vector3d kb = contact_normal.Normalize();
-    auto T_x = shear.X()*ib.X() + shear.Y()*ib.Y() + shear.Z()*ib.Z();
-    auto T_y =  shear.X()*jb.X() + shear.Y()*jb.Y() + shear.Z()*jb.Z();
-    auto T_z =  shear.X()*kb.X() + shear.Y()*kb.Y() + shear.Z()*kb.Z();
-
-    traction_force = -Vector3d(T_x,T_y,T_z); //force_x*contact_tangent;
-
+    traction_force = slip_vel.Normalize()*force_x;
 ////// Lateral forces
 
 ////// Apply forces

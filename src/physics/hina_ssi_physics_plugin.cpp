@@ -355,11 +355,11 @@ public:
                         auto angular_vel = link->RelativeAngularVel();
 
                         auto r_vec = center - link->WorldCoGPose().Pos();
-                        auto slip_velocity = -angular_vel.Cross(r_vec);
+                        auto slip_velocity = -Vector3d(angular_vel.X(),0,0).Cross(r_vec);
 
                         auto V_j = slip_velocity.Length();
 
-                        auto dir = -angular_vel.Y()/abs(angular_vel.Y());
+                        auto dir = -angular_vel.X()/abs(angular_vel.X());
 
                         auto j_p_o = j + (V_j*dt);
 
@@ -420,18 +420,19 @@ public:
             bool fwd = (vel.Dot(kb) < 0);
             int dir = (fwd) ? 1 : -1;
             double R = (8.14e5*0.3+1.37e3)*(pow(max_sinkage,2)*0.5);
-//            if(abs(vi) < 0.01) {
-//                R *= vi*10;
+//
+//            if(abs(vk) < 0.01) {
+//                R *= vk*10;
 //            }
 //
 //            R *= 0.1;
-//
+
             if(max_sinkage <= 0) {
-                link->AddForce(0.4*kb*dir*0.25);
+                link->AddForce(R*kb*dir);
             }
 
-            Vector3d dampingForce_jb = -5 * vj * jb;
-            Vector3d dampingForce_ib = -5 * vi * ib;
+            Vector3d dampingForce_jb = -500 * vj * jb; // Dampen +x
+            Vector3d dampingForce_ib = -10 * vi * ib;  // Dampen +z
             link->AddForce(dampingForce_jb+dampingForce_ib);
         }
 
@@ -495,7 +496,7 @@ public:
         for(auto& triangle : context_v) {
             auto centroid = triangle.first.tri.centroid();
             auto slip_vel = triangle.first.slip_velocity;
-            auto force = triangle.second.force_z;
+            auto force = triangle.second.force_x;
             auto normal = triangle.first.tri.normal().Normalize();
             auto t = triangle.second;
             auto contact = t.getSize() > 0;
