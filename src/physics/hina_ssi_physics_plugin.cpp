@@ -15,9 +15,11 @@
 #include "dem/dem_loader.h"
 #include "../common/field/uniform_field.h"
 #include "soil/triangle_context.h"
+#include "soil/body_context.h"
 
 #include "Triangles.pb.h"
 #include "SoilChunk.pb.h"
+#include "BodyPhysics.pb.h"
 
 namespace hina {
 
@@ -31,6 +33,7 @@ private:
     transport::NodePtr node = nullptr;
     transport::PublisherPtr soilPub = nullptr;
     transport::PublisherPtr triPub = nullptr;
+    transport::PublisherPtr bodyPub = nullptr;
     event::ConnectionPtr updateEventPtr = nullptr;
     event::ConnectionPtr onEntityAddedEventPtr = nullptr;
     physics::WorldPtr world = nullptr;
@@ -56,6 +59,9 @@ private:
         }
     };
     std::unordered_map<std::tuple<int, int, int>, std::pair<double,double>, tuple_hash> shear_displacement_map; // Hashmap to store shear displacement per triangle
+
+    std::vector<BodyContext> body_contexts{};
+
 
     common::Time time;
     common::Time vizTime;
@@ -117,6 +123,7 @@ public:
         node->Init();
         soilPub = node->Advertise<hina_ssi_msgs::msgs::SoilChunk>("~/soil");
         triPub = node->Advertise<hina_ssi_msgs::msgs::Triangles>("~/triangles");
+        bodyPub = node->Advertise<hina_ssi_msgs::msgs::BodyPhysics>("~/body_physics");
     }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -263,6 +270,7 @@ public:
 
         if(dt_tri > (1./ 5.f)) {
             broadcast_triangles(triangle_states);
+            broadcast_body(body_contexts);
             last_sec_tri = vsec;
         }
 
@@ -281,14 +289,21 @@ public:
         soil->pre_update();
 
         // Loop through each mesh in the table
+        int i = 0;
         for (auto &iter: mesh_lookup) {
             auto link = iter.first;
             auto mesh = iter.second;
-            auto& B = footprint_lookup[mesh];
+            auto B = footprint_lookup[mesh];
+
+            if(B = 0) {
+                B = 9999;
+            }
+
             double max_sinkage = 1;
 
             Vector3d traction_force;
             Vector3d normal_force;
+            Vector3d origin;
 
             // Iterate through each submesh
             int no_submeshes = 1; // mesh->GetSubMeshCount()
@@ -324,7 +339,7 @@ public:
 #ifdef PHYS_PROFILER
                 IGN_PROFILE_BEGIN("Collision Detection");
 #endif
-                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, max_sinkage, traction_force, normal_force, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(B,d,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
+                #pragma omp parallel num_threads(col_threads) default(none) shared(std::cout, B,max_sinkage, traction_force, normal_force, shear_displacement_map, mesh_footprint /*, total_footprint_size*/) firstprivate(d,j,submesh, soil, crot, cpos, pos, rot, indices, dt, link)
                 {
                     #pragma omp for nowait schedule(guided) //reduction(+:total_footprint_size)
 
@@ -350,33 +365,39 @@ public:
                         auto meshTri = Triangle(c1v0, c1v1, c1v2);
                         auto meshTriBody = Triangle(cv0,cv1,cv2);
 
-                        // TODO: Slip velocity
+                        // Calculate slip velocity
                         auto center = meshTri.centroid();
                         auto angular_vel = link->RelativeAngularVel();
-
+                        Vector3d e2q = rot.Euler();
+                        auto no_x_rot = Vector3d(0,e2q.Y(),e2q.Z());
+                        auto rot_pres_fwd = ignition::math::Quaternion(no_x_rot);
                         auto r_vec = center - link->WorldCoGPose().Pos();
-                        auto slip_velocity = -Vector3d(angular_vel.X(),0,0).Cross(r_vec);
-
+                        auto slip_velocity = -angular_vel.Cross(r_vec);
+                        auto slip_vel_f = rot_pres_fwd.RotateVector(slip_velocity);
                         auto V_j = slip_velocity.Length();
 
-                        auto dir = -angular_vel.X()/abs(angular_vel.X());
-
+                        // Update shear displacement by one timestep
                         auto j_p_o = j + (V_j*dt);
 
-                        auto tri_ctx = TriangleContext { meshTri, j_p_o,  slip_velocity,
-                                                         angular_vel, B };
+                        //
+                        auto tri_ctx = TriangleContext { meshTri, j_p_o,  slip_vel_f,
+                                                     angular_vel, B };
 
 
+                        // Compute contact forces and update soil graph
                         Footprint tri_ftp;
                         tri_ftp = soil->try_deform(tri_ctx, link);
 
+                        // Reset shear displacement if not in contact
                         if(tri_ftp.getSize() == 0) {
                             j_p_o *= 0;
                         }
 
-                         if(dir != d/abs(d)) {
-                             j_p_o *= 0;
-                         }
+                        // Reset shear displacement if switching dir
+                        auto dir = -angular_vel.X()/abs(angular_vel.X());
+                        if(dir != d/abs(d)) {
+                            j_p_o *= 0;
+                        }
 
                         #pragma omp critical
                         {
@@ -385,6 +406,7 @@ public:
                             shear_displacement_map[tuple] = std::make_pair(dir,j_p_o);
                             j = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].second;
                             d = shear_displacement_map[std::make_tuple(idx+3,idx+4,idx+5)].first;
+
                             traction_force += tri_ftp.force_x;
                             normal_force += tri_ftp.force_z;
 
@@ -398,12 +420,11 @@ public:
                 IGN_PROFILE_END();
 #endif
                 // Compute footprint stage for entire mesh
-//                soil->compute_footprint_stage(mesh_footprint,total_footprint_size,B);
-
+                soil->compute_footprint_stage(mesh_footprint,total_footprint_size,B);
+                footprint_lookup[mesh] = B;
             }
 
-            Vector3d contact_force = Vector3d(0,0,normal_force.Z())+traction_force;
-            link->AddForce(contact_force);
+//            Vector3d contact_force = Vector3d(0,0,normal_force.Z())+traction_force;
 
             // Get the orientation of the wheel link in the world frame
             ignition::math::Quaternion orientation = link->WorldPose().Rot();
@@ -416,26 +437,38 @@ public:
             double vj = vel.Dot(jb);
             double vk = vel.Dot(kb);
 
+//            if(link->RelativeAngularVel().Length() < 0.01) {
+//                traction_force *= kb/0.01;
+//            }
+
+            Vector3d contact_force = normal_force+traction_force;
+            link->AddForce(contact_force);
+
 
             bool fwd = (vel.Dot(kb) < 0);
+            bool rgt = (vel.Dot(jb) < 0);
             int dir = (fwd) ? 1 : -1;
+            int ldir = (rgt) ? 1: -1;
             double R = (8.14e5*0.3+1.37e3)*(pow(max_sinkage,2)*0.5);
-//
-//            if(abs(vk) < 0.01) {
-//                R *= vk*10;
-//            }
-//
-//            R *= 0.1;
+            double R_l = R;
+
+            if(abs(vk) < 0.001) {
+                R *= vk*100;
+            }
 
             if(max_sinkage <= 0) {
                 link->AddForce(R*kb*dir);
             }
 
             Vector3d dampingForce_jb = -500 * vj * jb; // Dampen +x
-            Vector3d dampingForce_ib = -10 * vi * ib;  // Dampen +z
-            link->AddForce(dampingForce_jb+dampingForce_ib);
-        }
+            Vector3d dampingForce_ib = -0 * vi * ib;  // Dampen +z
+            link->AddForce(dampingForce_ib+dampingForce_jb);
 
+            if(body_contexts.size() < i + 1 ) {
+                body_contexts.push_back({});
+            }
+            body_contexts[i++] = BodyContext { traction_force, normal_force, link->WorldCoGPose().Pos()};
+        }
         soil->post_update();
     }
 
@@ -540,6 +573,45 @@ public:
         triPub->Publish(triangle_update_msg);
 
     }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        void broadcast_body(const std::vector<BodyContext>& context_v) {
+            hina_ssi_msgs::msgs::BodyPhysics body_update_msg;
+
+            body_update_msg.set_len(context_v.size());
+
+            for(auto& body : context_v) {
+                auto traction = body.traction;
+                auto normal = body.normal;
+                auto origin = body.origin;
+
+                auto msg_traction = gazebo::msgs::Vector3d();
+                msg_traction.set_x(traction.X());
+                msg_traction.set_y(traction.Y());
+                msg_traction.set_z(traction.Z());
+
+                auto update_traction = body_update_msg.add_traction_force();
+                *update_traction = msg_traction;
+
+                auto msg_normal = gazebo::msgs::Vector3d();
+                msg_normal.set_x(normal.X());
+                msg_normal.set_y(normal.Y());
+                msg_normal.set_z(normal.Z());
+
+                auto update_normal = body_update_msg.add_normal_force();
+                *update_normal = msg_normal;
+
+                auto msg_origin = gazebo::msgs::Vector3d();
+                msg_origin.set_x(origin.X());
+                msg_origin.set_y(origin.Y());
+                msg_origin.set_z(origin.Z());
+
+                auto update_origin = body_update_msg.add_force_origin();
+                *update_origin = msg_origin;
+
+            }
+            bodyPub->Publish(body_update_msg);
+        }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     };

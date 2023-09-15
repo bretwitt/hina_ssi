@@ -202,6 +202,11 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     if(sigma_star < vert_state->sigma_yield) {
         sigma_p = sigma_star;
     } else {
+        auto B = tri_ctx.B;
+        if(B == 0) {
+            B = 9999;
+        }
+
         sigma_p = (814000 + (1.37e3/0.3))*(s_y);
         vert_state->sigma_yield = sigma_p;
         auto s_p_o = vert_state->s_p;

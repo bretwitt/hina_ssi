@@ -8,11 +8,14 @@
 #include <utility>
 #include "ogre_soil_renderer.cpp"
 #include "SoilChunk.pb.h"
+#include "BodyPhysics.pb.h"
 #include "Triangles.pb.h"
 #include "../common/field/chunked_field.h"
 #include "visual_chunk.h"
 #include "visual_triangles.h"
+#include "visual_body_physics.h"
 #include "triangle_info_renderer.cpp"
+#include "body_info_renderer.cpp"
 
 using namespace gazebo;
 using ignition::math::Vector2d;
@@ -28,6 +31,7 @@ namespace hina {
         transport::NodePtr node = nullptr;
         transport::SubscriberPtr sub = nullptr;
         transport::SubscriberPtr tri_sub = nullptr;
+        transport::SubscriberPtr body_sub = nullptr;
         event::ConnectionPtr updateEventPtr = nullptr;
         event::ConnectionPtr preRenderPtr = nullptr;
 
@@ -39,6 +43,9 @@ namespace hina {
 
         VisualTriangles triangles{};
         TriangleInfoRenderer renderer;
+
+        BodyInfoRenderer bp_renderer;
+        VisualBodyPhysics body_physics;
 
         std::unordered_map<int,std::unordered_map<int,
             std::shared_ptr<UniformField<ColorAttributes>>>> map;
@@ -66,15 +73,33 @@ namespace hina {
             node->Init();
             sub = node->Subscribe("~/soil", &HinaSSIVisualPlugin::OnSoilUpdate, this);
             tri_sub = node->Subscribe("~/triangles", &HinaSSIVisualPlugin::OnTrianglesUpdate, this);
+            body_sub = node->Subscribe("~/body_physics", &HinaSSIVisualPlugin::OnBodyPhysicsUpdate, this);
         }
 
         void init_chunk_field() {
             chunks.register_chunk_create_callback(boost::bind(&HinaSSIVisualPlugin::OnChunkCreated, this, _1, _2));
         }
 
-//        void init_triangles_renderer() {
-//            renderer.init(visual);
-//        }
+
+        void OnBodyPhysicsUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::BodyPhysics> &bp_update) {
+            auto len = bp_update->len();
+            auto traction_v = bp_update->traction_force();
+            auto normal_v = bp_update->normal_force();
+            auto origin_v = bp_update->force_origin();
+            VisualBodyPhysics physics{};
+
+            for(auto& traction : traction_v) {
+                physics.traction.push_back(traction);
+            }
+            for(auto& normal : normal_v) {
+                physics.normal.push_back(normal);
+            }
+            for(auto& origin : origin_v) {
+                physics.origin.push_back(origin);
+            }
+
+            body_physics = physics;
+        }
 
         void OnSoilUpdate(const boost::shared_ptr<const hina_ssi_msgs::msgs::SoilChunk> &soil_update) {
             uint32_t x_verts = soil_update->len_col();
@@ -172,6 +197,9 @@ namespace hina {
         void prerender() {
             renderer.init(visual);
             renderer.update_triangles(triangles);
+
+            bp_renderer.init(visual);
+            bp_renderer.update_body(body_physics);
         }
 
         void update() {
