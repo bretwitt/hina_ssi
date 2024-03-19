@@ -187,50 +187,9 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     auto contact_tri = tri_ctx.tri;
 
 /////// Tasora
-    auto vert_state = soil_vertex->v;
-    auto v3_0 = soil_vertex->v3_0;
-    auto k_e = 4e7;
-    auto s_sink = 0.0;
-
-    double y_h = tri_ctx.tri.centroid().Z();
-    double y_r = v3_0.Z();
-    double s_y = y_r - y_h;
-    double s_p = vert_state->s_p;
-    double sigma_t = k_e*(s_y - s_p);
-
-    auto sigma_star = sigma_t;
-    auto sigma_p = 0.0;
-    s_sink = s_y;
-
-    if(sigma_star < vert_state->sigma_yield) {
-        sigma_p = sigma_star;
-    } else {
-        auto B = tri_ctx.B;
-        if(B == 0) {
-            B = 9999;
-        }
-
-        sigma_p = (814000 + (1.37e3/0.3))*(s_y);
-        vert_state->sigma_yield = sigma_p;
-        auto s_p_o = vert_state->s_p;
-        vert_state->s_p = s_sink - (sigma_p / k_e);
-        vert_state->s_e = s_sink - vert_state->s_p;
-    }
-
-    sinkage = v3_0.Z() - vert_state->s_p;
-    double sigma = sigma_p;
-    double force_z = sigma*aabb_point_area;
-    Vector3d contact_normal = contact_tri.normal().Normalize();
-
-    // Transform into inertial frame
-    // Form bases
-    normal_force = -contact_normal*force_z*Vector3d(1,1,1);
-
-    soil_vertex->v->s_sink = s_sink;
-//
 //    auto vert_state = soil_vertex->v;
 //    auto v3_0 = soil_vertex->v3_0;
-//    auto k_e = 7.8e7;
+//    auto k_e = 4e7;
 //    auto s_sink = 0.0;
 //
 //    double y_h = tri_ctx.tri.centroid().Z();
@@ -239,35 +198,71 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
 //    double s_p = vert_state->s_p;
 //    double sigma_t = k_e*(s_y - s_p);
 //
-//    auto sigma_star = 0.0;
+//    auto sigma_star = sigma_t;
 //    auto sigma_p = 0.0;
+//    s_sink = s_y;
 //
-//    if(sigma_t > 0) {
-//        contact = true;
-//        sigma_star = sigma_t;
-//        s_sink = s_y;
-//        if(sigma_star < vert_state->sigma_yield) {
-//            vert_state->sigma = sigma_star;
-//        } else {
-//            auto B = tri_ctx.B;
-//            vert_state->sigma = (814000 + (1.37e3/0.3))*(s_y);
-//            vert_state->sigma_yield = vert_state->sigma;
-//            vert_state->s_p = s_sink - (vert_state->sigma / k_e);
-//            vert_state->s_e = s_sink - vert_state->s_p;
-//        }
+//    if(sigma_star < vert_state->sigma_yield) {
+//        sigma_p = sigma_star;
 //    } else {
-//        vert_state->sigma = 0;
+//        auto B = tri_ctx.B;
+//        sigma_p = (814000 + (1.37e3/0.3))*(s_y);
+//        vert_state->sigma_yield = sigma_p;
+//        auto s_p_o = vert_state->s_p;
+//        vert_state->s_p = s_sink - (sigma_p / k_e);
+//        vert_state->s_e = s_sink - vert_state->s_p;
 //    }
-//    sinkage = v3_0.Z() - vert_state->s_p;
 //
-//    double sigma = -abs(vert_state->sigma);
+//    sinkage = v3_0.Z() - vert_state->s_p;
+//    double sigma = sigma_p;
 //    double force_z = sigma*aabb_point_area;
 //    Vector3d contact_normal = contact_tri.normal().Normalize();
-//
-//    // Transform into inertial frame
-//    // Form bases
-//    normal_force = -contact_normal*force_z*Vector3d(0,0,1);
+
+    // Transform into inertial frame
+    // Form bases
+//    normal_force = -contact_normal*force_z*Vector3d(1,1,1);
+
 //    soil_vertex->v->s_sink = s_sink;
+
+    auto vert_state = soil_vertex->v;
+    auto v3_0 = soil_vertex->v3_0;
+    auto k_e = 7.8e7;
+    auto s_sink = 0.0;
+
+    double y_h = tri_ctx.tri.centroid().Z();
+    double y_r = v3_0.Z();
+    double s_y = y_r - y_h;
+    double s_p = vert_state->s_p;
+    double sigma_t = k_e*(s_y - s_p);
+
+    auto sigma_star = 0.0;
+
+    if(sigma_t > 0) {
+        contact = true;
+        sigma_star = sigma_t;
+        s_sink = s_y;
+        if(sigma_star < vert_state->sigma_yield) {
+            vert_state->sigma = sigma_star;
+        } else {
+            auto B = tri_ctx.B;
+            vert_state->sigma = (814000 + (1.37e3/0.3))*(s_y);
+            vert_state->sigma_yield = vert_state->sigma;
+            vert_state->s_p = s_sink - (vert_state->sigma / k_e);
+            vert_state->s_e = s_sink - vert_state->s_p;
+        }
+    } else {
+        vert_state->sigma = 0;
+    }
+    sinkage = v3_0.Z() - vert_state->s_p;
+
+    double sigma = abs(vert_state->sigma);
+    double force_z = sigma*aabb_point_area;
+    Vector3d contact_normal = contact_tri.normal().Normalize();
+
+    // Transform into inertial frame
+    // Form bases
+    normal_force = -contact_normal*force_z*Vector3d(0,0,1);
+    soil_vertex->v->s_sink = s_sink;
 
 ////// Shear forces
 
@@ -284,7 +279,7 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
 
     // Transform into inertial frame
     // Form bases
-    traction_force = slip_vel.Normalize()*force_x*Vector3d(1,1,1);
+    traction_force = slip_vel.Normalize()*force_x*Vector3d(1,1,1).Normalize();
 
 //    if(slip_vel.Length() < 0.01) {
 //        traction_force *= slip_vel/0.01;

@@ -378,17 +378,13 @@ public:
                         auto dir = -angular_vel.X()/abs(angular_vel.X());
                         // Update shear displacement by one timestep
                         auto j_p_o = j + (V_j*dt);
-                        Footprint tri_ftp {};
 
-                        //
+
                         auto tri_ctx = TriangleContext { meshTri, j_p_o,  slip_vel_f,
                                                      angular_vel, B };
 
-
-                        double theta = acos(meshTri.normal().Normalize().Dot(Vector3d(0,0,-1)));
-                        double alpha = 1.57 - theta; // Angle of normal to world -z
-
                         // Compute contact forces and update soil graph
+                         Footprint tri_ftp {};
                          tri_ftp = soil->try_deform(tri_ctx, link);
 
                          // Reset shear displacement if not in contact
@@ -397,24 +393,10 @@ public:
                          }
 
                          // Reset shear displacement if switching dir
-                         auto dir = -angular_vel.X() / abs(angular_vel.X());
+//                         auto dir = -angular_vel.X() / abs(angular_vel.X());
                          if (dir != d / abs(d)) {
                              j_p_o *= 0;
                          }
-
-                        if(alpha > 0.8) {      // AoA exceeds 45 deg, regular plate
-
-
-                        } else {        // AoA within 45 deg, grouser
-                            auto norm = meshTri.normal().Normalize();
-                            auto V_n = slip_vel_f;
-                            auto n = Vector3d(0,0,0);
-                            if(V_n.Dot(norm) >= 1) {
-                                n = norm;
-                            }
-                            auto F_g = 0.005*n;
-//                            link->AddForceAtWorldPosition(F_g, meshTri.centroid());
-                        }
 
                          #pragma omp critical
                          {
@@ -450,8 +432,8 @@ public:
             Vector3d kb = ib.Cross(jb).Normalize();
             Vector3d vel = link->WorldCoGLinearVel();
 
-            double vi = vel.Dot(ib);
-            double vj = vel.Dot(jb);
+            double vi = vel.Dot(ib); // Plate normal velocity
+            double vj = vel.Dot(jb); // Plate tangential velocity
             double vk = vel.Dot(kb);
 
 //            if(link->RelativeAngularVel().Length() < 0.01) {
@@ -462,24 +444,23 @@ public:
             link->AddForce(contact_force);
 
 
-            bool fwd = (vel.Dot(kb) < 0);
-            bool rgt = (vel.Dot(jb) < 0);
-            int dir = (fwd) ? 1 : -1;
-            int ldir = (rgt) ? 1: -1;
-            double R = (8.14e5*0.3+1.37e3)*(pow(max_sinkage,2)*0.5);
-            double R_l = R;
+//            bool fwd = (vel.Dot(kb) < 0);
+//            bool rgt = (vel.Dot(jb) < 0);
+//            int dir = (fwd) ? 1 : -1;
+//            double R = (8.14e5*0.3+1.37e3)*(pow(max_sinkage,2)*0.5);
+//            double R_l = R;
 
-            if(abs(vk) < 0.001) {
-                R *= vk*100;
-            }
+//            if(abs(vk) < 0.001) {
+//                R *= vk*100;
+//            }
 
-            if(max_sinkage <= 0) {
-                link->AddForce(R*kb*dir);
-            }
+//            if(max_sinkage <= 0) {
+//                link->AddForce(R*kb*dir);
+//            }
 
-            Vector3d dampingForce_jb = -500 * vj * jb; // Dampen +x
-            Vector3d dampingForce_ib = -0 * vi * ib;  // Dampen +z
-            link->AddForce(dampingForce_ib+dampingForce_jb);
+//            Vector3d dampingForce_jb = -500 * vj * jb; // Dampen +x
+//            Vector3d dampingForce_ib = -20 * vi * ib;  // Dampen +z
+//            link->AddForce(dampingForce_ib+dampingForce_jb);
 
             if(body_contexts.size() < i + 1 ) {
                 body_contexts.push_back({});
