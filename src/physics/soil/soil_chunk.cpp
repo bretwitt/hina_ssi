@@ -236,6 +236,7 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
     double sigma_t = k_e*(s_y - s_p);
 
     auto sigma_star = 0.0;
+    auto B = tri_ctx.B;
 
     if(sigma_t > 0) {
         contact = true;
@@ -244,7 +245,6 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
         if(sigma_star < vert_state->sigma_yield) {
             vert_state->sigma = sigma_star;
         } else {
-            auto B = tri_ctx.B;
             vert_state->sigma = (814000 + (1.37e3/0.3))*(s_y);
             vert_state->sigma_yield = vert_state->sigma;
             vert_state->s_p = s_sink - (vert_state->sigma / k_e);
@@ -261,7 +261,7 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
 
     // Transform into inertial frame
     // Form bases
-    normal_force = -contact_normal*force_z*Vector3d(0,0,1);
+    normal_force = -contact_normal*force_z;
     soil_vertex->v->s_sink = s_sink;
 
 ////// Shear forces
@@ -279,7 +279,7 @@ void SoilChunk::terramx_contact(const SoilPhysicsParams& vert_attr,
 
     // Transform into inertial frame
     // Form bases
-    traction_force = slip_vel.Normalize()*force_x*Vector3d(1,1,1).Normalize();
+     traction_force = slip_vel.Normalize()*(tau_max*aabb_point_area);
 
 //    if(slip_vel.Length() < 0.01) {
 //        traction_force *= slip_vel/0.01;

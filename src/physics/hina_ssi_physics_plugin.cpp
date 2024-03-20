@@ -366,21 +366,27 @@ public:
                         auto meshTriBody = Triangle(cv0,cv1,cv2);
 
                         // Calculate slip velocity
-                        auto center = meshTri.centroid();
-                        auto angular_vel = link->RelativeAngularVel();
-                        Vector3d e2q = rot.Euler();
-                        auto no_x_rot = Vector3d(0,e2q.Y(),e2q.Z());
-                        auto rot_pres_fwd = ignition::math::Quaternion(no_x_rot);
+                        auto center = meshTri.centroid();    // world frame: Assumed to be center of rotation
+                        auto angular_vel = link->WorldAngularVel(); //
+                        auto linear_vel = link->WorldLinearVel();      //
+                        ignition::math::Vector3d e2q = rot.Euler();
                         auto r_vec = center - link->WorldCoGPose().Pos();
-                        auto slip_velocity = -angular_vel.Cross(r_vec);
-                        auto slip_vel_f = rot_pres_fwd.RotateVector(slip_velocity);
-                        auto V_j = slip_velocity.Length();
-                        auto dir = -angular_vel.X()/abs(angular_vel.X());
+                        auto velocity_due_to_rotation = -angular_vel.Cross(r_vec);
+                        auto slip_velocity = velocity_due_to_rotation - linear_vel;
+
+                        auto V_j = slip_velocity.Length(); // Magnitude of the slip velocity
+//                        auto dir = -angular_vel.X()/abs(angular_vel.X());
+                        double dir = 0;
+                        if (angular_vel.X() != 0) {
+                            dir = -angular_vel.X()/std::abs(angular_vel.X());
+                        } else {
+                            dir = 0; // Example: Set to 0 or some other logic as per requirement
+                        }
+
                         // Update shear displacement by one timestep
                         auto j_p_o = j + (V_j*dt);
 
-
-                        auto tri_ctx = TriangleContext { meshTri, j_p_o,  slip_vel_f,
+                        auto tri_ctx = TriangleContext { meshTri, j_p_o, slip_velocity,
                                                      angular_vel, B };
 
                         // Compute contact forces and update soil graph
